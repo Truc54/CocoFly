@@ -1,0 +1,475 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// USER & AUTHENTICATION
+// ============================================================================
+
+model User {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  username             String    @unique @db.VarChar(50)
+  email                String    @unique @db.VarChar(255)
+  passwordHash         String?   @map("password_hash") @db.VarChar(255)
+  fullName             String?   @map("full_name") @db.VarChar(100)
+  phone                String?   @db.VarChar(20)
+  avatarUrl            String?   @map("avatar_url")
+  bio                  String?
+  role                 UserRole  @default(buyer)
+  isVerified           Boolean   @default(false) @map("is_verified")
+  isBanned             Boolean   @default(false) @map("is_banned")
+  banReason            String?   @map("ban_reason")
+  rating               Decimal   @default(0) @db.Decimal(4, 2)
+  totalAuctionsWon     Int       @default(0) @map("total_auctions_won")
+  totalAuctionsCreated Int       @default(0) @map("total_auctions_created")
+  lastLoginAt          DateTime? @map("last_login_at") @db.Timestamptz()
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt            DateTime? @updatedAt @map("updated_at") @db.Timestamptz()
+
+  // Relations
+  oauthAccounts   UserOAuth[]
+  items           Item[]
+  sellerAuctions  Auction[]        @relation("AuctionSeller")
+  wonAuctions     Auction[]        @relation("AuctionWinner")
+  bids            Bid[]
+  watchedAuctions AuctionWatcher[]
+  chatMessages    ChatMessage[]
+  buyerPayments   Payment[]        @relation("PaymentBuyer")
+  sellerPayments  Payment[]        @relation("PaymentSeller")
+  notifications   Notification[]
+  addresses       Address[]
+  reviewsGiven    Review[]         @relation("ReviewAuthor")
+  reviewsReceived Review[]         @relation("ReviewTarget")
+  uploadedMedia   ItemMedia[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  buyer
+  seller
+  admin
+}
+
+model UserOAuth {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  provider   String    @db.VarChar(20) // google, facebook, github
+  providerId String    @map("provider_id") @db.VarChar(255)
+  rawData    Json?     @map("raw_data") @db.JsonB
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt  DateTime? @updatedAt @map("updated_at") @db.Timestamptz()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerId])
+  @@map("user_oauth")
+}
+
+// ============================================================================
+// CATALOG (CATEGORIES & ITEMS)
+// ============================================================================
+
+model Category {
+  id          Int      @id @default(autoincrement())
+  parentId    Int?     @map("parent_id")
+  name        String   @db.VarChar(100)
+  slug        String   @unique @db.VarChar(100)
+  description String?
+  iconUrl     String?  @map("icon_url")
+  sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children Category[] @relation("CategoryHierarchy")
+  items    Item[]
+
+  @@map("categories")
+}
+
+model Item {
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sellerId    String        @map("seller_id") @db.Uuid
+  categoryId  Int           @map("category_id")
+  title       String        @db.VarChar(255)
+  description String?
+  condition   ItemCondition @default(good)
+  brand       String?       @db.VarChar(100)
+  location    String?       @db.VarChar(255)
+  isActive    Boolean       @default(true) @map("is_active")
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt   DateTime?     @updatedAt @map("updated_at") @db.Timestamptz()
+
+  seller   User        @relation(fields: [sellerId], references: [id], onDelete: Restrict)
+  category Category    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  media    ItemMedia[]
+  auctions Auction[]
+
+  @@index([categoryId, isActive])
+  @@map("items")
+}
+
+enum ItemCondition {
+  new_item @map("new")
+  like_new
+  good
+  fair
+  poor
+}
+
+model ItemMedia {
+  id         String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  itemId     String       @map("item_id") @db.Uuid
+  uploaderId String       @map("uploader_id") @db.Uuid
+  type       MediaType
+  purpose    MediaPurpose @default(gallery)
+
+  // Storage
+  storageKey String @map("storage_key")
+  cdnUrl     String @map("cdn_url")
+
+  // File info
+  originalName String? @map("original_name") @db.VarChar(255)
+  mimeType     String? @map("mime_type") @db.VarChar(100)
+  fileSize     BigInt? @map("file_size")
+  checksum     String? @db.VarChar(64)
+
+  // Image metadata
+  width  Int?
+  height Int?
+
+  // Video metadata
+  duration     Int?
+  thumbnailUrl String? @map("thumbnail_url")
+
+  // Processing
+  processStatus MediaProcessStatus @default(pending) @map("process_status")
+
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  item     Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  uploader User @relation(fields: [uploaderId], references: [id], onDelete: Restrict)
+
+  @@map("item_media")
+}
+
+enum MediaType {
+  image
+  video
+}
+
+enum MediaPurpose {
+  thumbnail
+  gallery
+  intro_video
+}
+
+enum MediaProcessStatus {
+  pending
+  processing
+  ready
+  failed
+}
+
+// ============================================================================
+// AUCTION CORE
+// ============================================================================
+
+model Auction {
+  id       String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  itemId   String @map("item_id") @db.Uuid
+  sellerId String @map("seller_id") @db.Uuid
+
+  // Pricing
+  startingPrice Decimal  @map("starting_price") @db.Decimal(18, 2)
+  reservePrice  Decimal? @map("reserve_price") @db.Decimal(18, 2)
+  currentPrice  Decimal  @map("current_price") @db.Decimal(18, 2)
+  buyoutPrice   Decimal? @map("buyout_price") @db.Decimal(18, 2)
+  bidIncrement  Decimal  @default(1000) @map("bid_increment") @db.Decimal(18, 2)
+
+  // Type & Status
+  auctionType AuctionType   @default(english) @map("auction_type")
+  status      AuctionStatus @default(scheduled)
+
+  // Timing
+  scheduledStart DateTime  @map("scheduled_start") @db.Timestamptz()
+  startTime      DateTime? @map("start_time") @db.Timestamptz()
+  endTime        DateTime  @map("end_time") @db.Timestamptz()
+  actualEndTime  DateTime? @map("actual_end_time") @db.Timestamptz()
+
+  // Auto-extend (anti-sniping)
+  autoExtend          Boolean @default(true) @map("auto_extend")
+  autoExtendMinutes   Int     @default(5) @map("auto_extend_minutes")
+  autoExtendThreshold Int     @default(5) @map("auto_extend_threshold")
+  extendCount         Int     @default(0) @map("extend_count")
+
+  // Result
+  winnerId     String?  @map("winner_id") @db.Uuid
+  winningBidId String?  @unique @map("winning_bid_id") @db.Uuid
+  finalPrice   Decimal? @map("final_price") @db.Decimal(18, 2)
+
+  // Stats (denormalized for performance)
+  totalBids     Int @default(0) @map("total_bids")
+  totalWatchers Int @default(0) @map("total_watchers")
+  viewCount     Int @default(0) @map("view_count")
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamptz()
+
+  // Relations
+  item          Item             @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  seller        User             @relation("AuctionSeller", fields: [sellerId], references: [id], onDelete: Restrict)
+  winner        User?            @relation("AuctionWinner", fields: [winnerId], references: [id], onDelete: SetNull)
+  winningBid    Bid?             @relation("WinningBid", fields: [winningBidId], references: [id], onDelete: SetNull)
+  bids          Bid[]            @relation("AuctionBids")
+  watchers      AuctionWatcher[]
+  chatRoom      ChatRoom?
+  payments      Payment[]
+  notifications Notification[]
+  reviews       Review[]
+
+  @@index([status, endTime])
+  @@index([sellerId, status])
+  @@map("auctions")
+}
+
+enum AuctionType {
+  english
+  dutch
+  sealed
+}
+
+enum AuctionStatus {
+  scheduled
+  active
+  ended
+  cancelled
+  failed
+}
+
+// ============================================================================
+// BIDDING
+// ============================================================================
+
+model Bid {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  auctionId  String   @map("auction_id") @db.Uuid
+  bidderId   String   @map("bidder_id") @db.Uuid
+  amount     Decimal  @db.Decimal(18, 2)
+  maxAutoBid Decimal? @map("max_auto_bid") @db.Decimal(18, 2)
+  isAutoBid  Boolean  @default(false) @map("is_auto_bid")
+  isValid    Boolean  @default(true) @map("is_valid")
+  ipAddress  String?  @map("ip_address") @db.VarChar(45)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  auction    Auction  @relation("AuctionBids", fields: [auctionId], references: [id], onDelete: Restrict)
+  bidder     User     @relation(fields: [bidderId], references: [id], onDelete: Restrict)
+  wonAuction Auction? @relation("WinningBid")
+
+  @@index([auctionId, amount(sort: Desc)])
+  @@map("bids")
+}
+
+model AuctionWatcher {
+  auctionId String   @map("auction_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  auction Auction @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([auctionId, userId])
+  @@map("auction_watchers")
+}
+
+// ============================================================================
+// CHAT
+// ============================================================================
+
+model ChatRoom {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  auctionId String   @unique @map("auction_id") @db.Uuid
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  auction  Auction       @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+
+  @@map("chat_rooms")
+}
+
+model ChatMessage {
+  id        String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  roomId    String          @map("room_id") @db.Uuid
+  senderId  String?         @map("sender_id") @db.Uuid
+  message   String
+  type      ChatMessageType @default(text)
+  isDeleted Boolean         @default(false) @map("is_deleted")
+  createdAt DateTime        @default(now()) @map("created_at") @db.Timestamptz()
+
+  room   ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  sender User?    @relation(fields: [senderId], references: [id], onDelete: SetNull)
+
+  @@index([roomId, createdAt])
+  @@map("chat_messages")
+}
+
+enum ChatMessageType {
+  text
+  system
+  bid_alert
+}
+
+// ============================================================================
+// PAYMENTS
+// ============================================================================
+
+model Payment {
+  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  auctionId     String        @map("auction_id") @db.Uuid
+  buyerId       String        @map("buyer_id") @db.Uuid
+  sellerId      String        @map("seller_id") @db.Uuid
+  amount        Decimal       @db.Decimal(18, 2)
+  platformFee   Decimal       @map("platform_fee") @db.Decimal(18, 2)
+  sellerAmount  Decimal       @map("seller_amount") @db.Decimal(18, 2)
+  paymentMethod PaymentMethod @map("payment_method")
+  status        PaymentStatus @default(pending)
+  transactionId String?       @map("transaction_id") @db.VarChar(255)
+  paidAt        DateTime?     @map("paid_at") @db.Timestamptz()
+  refundedAt    DateTime?     @map("refunded_at") @db.Timestamptz()
+  note          String?
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz()
+
+  auction Auction @relation(fields: [auctionId], references: [id], onDelete: Restrict)
+  buyer   User    @relation("PaymentBuyer", fields: [buyerId], references: [id], onDelete: Restrict)
+  seller  User    @relation("PaymentSeller", fields: [sellerId], references: [id], onDelete: Restrict)
+
+  // NOTE: No UNIQUE on auctionId — allows payment retries.
+  // Add partial unique index via raw SQL migration:
+  // CREATE UNIQUE INDEX idx_payments_auction_paid ON payments (auction_id) WHERE status = 'paid';
+
+  @@map("payments")
+}
+
+enum PaymentMethod {
+  vnpay
+  momo
+  banking
+  cod
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  refunded
+  failed
+  disputed
+}
+
+// ============================================================================
+// NOTIFICATIONS
+// ============================================================================
+
+model Notification {
+  id        String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String           @map("user_id") @db.Uuid
+  auctionId String?          @map("auction_id") @db.Uuid
+  type      NotificationType
+  title     String?          @db.VarChar(255)
+  message   String?
+  metadata  Json?            @db.JsonB
+  isRead    Boolean          @default(false) @map("is_read")
+  expiresAt DateTime?        @map("expires_at") @db.Timestamptz()
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz()
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  auction Auction? @relation(fields: [auctionId], references: [id], onDelete: SetNull)
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  outbid
+  auction_starting
+  auction_ending
+  auction_won
+  auction_failed
+  payment_due
+  payment_confirmed
+  system
+}
+
+// ============================================================================
+// REVIEWS & ADDRESSES (NEW)
+// ============================================================================
+
+model Review {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  auctionId String    @map("auction_id") @db.Uuid
+  authorId  String    @map("author_id") @db.Uuid
+  targetId  String    @map("target_id") @db.Uuid
+  rating    Int // 1-5
+  comment   String?
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamptz()
+
+  auction Auction @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  author  User    @relation("ReviewAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  target  User    @relation("ReviewTarget", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([auctionId, authorId])
+  @@map("reviews")
+}
+
+model Address {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  label       String?   @db.VarChar(50) // "Nhà", "Công ty"
+  fullName    String    @map("full_name") @db.VarChar(100)
+  phone       String    @db.VarChar(20)
+  addressLine String    @map("address_line") @db.VarChar(255)
+  ward        String?   @db.VarChar(100)
+  district    String    @db.VarChar(100)
+  city        String    @db.VarChar(100)
+  isDefault   Boolean   @default(false) @map("is_default")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt   DateTime? @updatedAt @map("updated_at") @db.Timestamptz()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("addresses")
+}
+
+// ============================================================================
+// LEADERBOARD (DENORMALIZED CACHE)
+// ============================================================================
+
+model LeaderboardCache {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  periodType  String   @map("period_type") @db.VarChar(10) // daily, weekly, monthly
+  periodStart DateTime @map("period_start") @db.Date
+  auctionId   String   @map("auction_id") @db.Uuid
+
+  // Denormalized to avoid JOINs on read
+  itemTitle  String  @map("item_title") @db.VarChar(255)
+  itemImage  String? @map("item_image")
+  sellerId   String  @map("seller_id") @db.Uuid
+  sellerName String  @map("seller_name") @db.VarChar(100)
+  finalPrice Decimal @map("final_price") @db.Decimal(18, 2)
+  totalBids  Int     @default(0) @map("total_bids")
+  rank       Int     @db.SmallInt
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@unique([periodType, periodStart, rank])
+  @@map("leaderboard_cache")
+}
