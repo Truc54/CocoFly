@@ -37,7 +37,7 @@ const MOCK_AUCTIONS: Record<string, {
     image: "https://lh3.googleusercontent.com/aida-public/AB6AXuA4a25dDQ7_BoHv9jPPsBrzK8pCoacotFh4rj2EbadQxLUZJb6cgm2WFrulnz_oKYWUlVRqhJe9VDK-qcvsbchTduj7uebB3DwpLruZAcw0v5XwX5ludpx35uPPsRWjFevZX7F9jPJZtqyt679m-wzBmEMQrmwKUnZn1-heHLZXIwSqyiX6AY15BkBf6oEajTicPzqGnNPTklzu3fwA90fP0zn0vCO6pZQpQFblj7XIjWuIDXeMNLv-Ws9z5eR_zVO0k7Oj-CKhRrbk",
     description: "iPhone 15 Pro Max chính hãng Apple, full box, mới 100%. Màn hình Super Retina XDR 6.7 inch, chip A17 Pro, camera 48MP. Bảo hành 12 tháng tại các trung tâm uỷ quyền Apple.",
     condition: "Mới 100% - Nguyên seal, Full Box, phụ kiện đầy đủ theo máy.",
-    authenticity: "Sản phẩm chính hãng Apple, có đầy đủ hóa đơn VAT và giấy tờ bảo hành. Đã được CocoFly xác minh.",
+    authenticity: "Sản phẩm chính hãng Apple, có đầy đủ hóa đơn VAT và giấy tờ bảo hành. Đã được COCOFLY xác minh.",
   },
   "2": {
     id: "2",
@@ -54,7 +54,7 @@ const MOCK_AUCTIONS: Record<string, {
     image: "https://lh3.googleusercontent.com/aida-public/AB6AXuBYfyyLXiyVQPUR0qZVHlXkqxdAsOBOwe6p7_woDvvJRR8KbKSTiT4my1PLt7bE3ttDdAzIs4DaP5GV7j7mwc6sURi2Tl-GZ_8AWYf-eKXEtytJNrxHHrkrQdQXcQrdL9dl5v5aZK9PbMGZ5pdU_1zks08kqgIuhtPofoMVr9fZGR7j5SNJ5aSeb08mTV2pIWw-0-RpF_o5wFU2GkuovVYbyPIxLmLhvCvRZnOW04h0zVV8rdM-xH8BOFz1JwQJqkPVAngodA5A-V4R",
     description: "MacBook Pro 14 inch với chip M3, RAM 18GB, SSD 512GB. Màn hình Liquid Retina XDR, hiệu năng vượt trội cho mọi tác vụ chuyên nghiệp.",
     condition: "Mới 100% - Nguyên seal, Full Box.",
-    authenticity: "Sản phẩm chính hãng Apple. Đã được CocoFly xác minh chất lượng.",
+    authenticity: "Sản phẩm chính hãng Apple. Đã được COCOFLY xác minh chất lượng.",
   },
 };
 

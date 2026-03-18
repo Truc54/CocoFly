@@ -10,7 +10,7 @@
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
   
-  /* CocoFly Custom Colors */
+  /* COCOFLY Custom Colors */
   --color-primary-main: #8f5c38;
   --color-accent-main: #E2B9A1;
   --color-text-main: #2B2B2B;
@@ -18,8 +18,9 @@
   --color-background-dark: #1d1815;
   
   /* Font families mapped to Next.js */
-  --font-display: var(--font-poppins);
-  --font-body: var(--font-manrope);
+  --font-display: var(--font-roboto);
+  --font-body: var(--font-roboto);
+  --font-brand: var(--font-bebas);
 
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -134,6 +135,7 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-variation-settings: "wght" 560, "wdth" 100;
   }
   html {
     @apply font-sans scroll-smooth;
@@ -141,6 +143,9 @@
   /* Map existing HTML tags to new typography */
   h1, h2, h3, h4, h5, h6 {
     @apply font-display;
+  }
+  .brand-text {
+    @apply font-brand uppercase tracking-wide;
   }
   /* Global pointer cursor for all interactive elements */
   a, button, [role="button"], input[type="submit"], summary, select,

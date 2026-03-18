@@ -222,7 +222,7 @@ export default function HowItWorksPage() {
             },
             {
               q: "Làm sao để biết sản phẩm có đúng chất lượng?",
-              a: "Tất cả sản phẩm trên CocoFly đều được xác minh bởi đội ngũ chuyên gia. Chúng tôi cam kết hoàn tiền 100% nếu sản phẩm không đúng mô tả.",
+              a: "Tất cả sản phẩm trên COCOFLY đều được xác minh bởi đội ngũ chuyên gia. Chúng tôi cam kết hoàn tiền 100% nếu sản phẩm không đúng mô tả.",
             },
             {
               q: "Nếu tôi thắng đấu giá nhưng không muốn mua nữa?",
@@ -230,7 +230,7 @@ export default function HowItWorksPage() {
             },
             {
               q: "Phương thức thanh toán nào được hỗ trợ?",
-              a: "CocoFly hỗ trợ thanh toán qua VNPay, MoMo, ZaloPay, chuyển khoản ngân hàng và thẻ quốc tế (Visa, Mastercard).",
+              a: "COCOFLY hỗ trợ thanh toán qua VNPay, MoMo, ZaloPay, chuyển khoản ngân hàng và thẻ quốc tế (Visa, Mastercard).",
             },
           ].map((faq, i) => (
             <details key={i} className="group bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
@@ -250,7 +250,7 @@ export default function HowItWorksPage() {
       <section className="max-w-4xl mx-auto px-6 pb-20 text-center">
         <div className="bg-gradient-to-r from-primary to-[#B78967] rounded-2xl p-12 shadow-2xl">
           <h2 className="text-3xl font-bold text-white mb-4">Sẵn sàng bắt đầu?</h2>
-          <p className="text-white/80 mb-8 max-w-lg mx-auto">Tham gia cộng đồng hơn 12.000 người dùng đang săn deal mỗi ngày trên CocoFly.</p>
+          <p className="text-white/80 mb-8 max-w-lg mx-auto">Tham gia cộng đồng hơn 12.000 người dùng đang săn deal mỗi ngày trên COCOFLY.</p>
           <div className="flex flex-wrap justify-center gap-4">
             <button className="px-8 py-4 bg-white text-primary font-bold rounded-xl shadow-lg hover:bg-accent hover:text-white transition-all">Đăng ký miễn phí</button>
             <button className="px-8 py-4 border-2 border-white/30 text-white font-bold rounded-xl hover:bg-white/10 transition-all">Xem phiên đấu giá</button>
