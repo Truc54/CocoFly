@@ -18,7 +18,7 @@ export default function AppChrome({ children }: AppChromeProps) {
   return (
     <>
       {!isAuthPage && <Header />}
-      <main className={isAuthPage ? "min-h-screen" : "flex-grow"}>{children}</main>
+      <main className={isAuthPage ? "min-h-dvh" : "flex-grow"}>{children}</main>
       {!isAuthPage && <Footer />}
     </>
   );
