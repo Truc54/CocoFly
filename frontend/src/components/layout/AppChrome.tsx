@@ -9,7 +9,7 @@ type AppChromeProps = {
   children: React.ReactNode;
 };
 
-const AUTH_PATHS = new Set(["/login", "/register"]);
+const AUTH_PATHS = new Set(["/login", "/register", "/verify-otp", "/verification-success"]);
 
 export default function AppChrome({ children }: AppChromeProps) {
   const pathname = usePathname();
@@ -18,7 +18,7 @@ export default function AppChrome({ children }: AppChromeProps) {
   return (
     <>
       {!isAuthPage && <Header />}
-      <main className={isAuthPage ? "min-h-dvh" : "flex-grow"}>{children}</main>
+      <main className={isAuthPage ? "min-h-dvh" : "grow"}>{children}</main>
       {!isAuthPage && <Footer />}
     </>
   );

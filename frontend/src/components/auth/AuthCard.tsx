@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import { Playfair_Display } from "next/font/google";
 
@@ -20,8 +21,20 @@ const playfairDisplay = Playfair_Display({
 });
 
 export default function AuthCard({ mode }: AuthCardProps) {
+  const router = useRouter();
   const isLogin = mode === "login";
   const [showPassword, setShowPassword] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isLogin) {
+      // Flow đăng ký -> OTP
+      router.push("/verify-otp");
+    } else {
+      // Flow đăng nhập -> Trang chủ
+      router.push("/");
+    }
+  };
 
   return (
     <section className="relative box-border flex min-h-dvh items-start justify-center overflow-hidden px-6 pb-3 pt-5 lg:pb-4 lg:pt-6">
@@ -30,7 +43,22 @@ export default function AuthCard({ mode }: AuthCardProps) {
       <div className="pointer-events-none absolute -right-10 bottom-0 -z-10 h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
 
       <div className="mx-auto w-full max-w-md">
-        <Card className="mx-auto w-full border-primary/15 bg-white/90 py-0 shadow-2xl shadow-primary/10 backdrop-blur-sm dark:bg-background-dark/90">
+        <Card className="relative mx-auto w-full border-primary/15 bg-white/90 py-0 shadow-2xl shadow-primary/10 backdrop-blur-sm dark:bg-background-dark/90">
+          <Link
+            href="/"
+            aria-label="Về trang chủ"
+            title="Về trang chủ"
+            className="absolute left-4 top-4 z-20 inline-flex size-11 items-center justify-center rounded-full transition-transform duration-200 hover:scale-105"
+          >
+            <Image
+              src="/auth/back-arrow.svg"
+              alt="Back"
+              width={44}
+              height={44}
+              className="h-11 w-11"
+            />
+          </Link>
+
           <CardHeader className="space-y-1.5 px-6 pb-1 pt-6 text-center">
             <div className="flex items-center justify-center gap-2.5">
               <Image
@@ -46,7 +74,7 @@ export default function AuthCard({ mode }: AuthCardProps) {
               <div className="grid grid-cols-2 gap-1">
                 <Link
                   href="/login"
-                  className={`inline-flex h-10 items-center justify-center rounded-lg text-sm font-bold transition-colors hover:underline ${
+                  className={`inline-flex h-10 items-center justify-center rounded-lg text-sm font-bold transition-colors ${
                     isLogin
                       ? "bg-white text-primary shadow-sm"
                       : "text-primary/75 hover:text-primary"
@@ -56,7 +84,7 @@ export default function AuthCard({ mode }: AuthCardProps) {
                 </Link>
                 <Link
                   href="/register"
-                  className={`inline-flex h-10 items-center justify-center rounded-lg text-sm font-bold transition-colors hover:underline ${
+                  className={`inline-flex h-10 items-center justify-center rounded-lg text-sm font-bold transition-colors ${
                     !isLogin
                       ? "bg-white text-primary shadow-sm"
                       : "text-primary/75 hover:text-primary"
@@ -73,7 +101,7 @@ export default function AuthCard({ mode }: AuthCardProps) {
               {isLogin ? "Chào mừng trở lại" : "Tạo tài khoản"}
             </h1>
 
-            <form className="space-y-3.5">
+            <form className="space-y-3.5" onSubmit={handleSubmit}>
               {!isLogin && (
                 <label className="block space-y-2">
                   <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Họ và tên</span>
