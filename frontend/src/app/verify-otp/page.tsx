@@ -9,6 +9,7 @@ import { ArrowRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import OtpInput from "@/components/auth/OtpInput";
+import { authApi } from "@/lib/api";
 
 const playfairDisplay = Playfair_Display({
   subsets: ["latin", "vietnamese"],
@@ -19,16 +20,49 @@ export default function VerifyOtpPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [otpValue, setOtpValue] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
 
-  const handleSubmit = (e?: React.FormEvent) => {
+  const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (otpValue.length !== 6) return;
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    const email = localStorage.getItem("verification_email");
+    if (!email) {
+      setErrorMsg("Không tìm thấy email xác thực. Vui lòng đăng ký lại.");
+      return;
+    }
 
     setIsSubmitting(true);
-    // Mock API call delay
-    setTimeout(() => {
+    try {
+      await authApi.verifyOtp({ email, otp: otpValue });
+      // Xóa email khỏi localStorage sau khi thành công (tuỳ chọn)
+      localStorage.removeItem("verification_email");
       router.push("/verification-success");
-    }, 800);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Xác thực thất bại.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setErrorMsg("");
+    setSuccessMsg("");
+    const email = localStorage.getItem("verification_email");
+    if (!email) {
+      setErrorMsg("Không tìm thấy email xác thực. Vui lòng đăng ký lại.");
+      return;
+    }
+
+    try {
+      await authApi.resendOtp({ email });
+      setSuccessMsg("Đã gửi lại mã OTP đến email của bạn.");
+    } catch (err: any) {
+      setErrorMsg(err.message || "Lỗi khi gửi lại OTP.");
+    }
   };
 
   return (
@@ -69,6 +103,17 @@ export default function VerifyOtpPage() {
 
           <form onSubmit={handleSubmit} className="space-y-8">
             <div className="space-y-4">
+              {errorMsg && (
+                <div className="rounded-md bg-red-50 p-3 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
+                  {errorMsg}
+                </div>
+              )}
+              {successMsg && (
+                <div className="rounded-md bg-green-50 p-3 text-sm text-green-600 dark:bg-green-900/20 dark:text-green-400">
+                  {successMsg}
+                </div>
+              )}
+              
               <label className="mb-2 block text-sm font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-300">
                 Nhập mã bảo mật
               </label>
@@ -88,7 +133,7 @@ export default function VerifyOtpPage() {
               <button
                 type="button"
                 className="font-bold text-primary-main transition-colors hover:text-primary hover:underline"
-                onClick={() => alert("Đã gửi lại mã OTP!")}
+                onClick={handleResendOtp}
               >
                 Gửi lại mã
               </button>

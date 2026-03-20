@@ -12,10 +12,9 @@ export class AuctionController {
 
   public async placeBid(req: Request, res: Response): Promise<void> {
     try {
-      const { auctionId } = req.params;
-      const bidData = req.body; // In real app, this is validated via Middleware
+      const auctionId = req.params.auctionId as string;
+      const bidData = req.body;
 
-      // Call service to handle core logic
       const result = await this.auctionService.processBid(auctionId, bidData);
 
       res.status(result.success ? 200 : 400).json(result);

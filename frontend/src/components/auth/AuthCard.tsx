@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import { Playfair_Display } from "next/font/google";
 
+import { API_URL, authApi } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -24,15 +25,42 @@ export default function AuthCard({ mode }: AuthCardProps) {
   const router = useRouter();
   const isLogin = mode === "login";
   const [showPassword, setShowPassword] = useState(false);
+  
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isLogin) {
-      // Flow đăng ký -> OTP
-      router.push("/verify-otp");
-    } else {
-      // Flow đăng nhập -> Trang chủ
-      router.push("/");
+    setErrorMsg("");
+    
+    if (!isLogin && password !== confirmPassword) {
+      setErrorMsg("Mật khẩu xác nhận không khớp.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      if (!isLogin) {
+        // Gọi API Register
+        await authApi.register({ email, password, fullName });
+        // Nếu thành công, lưu email vào localStorage để màn verify-otp có thể lấy
+        localStorage.setItem("verification_email", email);
+        router.push("/verify-otp");
+      } else {
+        // Gọi API Login
+        const data = await authApi.login({ email, password });
+        localStorage.setItem("access_token", data.accessToken);
+        // Lưu data user nếu cần
+        router.push("/");
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || "Có lỗi xảy ra.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -102,6 +130,12 @@ export default function AuthCard({ mode }: AuthCardProps) {
             </h1>
 
             <form className="space-y-3.5" onSubmit={handleSubmit}>
+              {errorMsg && (
+                <div className="rounded-md bg-red-50 p-3 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
+                  {errorMsg}
+                </div>
+              )}
+
               {!isLogin && (
                 <label className="block space-y-2">
                   <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Họ và tên</span>
@@ -113,7 +147,14 @@ export default function AuthCard({ mode }: AuthCardProps) {
                       height={18}
                       className="pointer-events-none absolute left-3 top-1/2 size-4.5 -translate-y-1/2"
                     />
-                    <Input type="text" placeholder="Nguyễn Văn A" className="h-10 pl-10" />
+                    <Input 
+                      type="text" 
+                      placeholder="Nguyễn Văn A" 
+                      className="h-10 pl-10"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      required={!isLogin}
+                    />
                   </div>
                 </label>
               )}
@@ -128,7 +169,14 @@ export default function AuthCard({ mode }: AuthCardProps) {
                     height={18}
                     className="pointer-events-none absolute left-3 top-1/2 size-4.5 -translate-y-1/2"
                   />
-                  <Input type="email" placeholder="you@example.com" className="h-10 pl-10" />
+                  <Input 
+                    type="email" 
+                    placeholder="you@example.com" 
+                    className="h-10 pl-10" 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
                 </div>
               </label>
 
@@ -146,6 +194,9 @@ export default function AuthCard({ mode }: AuthCardProps) {
                     type={showPassword ? "text" : "password"}
                     placeholder={isLogin ? "••••••••" : "Tối thiểu 8 ký tự"}
                     className="h-10 pl-10 pr-10"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
                   />
                   <button
                     type="button"
@@ -169,7 +220,14 @@ export default function AuthCard({ mode }: AuthCardProps) {
                       height={18}
                       className="pointer-events-none absolute left-3 top-1/2 size-4.5 -translate-y-1/2"
                     />
-                    <Input type="password" placeholder="Nhập lại mật khẩu" className="h-10 pl-10" />
+                    <Input 
+                      type="password" 
+                      placeholder="Nhập lại mật khẩu" 
+                      className="h-10 pl-10" 
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required={!isLogin}
+                    />
                   </div>
                 </label>
               )}
@@ -215,8 +273,8 @@ export default function AuthCard({ mode }: AuthCardProps) {
                 )}
               </div>
 
-              <Button className="h-10 w-full text-sm font-bold" size="lg" type="submit">
-                {isLogin ? "Đăng nhập" : "Tạo tài khoản"}
+              <Button className="h-10 w-full text-sm font-bold" size="lg" type="submit" disabled={isLoading}>
+                {isLoading ? "Đang xử lý..." : isLogin ? "Đăng nhập" : "Tạo tài khoản"}
               </Button>
             </form>
 
@@ -232,7 +290,7 @@ export default function AuthCard({ mode }: AuthCardProps) {
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <Button variant="outline" className="h-10 font-semibold" type="button">
+                  <a href={`${API_URL}/auth/google`} className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm transition-colors hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-50 dark:hover:bg-slate-800 dark:hover:text-slate-50">
                     <Image
                       src="/auth/google-logo.svg"
                       alt="Google"
@@ -241,8 +299,8 @@ export default function AuthCard({ mode }: AuthCardProps) {
                       className="size-4.5"
                     />
                     Tiếp tục với Google
-                  </Button>
-                  <Button variant="outline" className="h-10 font-semibold" type="button">
+                  </a>
+                  <a href={`${API_URL}/auth/facebook`} className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm transition-colors hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-50 dark:hover:bg-slate-800 dark:hover:text-slate-50">
                     <Image
                       src="/auth/facebook-logo.svg"
                       alt="Facebook"
@@ -251,7 +309,7 @@ export default function AuthCard({ mode }: AuthCardProps) {
                       className="size-4.5"
                     />
                     Tiếp tục với Facebook
-                  </Button>
+                  </a>
                 </div>
               </>
             )}
