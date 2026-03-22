@@ -45,4 +45,5 @@ export const authApi = {
   }),
   verifyOtp: (data: { email: string; otp: string }) => fetchApi("/auth/verify-otp", { method: "POST", body: JSON.stringify(data) }),
   resendOtp: (data: { email: string }) => fetchApi("/auth/resend-otp", { method: "POST", body: JSON.stringify(data) }),
+  logout: () => fetchApi("/auth/logout", { method: "POST", credentials: "omit" }),
 };

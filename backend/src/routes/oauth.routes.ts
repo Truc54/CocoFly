@@ -38,8 +38,11 @@ oauthRoutes.get('/google/callback', async (req: Request, res: Response, next: Ne
     // Set refresh token as HttpOnly cookie
     res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, REFRESH_COOKIE_OPTIONS);
 
-    // Redirect to frontend with access token
-    const params = new URLSearchParams({ accessToken: result.accessToken });
+    // Redirect to frontend with access token and user stringified
+    const params = new URLSearchParams({ 
+      accessToken: result.accessToken,
+      user: JSON.stringify(result.user) 
+    });
     if ('message' in result && result.message) {
       params.set('message', result.message);
     }
@@ -72,7 +75,10 @@ oauthRoutes.get('/facebook/callback', async (req: Request, res: Response, next: 
 
     res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, REFRESH_COOKIE_OPTIONS);
 
-    const params = new URLSearchParams({ accessToken: result.accessToken });
+    const params = new URLSearchParams({ 
+      accessToken: result.accessToken,
+      user: JSON.stringify(result.user)
+    });
     if ('message' in result && result.message) {
       params.set('message', result.message);
     }

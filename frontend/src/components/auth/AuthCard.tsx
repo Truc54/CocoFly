@@ -51,14 +51,16 @@ export default function AuthCard({ mode }: AuthCardProps) {
         localStorage.setItem("verification_email", email);
         router.push("/verify-otp");
       } else {
-        // Gọi API Login
         const data = await authApi.login({ email, password });
         localStorage.setItem("access_token", data.accessToken);
-        // Lưu data user nếu cần
+        if (data.user) {
+          localStorage.setItem("user", JSON.stringify(data.user));
+        }
+        window.dispatchEvent(new Event("auth-change"));
         router.push("/");
       }
-    } catch (err: any) {
-      setErrorMsg(err.message || "Có lỗi xảy ra.");
+    } catch (err: unknown) {
+      setErrorMsg((err as Error).message || "Có lỗi xảy ra.");
     } finally {
       setIsLoading(false);
     }
