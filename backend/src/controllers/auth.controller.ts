@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/auth.service';
-import { incrementRegisterCounter } from '../middlewares/rateLimiter';
 
 const authService = new AuthService();
 
@@ -18,11 +17,6 @@ export class AuthController {
     try {
       const { email, password, fullName } = req.body;
       const result = await authService.register(email, password, fullName);
-
-      // Increment rate limit counter after successful registration
-      const ip = req.ip || req.socket.remoteAddress || 'unknown';
-      await incrementRegisterCounter(ip);
-
       res.status(201).json({ success: true, ...result });
     } catch (err) {
       next(err);

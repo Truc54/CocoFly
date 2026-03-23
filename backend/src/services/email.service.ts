@@ -5,21 +5,33 @@ const resend = new Resend(env.RESEND_API_KEY);
 
 export class EmailService {
   async sendOtpEmail(to: string, code: string): Promise<void> {
-    await resend.emails.send({
-      from: env.RESEND_FROM_EMAIL,
-      to,
-      subject: 'CocoFly - Mã xác minh tài khoản',
-      html: `
-        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
-          <h2 style="color: #1a1a1a; margin-bottom: 8px;">Xác minh tài khoản CocoFly</h2>
-          <p style="color: #555; font-size: 15px;">Mã OTP của bạn là:</p>
-          <div style="background: #f4f4f4; border-radius: 8px; padding: 20px; text-align: center; margin: 24px 0;">
-            <span style="font-size: 32px; font-weight: 700; letter-spacing: 8px; color: #1a1a1a;">${code}</span>
+    try {
+      const result = await resend.emails.send({
+        from: env.RESEND_FROM_EMAIL,
+        to,
+        subject: 'CocoFly - Mã xác minh tài khoản',
+        html: `
+          <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
+            <h2 style="color: #1a1a1a; margin-bottom: 8px;">Xác minh tài khoản CocoFly</h2>
+            <p style="color: #555; font-size: 15px;">Mã OTP của bạn là:</p>
+            <div style="background: #f4f4f4; border-radius: 8px; padding: 20px; text-align: center; margin: 24px 0;">
+              <span style="font-size: 32px; font-weight: 700; letter-spacing: 8px; color: #1a1a1a;">${code}</span>
+            </div>
+            <p style="color: #888; font-size: 13px;">Mã có hiệu lực trong 10 phút. Không chia sẻ mã này với bất kỳ ai.</p>
           </div>
-          <p style="color: #888; font-size: 13px;">Mã có hiệu lực trong 10 phút. Không chia sẻ mã này với bất kỳ ai.</p>
-        </div>
-      `,
-    });
+        `,
+      });
+
+      if (result.error) {
+        console.error('[EmailService] Resend API error:', result.error);
+        throw new Error(`Không thể gửi email đến ${to}: ${result.error.message}`);
+      }
+
+      console.log(`[EmailService] OTP email sent to ${to}, id: ${result.data?.id}`);
+    } catch (err: any) {
+      console.error('[EmailService] Failed to send OTP email:', err.message || err);
+      throw err;
+    }
   }
 
   async sendSecurityAlertEmail(to: string, ip: string): Promise<void> {

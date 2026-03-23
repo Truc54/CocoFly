@@ -43,7 +43,7 @@ export const authApi = {
     body: JSON.stringify(data),
     credentials: "omit", // Login/register cơ bản trước
   }),
-  verifyOtp: (data: { email: string; otp: string }) => fetchApi("/auth/verify-otp", { method: "POST", body: JSON.stringify(data) }),
+  verifyOtp: (data: { email: string; otp: string }) => fetchApi("/auth/verify-otp", { method: "POST", body: JSON.stringify({ email: data.email, code: data.otp }) }),
   resendOtp: (data: { email: string }) => fetchApi("/auth/resend-otp", { method: "POST", body: JSON.stringify(data) }),
   logout: () => fetchApi("/auth/logout", { method: "POST", credentials: "omit" }),
 };

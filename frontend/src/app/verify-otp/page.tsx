@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -22,6 +22,12 @@ export default function VerifyOtpPage() {
   const [otpValue, setOtpValue] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const [userEmail, setUserEmail] = useState("");
+
+  useEffect(() => {
+    const stored = localStorage.getItem("verification_email");
+    if (stored) setUserEmail(stored);
+  }, []);
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -97,7 +103,8 @@ export default function VerifyOtpPage() {
               Xác thực OTP
             </h1>
             <p className="text-base text-slate-600 dark:text-slate-400">
-              Để bảo vệ tài khoản, vui lòng nhập mã gồm 6 chữ số đã được gửi đến email của bạn.
+              Để bảo vệ tài khoản, vui lòng nhập mã gồm 6 chữ số đã được
+              gửi đến{userEmail ? <> <span className="font-semibold text-slate-800 dark:text-slate-200">{userEmail}</span></> : " email của bạn"}.
             </p>
           </div>
 

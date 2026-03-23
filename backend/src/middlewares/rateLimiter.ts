@@ -30,22 +30,7 @@ function createRateLimiter(config: RateLimitConfig) {
   };
 }
 
-// Rate limit: 3 registrations per hour per IP
-export const registerRateLimit = createRateLimiter({
-  keyGenerator: (req) => {
-    const ip = req.ip || req.socket.remoteAddress || 'unknown';
-    return [`register:ip:${ip}`];
-  },
-  limits: [{ key: 'register:ip', max: 3, ttl: 3600 }],
-  message: 'Bạn đã đăng ký quá nhiều lần. Vui lòng thử lại sau',
-});
-
-// Increment register counter (called after successful registration in service)
-export async function incrementRegisterCounter(ip: string): Promise<void> {
-  const key = `register:ip:${ip}`;
-  await redis.incr(key);
-  await redis.expire(key, 3600);
-}
+// Registration rate limit removed — validation errors should not count against the user
 
 // Rate limit: 5 login fails per 15min per email + 20 per hour per IP
 export const loginRateLimit = async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
@@ -54,15 +39,21 @@ export const loginRateLimit = async (req: Request, _res: Response, next: NextFun
     const email = req.body?.email;
 
     if (email) {
-      const emailCount = await redis.get(`login:fail:email:${email}`);
+      const emailKey = `login:fail:email:${email}`;
+      const emailCount = await redis.get(emailKey);
       if (emailCount && parseInt(emailCount, 10) >= 5) {
-        throw new AppError('Tài khoản tạm bị khóa do đăng nhập sai quá nhiều lần. Vui lòng thử lại sau 15 phút', 429);
+        const ttl = await redis.ttl(emailKey);
+        const minutes = Math.max(1, Math.ceil(ttl / 60));
+        throw new AppError(`Tài khoản tạm bị khóa do đăng nhập sai quá nhiều lần. Vui lòng thử lại sau ${minutes} phút`, 429);
       }
     }
 
-    const ipCount = await redis.get(`login:fail:ip:${ip}`);
+    const ipKey = `login:fail:ip:${ip}`;
+    const ipCount = await redis.get(ipKey);
     if (ipCount && parseInt(ipCount, 10) >= 20) {
-      throw new AppError('Quá nhiều lần đăng nhập thất bại từ IP này. Vui lòng thử lại sau', 429);
+      const ttl = await redis.ttl(ipKey);
+      const minutes = Math.max(1, Math.ceil(ttl / 60));
+      throw new AppError(`Quá nhiều lần đăng nhập thất bại từ IP này. Vui lòng thử lại sau ${minutes} phút`, 429);
     }
 
     next();

@@ -32,6 +32,7 @@ export default function AuthCard({ mode }: AuthCardProps) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,6 +40,11 @@ export default function AuthCard({ mode }: AuthCardProps) {
     
     if (!isLogin && password !== confirmPassword) {
       setErrorMsg("Mật khẩu xác nhận không khớp.");
+      return;
+    }
+
+    if (!isLogin && !termsAccepted) {
+      setErrorMsg("Bạn cần đồng ý với điều khoản sử dụng và chính sách bảo mật.");
       return;
     }
 
@@ -250,6 +256,8 @@ export default function AuthCard({ mode }: AuthCardProps) {
                 >
                   <input
                     type="checkbox"
+                    checked={isLogin ? undefined : termsAccepted}
+                    onChange={isLogin ? undefined : (e) => setTermsAccepted(e.target.checked)}
                     className="mt-0.5 size-4 cursor-pointer rounded border border-primary-main text-primary-main accent-primary-main focus:ring-primary-main/30"
                   />
                   {isLogin ? (

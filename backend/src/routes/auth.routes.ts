@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { AuthController } from '../controllers/auth.controller';
 import { validate } from '../middlewares/validate';
-import { registerRateLimit, loginRateLimit } from '../middlewares/rateLimiter';
+import { loginRateLimit } from '../middlewares/rateLimiter';
 import { registerSchema, verifyOtpSchema, resendOtpSchema, loginSchema } from '../validators/auth.validator';
 
 const authController = new AuthController();
@@ -10,7 +10,6 @@ export const authRoutes = Router();
 // POST /auth/register
 authRoutes.post(
   '/register',
-  registerRateLimit,
   validate(registerSchema),
   authController.register.bind(authController),
 );
