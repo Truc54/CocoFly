@@ -174,10 +174,10 @@ export default function Header() {
               </Link>
               <Link
                 href="/register"
-                className={`px-5 py-2 text-sm font-bold rounded-xl transition-all duration-200 cursor-pointer ${
+                className={`px-5 py-2 text-sm font-bold rounded-none border-2 border-primary transition-all duration-200 cursor-pointer shadow-[2px_2px_0px_#E2B9A1] hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#E2B9A1] active:translate-y-px active:shadow-[1px_1px_0px_#E2B9A1] ${
                   pathname === "/register"
-                    ? "bg-primary/90 text-white shadow-lg shadow-primary/20"
-                    : "bg-primary text-white shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95"
+                    ? "bg-primary/90 text-white"
+                    : "bg-primary text-white"
                 }`}
               >
                 Đăng ký
