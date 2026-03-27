@@ -46,4 +46,7 @@ export const authApi = {
   verifyOtp: (data: { email: string; otp: string }) => fetchApi("/auth/verify-otp", { method: "POST", body: JSON.stringify({ email: data.email, code: data.otp }) }),
   resendOtp: (data: { email: string }) => fetchApi("/auth/resend-otp", { method: "POST", body: JSON.stringify(data) }),
   logout: () => fetchApi("/auth/logout", { method: "POST", credentials: "omit" }),
+  forgotPassword: (data: { email: string }) => fetchApi("/auth/forgot-password", { method: "POST", body: JSON.stringify(data) }),
+  verifyResetOtp: (data: { email: string; otp: string }) => fetchApi("/auth/verify-reset-otp", { method: "POST", body: JSON.stringify({ email: data.email, code: data.otp }) }),
+  resetPassword: (data: { email: string; token: string; newPassword: string }) => fetchApi("/auth/reset-password", { method: "POST", body: JSON.stringify(data) }),
 };

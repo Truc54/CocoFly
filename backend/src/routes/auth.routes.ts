@@ -2,7 +2,15 @@ import { Router } from 'express';
 import { AuthController } from '../controllers/auth.controller';
 import { validate } from '../middlewares/validate';
 import { loginRateLimit } from '../middlewares/rateLimiter';
-import { registerSchema, verifyOtpSchema, resendOtpSchema, loginSchema } from '../validators/auth.validator';
+import {
+  registerSchema,
+  verifyOtpSchema,
+  resendOtpSchema,
+  loginSchema,
+  forgotPasswordSchema,
+  verifyResetOtpSchema,
+  resetPasswordSchema,
+} from '../validators/auth.validator';
 
 const authController = new AuthController();
 export const authRoutes = Router();
@@ -46,4 +54,25 @@ authRoutes.post(
 authRoutes.post(
   '/logout',
   authController.logout.bind(authController),
+);
+
+// POST /auth/forgot-password
+authRoutes.post(
+  '/forgot-password',
+  validate(forgotPasswordSchema),
+  authController.forgotPassword.bind(authController),
+);
+
+// POST /auth/verify-reset-otp
+authRoutes.post(
+  '/verify-reset-otp',
+  validate(verifyResetOtpSchema),
+  authController.verifyResetOtp.bind(authController),
+);
+
+// POST /auth/reset-password
+authRoutes.post(
+  '/reset-password',
+  validate(resetPasswordSchema),
+  authController.resetPassword.bind(authController),
 );

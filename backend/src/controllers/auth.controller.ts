@@ -104,4 +104,34 @@ export class AuthController {
       next(err);
     }
   }
+
+  async forgotPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { email } = req.body;
+      const result = await authService.forgotPassword(email);
+      res.status(200).json({ success: true, ...result });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async verifyResetOtp(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { email, code } = req.body;
+      const result = await authService.verifyResetOtp(email, code);
+      res.status(200).json({ success: true, ...result });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async resetPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { email, token, newPassword } = req.body;
+      const result = await authService.resetPassword(email, token, newPassword);
+      res.status(200).json({ success: true, ...result });
+    } catch (err) {
+      next(err);
+    }
+  }
 }

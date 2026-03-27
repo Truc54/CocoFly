@@ -277,7 +277,7 @@ export default function AuthCard({ mode }: AuthCardProps) {
                   )}
                 </label>
                 {isLogin && (
-                  <Link href="#" className="font-semibold text-primary hover:text-primary/80 hover:underline">
+                  <Link href="/forgot-password" className="font-semibold text-primary hover:text-primary/80 hover:underline">
                     Quên mật khẩu?
                   </Link>
                 )}

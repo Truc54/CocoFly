@@ -210,6 +210,91 @@ export class AuthService {
   }
 
   // ──────────────────────────────────────────
+  // 7. FORGOT PASSWORD — Send OTP
+  // ──────────────────────────────────────────
+  async forgotPassword(email: string) {
+    const user = await this.userRepository.findByEmail(email);
+
+    if (!user || !user.isVerified) {
+      throw new AppError('Email không tồn tại hoặc chưa được xác minh', 404);
+    }
+
+    // Check cooldown
+    const cooldownTtl = await redis.ttl(`otp:cooldown:reset:${email}`);
+    if (cooldownTtl > 0) {
+      throw new AppError(`Vui lòng chờ ${cooldownTtl} giây trước khi gửi lại`, 429);
+    }
+
+    const otpCode = this.generateOtp();
+    await redis.set(`otp:reset:${email}`, otpCode, 'EX', OTP_TTL);
+    await redis.del(`otp:attempts:reset:${email}`);
+    await redis.set(`otp:cooldown:reset:${email}`, '1', 'EX', OTP_COOLDOWN_TTL);
+
+    await this.emailService.sendPasswordResetOtpEmail(email, otpCode);
+
+    return { message: 'Mã OTP đặt lại mật khẩu đã được gửi đến email của bạn' };
+  }
+
+  // ──────────────────────────────────────────
+  // 8. VERIFY RESET OTP
+  // ──────────────────────────────────────────
+  async verifyResetOtp(email: string, code: string) {
+    const user = await this.userRepository.findByEmail(email);
+    if (!user) {
+      throw new AppError('Email không tồn tại', 404);
+    }
+
+    // Check attempts
+    const attemptsStr = await redis.get(`otp:attempts:reset:${email}`);
+    const attempts = attemptsStr ? parseInt(attemptsStr, 10) : 0;
+    if (attempts >= OTP_MAX_ATTEMPTS) {
+      throw new AppError('Bạn đã nhập sai quá nhiều lần. Vui lòng yêu cầu mã mới', 429);
+    }
+
+    const storedOtp = await redis.get(`otp:reset:${email}`);
+    if (!storedOtp) {
+      throw new AppError('Mã OTP đã hết hạn', 410);
+    }
+
+    if (storedOtp !== code) {
+      await redis.incr(`otp:attempts:reset:${email}`);
+      await redis.expire(`otp:attempts:reset:${email}`, OTP_TTL);
+      const remaining = OTP_MAX_ATTEMPTS - 1 - attempts;
+      throw new AppError(`Mã không đúng. Còn ${remaining} lần thử`, 400);
+    }
+
+    // OTP correct — clean up and issue a reset token
+    await redis.del(`otp:reset:${email}`);
+    await redis.del(`otp:attempts:reset:${email}`);
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    await redis.set(`reset:token:${email}`, resetToken, 'EX', OTP_TTL);
+
+    return { message: 'Xác thực OTP thành công', resetToken };
+  }
+
+  // ──────────────────────────────────────────
+  // 9. RESET PASSWORD
+  // ──────────────────────────────────────────
+  async resetPassword(email: string, token: string, newPassword: string) {
+    const user = await this.userRepository.findByEmail(email);
+    if (!user) {
+      throw new AppError('Email không tồn tại', 404);
+    }
+
+    const storedToken = await redis.get(`reset:token:${email}`);
+    if (!storedToken || storedToken !== token) {
+      throw new AppError('Phiên đặt lại mật khẩu không hợp lệ hoặc đã hết hạn', 400);
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, BCRYPT_COST);
+    await this.userRepository.updatePassword(user.id, passwordHash);
+    await redis.del(`reset:token:${email}`);
+
+    return { message: 'Đặt lại mật khẩu thành công' };
+  }
+
+  // ──────────────────────────────────────────
   // Helpers
   // ──────────────────────────────────────────
   private generateOtp(): string {

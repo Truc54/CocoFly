@@ -9,7 +9,16 @@ type AppChromeProps = {
   children: React.ReactNode;
 };
 
-const AUTH_PATHS = new Set(["/login", "/register", "/verify-otp", "/verification-success"]);
+const AUTH_PATHS = new Set([
+  "/login",
+  "/register",
+  "/verify-otp",
+  "/verification-success",
+  "/forgot-password",
+  "/reset-verify-otp",
+  "/reset-password",
+  "/password-reset-success",
+]);
 
 export default function AppChrome({ children }: AppChromeProps) {
   const pathname = usePathname();
