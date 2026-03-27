@@ -2,13 +2,13 @@
 
 import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { authStorage } from "@/lib/auth-storage";
 
 export default function AuthCallback() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    // We only want this logic to run on the client, inside useEffect
     const accessToken = searchParams.get("accessToken");
     const userStr = searchParams.get("user");
     const errorMessage = searchParams.get("error");
@@ -19,16 +19,13 @@ export default function AuthCallback() {
     }
 
     if (accessToken) {
-      localStorage.setItem("access_token", accessToken);
-    }
-
-    if (userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        localStorage.setItem("user", JSON.stringify(user));
-      } catch (e) {
-        // failed to parse user
+      let user = {};
+      if (userStr) {
+        try { user = JSON.parse(userStr); } catch {}
       }
+      // OAuth login always persists (remember me = true)
+      authStorage.setRememberMe(true);
+      authStorage.save(accessToken, user);
     }
 
     if (accessToken) {

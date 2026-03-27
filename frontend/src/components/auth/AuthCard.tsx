@@ -8,6 +8,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { Playfair_Display } from "next/font/google";
 
 import { API_URL, authApi } from "@/lib/api";
+import { authStorage } from "@/lib/auth-storage";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -33,6 +34,7 @@ export default function AuthCard({ mode }: AuthCardProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,10 +60,8 @@ export default function AuthCard({ mode }: AuthCardProps) {
         router.push("/verify-otp");
       } else {
         const data = await authApi.login({ email, password });
-        localStorage.setItem("access_token", data.accessToken);
-        if (data.user) {
-          localStorage.setItem("user", JSON.stringify(data.user));
-        }
+        authStorage.setRememberMe(rememberMe);
+        authStorage.save(data.accessToken, data.user || {});
         window.dispatchEvent(new Event("auth-change"));
         router.push("/");
       }
@@ -256,8 +256,8 @@ export default function AuthCard({ mode }: AuthCardProps) {
                 >
                   <input
                     type="checkbox"
-                    checked={isLogin ? undefined : termsAccepted}
-                    onChange={isLogin ? undefined : (e) => setTermsAccepted(e.target.checked)}
+                    checked={isLogin ? rememberMe : termsAccepted}
+                    onChange={isLogin ? (e) => setRememberMe(e.target.checked) : (e) => setTermsAccepted(e.target.checked)}
                     className="mt-0.5 size-4 cursor-pointer rounded border border-primary-main text-primary-main accent-primary-main focus:ring-primary-main/30"
                   />
                   {isLogin ? (

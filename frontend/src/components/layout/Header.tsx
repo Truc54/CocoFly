@@ -5,6 +5,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { authApi } from "@/lib/api";
+import { authStorage } from "@/lib/auth-storage";
 import { LogOut, Settings } from "lucide-react";
 
 const NAV_LINKS = [
@@ -26,13 +27,12 @@ export default function Header() {
     setMounted(true);
     const checkUser = () => {
       try {
-        const storedUser = localStorage.getItem("user");
-        const accessToken = localStorage.getItem("access_token");
+        const storedUser = authStorage.getUser() as { fullName?: string; email?: string; avatar?: string; avatarUrl?: string; role?: string } | null;
+        const accessToken = authStorage.getToken();
 
         if (storedUser) {
-          setUser(JSON.parse(storedUser));
+          setUser(storedUser);
         } else if (accessToken) {
-          // Robust fallback: if user string is missing but token exists, decode token
           try {
             const payload = JSON.parse(atob(accessToken.split('.')[1]));
             setUser({ email: payload.email, fullName: payload.fullName || "Người dùng", role: payload.role });
@@ -69,8 +69,7 @@ export default function Header() {
     } catch (e) {
       console.error(e);
     } finally {
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("user");
+      authStorage.clear();
       setUser(null);
       window.dispatchEvent(new Event("auth-change"));
       router.push("/");
