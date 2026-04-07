@@ -16,7 +16,7 @@ const playfairDisplay = Playfair_Display({
   weight: ["700", "800"],
 });
 
-export default function VerifyOtpPage() {
+export default function ResetVerifyOtpPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [otpValue, setOtpValue] = useState("");
@@ -26,9 +26,13 @@ export default function VerifyOtpPage() {
   const [countdown, setCountdown] = useState(60);
 
   useEffect(() => {
-    const stored = localStorage.getItem("verification_email");
-    if (stored) setUserEmail(stored);
-  }, []);
+    const stored = localStorage.getItem("reset_email");
+    if (!stored) {
+      router.push("/forgot-password");
+      return;
+    }
+    setUserEmail(stored);
+  }, [router]);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -46,18 +50,17 @@ export default function VerifyOtpPage() {
     setErrorMsg("");
     setSuccessMsg("");
 
-    const email = localStorage.getItem("verification_email");
+    const email = localStorage.getItem("reset_email");
     if (!email) {
-      setErrorMsg("Không tìm thấy email xác thực. Vui lòng đăng ký lại.");
+      setErrorMsg("Không tìm thấy email. Vui lòng thử lại từ đầu.");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      await authApi.verifyOtp({ email, otp: otpValue });
-      // Xóa email khỏi localStorage sau khi thành công (tuỳ chọn)
-      localStorage.removeItem("verification_email");
-      router.push("/verification-success");
+      const data = await authApi.verifyResetOtp({ email, otp: otpValue });
+      localStorage.setItem("reset_token", data.resetToken);
+      router.push("/reset-password");
     } catch (err: any) {
       setErrorMsg(err.message || "Xác thực thất bại.");
     } finally {
@@ -68,14 +71,14 @@ export default function VerifyOtpPage() {
   const handleResendOtp = async () => {
     setErrorMsg("");
     setSuccessMsg("");
-    const email = localStorage.getItem("verification_email");
+    const email = localStorage.getItem("reset_email");
     if (!email) {
-      setErrorMsg("Không tìm thấy email xác thực. Vui lòng đăng ký lại.");
+      setErrorMsg("Không tìm thấy email. Vui lòng thử lại từ đầu.");
       return;
     }
 
     try {
-      await authApi.resendOtp({ email });
+      await authApi.forgotPassword({ email });
       setSuccessMsg("Đã gửi lại mã OTP đến email của bạn.");
       setCountdown(60);
     } catch (err: any) {
@@ -85,7 +88,7 @@ export default function VerifyOtpPage() {
 
   return (
     <div className="flex min-h-screen bg-background-light dark:bg-background-dark">
-      {/* LEFT PANEL - IMAGE BACKGROUND ONLY (Hidden on small screens) */}
+      {/* LEFT PANEL */}
       <div className="relative hidden w-1/2 overflow-hidden bg-primary-main lg:flex">
         <img
           src="/otp-illustration.png"
@@ -98,11 +101,9 @@ export default function VerifyOtpPage() {
         <div className="absolute inset-0 bg-primary-main/30" />
       </div>
 
-      {/* RIGHT PANEL - FORM */}
+      {/* RIGHT PANEL */}
       <div className="flex w-full flex-col items-center justify-center p-6 lg:w-1/2 lg:p-16">
         <div className="w-full max-w-md space-y-8 relative">
-
-          {/* Decorative Corner Element (Brutalist motif) */}
           <div className="absolute -top-12 -right-6 h-20 w-20 border-r-4 border-t-4 border-primary-main/20 hidden md:block" />
 
           <div className="space-y-3 text-center">
@@ -115,8 +116,7 @@ export default function VerifyOtpPage() {
               Xác thực OTP
             </h1>
             <p className="text-base text-slate-600 dark:text-slate-400">
-              Để bảo vệ tài khoản, vui lòng nhập mã gồm 6 chữ số đã được
-              gửi đến{userEmail ? <> <span className="font-semibold text-slate-800 dark:text-slate-200">{userEmail}</span></> : " email của bạn"}.
+              Nhập mã gồm 6 chữ số đã được gửi đến{userEmail ? <> <span className="font-semibold text-slate-800 dark:text-slate-200">{userEmail}</span></> : " email của bạn"} để đặt lại mật khẩu.
             </p>
           </div>
 
@@ -132,7 +132,7 @@ export default function VerifyOtpPage() {
                   {successMsg}
                 </div>
               )}
-              
+
               <label className="mb-2 block text-sm font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-300">
                 Nhập mã bảo mật
               </label>
@@ -151,7 +151,7 @@ export default function VerifyOtpPage() {
               </span>
               <button
                 type="button"
-                className="font-bold text-primary-main transition-colors hover:text-primary hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                className="font-bold text-primary-main transition-colors hover:text-primary hover:underline cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handleResendOtp}
                 disabled={countdown > 0}
               >
@@ -166,20 +166,18 @@ export default function VerifyOtpPage() {
                 disabled={isSubmitting || otpValue.length !== 6}
               >
                 {isSubmitting ? "Đang xử lý..." : (
-                  <>
-                    <span className="relative z-10 flex items-center justify-center gap-2">
-                      Xác nhận
-                      <ArrowRight className="size-5 transition-transform group-hover:translate-x-1" />
-                    </span>
-                  </>
+                  <span className="relative z-10 flex items-center justify-center gap-2">
+                    Xác nhận
+                    <ArrowRight className="size-5 transition-transform group-hover:translate-x-1" />
+                  </span>
                 )}
               </Button>
               <Button
                 type="button"
-                onClick={() => router.back()}
+                onClick={() => router.push("/forgot-password")}
                 className="h-14 w-full rounded-none border-2 border-slate-300 bg-white text-lg font-bold text-slate-700 shadow-[4px_4px_0px_#cbd5e1] transition-all hover:-translate-y-1 hover:bg-slate-50 hover:shadow-[6px_6px_0px_#cbd5e1] dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300 dark:shadow-[4px_4px_0px_#334155] sm:w-36"
               >
-                Hủy bỏ
+                Quay lại
               </Button>
             </div>
           </form>
