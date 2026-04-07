@@ -9,12 +9,13 @@ export class UserRepository {
     return prisma.user.findUnique({ where: { id } });
   }
 
-  async create(data: { email: string; passwordHash: string | null; fullName: string; isVerified?: boolean }) {
+  async create(data: { email: string; passwordHash: string | null; fullName: string; avatarUrl?: string | null; isVerified?: boolean }) {
     return prisma.user.create({
       data: {
         email: data.email,
         passwordHash: data.passwordHash,
         fullName: data.fullName,
+        avatarUrl: data.avatarUrl,
         isVerified: data.isVerified ?? false,
       },
     });
@@ -42,6 +43,13 @@ export class UserRepository {
     return prisma.user.update({
       where: { id },
       data: { lastLoginAt: new Date() },
+    });
+  }
+
+  async updateAvatarUrl(id: string, avatarUrl: string) {
+    return prisma.user.update({
+      where: { id },
+      data: { avatarUrl },
     });
   }
 

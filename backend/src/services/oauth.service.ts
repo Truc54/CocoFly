@@ -2,6 +2,7 @@ import { env } from '../config/env';
 import { UserRepository } from '../repositories/user.repository';
 import { TokenService } from './token.service';
 import { AppError } from '../utils/AppError';
+import { uploadFromUrl } from '../config/cloudinary.config';
 
 const userRepository = new UserRepository();
 const tokenService = new TokenService();
@@ -130,6 +131,15 @@ export class OAuthService {
     if (existingOAuth) {
       const user = existingOAuth.user;
       await userRepository.updateLastLogin(user.id);
+      
+      if (!user.avatarUrl && info.avatar) {
+        const uploadedUrl = await uploadFromUrl(info.avatar, 'cocofly/users/avatars');
+        if (uploadedUrl) {
+          await userRepository.updateAvatarUrl(user.id, uploadedUrl);
+          user.avatarUrl = uploadedUrl;
+        }
+      }
+      
       return this.issueTokens(user);
     }
 
@@ -151,6 +161,14 @@ export class OAuthService {
       }
 
       await userRepository.updateLastLogin(existingUser.id);
+      
+      if (!existingUser.avatarUrl && info.avatar) {
+        const uploadedUrl = await uploadFromUrl(info.avatar, 'cocofly/users/avatars');
+        if (uploadedUrl) {
+          await userRepository.updateAvatarUrl(existingUser.id, uploadedUrl);
+          existingUser.avatarUrl = uploadedUrl;
+        }
+      }
 
       return {
         ...this.issueTokens(existingUser),
@@ -159,10 +177,16 @@ export class OAuthService {
     }
 
     // TH3: Completely new user
+    let uploadedAvatarUrl = null;
+    if (info.avatar) {
+      uploadedAvatarUrl = await uploadFromUrl(info.avatar, 'cocofly/users/avatars');
+    }
+
     const newUser = await userRepository.create({
       email: info.email,
       passwordHash: null,
       fullName: info.name,
+      avatarUrl: uploadedAvatarUrl,
       isVerified: true,
     });
 
