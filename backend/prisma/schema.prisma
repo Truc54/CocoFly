@@ -8,43 +8,74 @@ datasource db {
 }
 
 // ============================================================================
+// SYSTEM & CONFIG
+// ============================================================================
+
+model SystemConfig {
+  key         String   @id @db.VarChar(50)
+  value       String   @db.Text
+  description String?
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@map("system_configs")
+}
+
+model AuditLog {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  actionType String   @map("action_type") @db.VarChar(100)
+  actorId    String   @map("actor_id") @db.Uuid
+  targetId   String?  @map("target_id") @db.VarChar(255)
+  reason     String?  @db.Text
+  metadata   Json?    @db.JsonB
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  actor User @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([actorId, createdAt])
+  @@map("audit_logs")
+}
+
+// ============================================================================
 // USER & AUTHENTICATION
 // ============================================================================
 
 model User {
-  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email                String    @unique @db.VarChar(255)
-  passwordHash         String?   @map("password_hash") @db.VarChar(255)
-  fullName             String?   @map("full_name") @db.VarChar(100)
-  phone                String?   @db.VarChar(20)
-  avatarUrl            String?   @map("avatar_url")
+  id                   String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                String        @unique @db.VarChar(255)
+  passwordHash         String?       @map("password_hash") @db.VarChar(255)
+  fullName             String?       @map("full_name") @db.VarChar(100)
+  phone                String?       @db.VarChar(20)
+  avatarUrl            String?       @map("avatar_url")
   bio                  String?
-  role                 UserRole  @default(buyer)
-  isVerified           Boolean   @default(false) @map("is_verified")
-  isBanned             Boolean   @default(false) @map("is_banned")
-  banReason            String?   @map("ban_reason")
-  rating               Decimal   @default(0) @db.Decimal(4, 2)
-  totalAuctionsWon     Int       @default(0) @map("total_auctions_won")
-  totalAuctionsCreated Int       @default(0) @map("total_auctions_created")
-  lastLoginAt          DateTime? @map("last_login_at") @db.Timestamptz()
-  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz()
-  updatedAt            DateTime? @updatedAt @map("updated_at") @db.Timestamptz()
+  role                 UserRole      @default(buyer)
+  accountStatus        AccountStatus @default(unverified) @map("account_status") // New Enum instead of `isVerified` and `isBanned`
+  banReason            String?       @map("ban_reason")
+  nonPaymentStrikes    Int           @default(0) @map("non_payment_strikes") // New anti-fraud measure
+  rating               Decimal       @default(0) @db.Decimal(4, 2)
+  totalAuctionsWon     Int           @default(0) @map("total_auctions_won")
+  totalAuctionsCreated Int           @default(0) @map("total_auctions_created")
+  lastLoginAt          DateTime?     @map("last_login_at") @db.Timestamptz()
+  createdAt            DateTime      @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt            DateTime?     @updatedAt @map("updated_at") @db.Timestamptz()
 
   // Relations
-  oauthAccounts   UserOAuth[]
-  items           Item[]
-  sellerAuctions  Auction[]        @relation("AuctionSeller")
-  wonAuctions     Auction[]        @relation("AuctionWinner")
-  bids            Bid[]
-  watchedAuctions AuctionWatcher[]
-  chatMessages    ChatMessage[]
-  buyerPayments   Payment[]        @relation("PaymentBuyer")
-  sellerPayments  Payment[]        @relation("PaymentSeller")
-  notifications   Notification[]
-  addresses       Address[]
-  reviewsGiven    Review[]         @relation("ReviewAuthor")
-  reviewsReceived Review[]         @relation("ReviewTarget")
-  uploadedMedia   ItemMedia[]
+  oauthAccounts    UserOAuth[]
+  items            Item[]
+  sellerAuctions   Auction[]        @relation("AuctionSeller")
+  wonAuctions      Auction[]        @relation("AuctionWinner")
+  bids             Bid[]
+  watchedAuctions  AuctionWatcher[]
+  chatMessages     ChatMessage[]
+  buyerPayments    Payment[]        @relation("PaymentBuyer")
+  sellerPayments   Payment[]        @relation("PaymentSeller")
+  notifications    Notification[]
+  addresses        Address[]
+  reviewsGiven     Review[]         @relation("ReviewAuthor")
+  reviewsReceived  Review[]         @relation("ReviewTarget")
+  uploadedMedia    ItemMedia[]
+  auditLogs        AuditLog[] // New relation
+  openedDisputes   Dispute[]        @relation("DisputeOpener") // New relation
+  resolvedDisputes Dispute[]        @relation("DisputeResolver") // New relation
 
   @@map("users")
 }
@@ -53,6 +84,13 @@ enum UserRole {
   buyer
   seller
   admin
+}
+
+enum AccountStatus {
+  unverified
+  active
+  suspended
+  banned
 }
 
 model UserOAuth {
@@ -101,7 +139,7 @@ model Item {
   condition   ItemCondition @default(good)
   brand       String?       @db.VarChar(100)
   location    String?       @db.VarChar(255)
-  isActive    Boolean       @default(true) @map("is_active")
+  status      ItemStatus    @default(active) @map("status") // Replaced `isActive` bool
   createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt   DateTime?     @updatedAt @map("updated_at") @db.Timestamptz()
 
@@ -110,7 +148,7 @@ model Item {
   media    ItemMedia[]
   auctions Auction[]
 
-  @@index([categoryId, isActive])
+  @@index([categoryId, status])
   @@map("items")
 }
 
@@ -120,6 +158,12 @@ enum ItemCondition {
   good
   fair
   poor
+}
+
+enum ItemStatus {
+  active // Available to create auction (No admin review needed)
+  in_auction // Currently locked in an active auction
+  sold // Successfully sold and won
 }
 
 model ItemMedia {
@@ -196,7 +240,7 @@ model Auction {
 
   // Type & Status
   auctionType AuctionType   @default(english) @map("auction_type")
-  status      AuctionStatus @default(scheduled)
+  status      AuctionStatus @default(scheduled) // Scheduled is standard upon creation
 
   // Timing
   scheduledStart DateTime  @map("scheduled_start") @db.Timestamptz()
@@ -209,13 +253,14 @@ model Auction {
   autoExtendMinutes   Int     @default(5) @map("auto_extend_minutes")
   autoExtendThreshold Int     @default(5) @map("auto_extend_threshold")
   extendCount         Int     @default(0) @map("extend_count")
+  maxExtendCount      Int     @default(20) @map("max_extend_count") // NEW: safety limit
 
   // Result
   winnerId     String?  @map("winner_id") @db.Uuid
   winningBidId String?  @unique @map("winning_bid_id") @db.Uuid
   finalPrice   Decimal? @map("final_price") @db.Decimal(18, 2)
 
-  // Stats (denormalized for performance)
+  // Stats
   totalBids     Int @default(0) @map("total_bids")
   totalWatchers Int @default(0) @map("total_watchers")
   viewCount     Int @default(0) @map("view_count")
@@ -328,7 +373,7 @@ enum ChatMessageType {
 }
 
 // ============================================================================
-// PAYMENTS
+// PAYMENTS & SHIPPING (SIMPLIFIED MANUAL FLOW)
 // ============================================================================
 
 model Payment {
@@ -344,16 +389,19 @@ model Payment {
   transactionId String?       @map("transaction_id") @db.VarChar(255)
   paidAt        DateTime?     @map("paid_at") @db.Timestamptz()
   refundedAt    DateTime?     @map("refunded_at") @db.Timestamptz()
-  note          String?
-  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz()
 
-  auction Auction @relation(fields: [auctionId], references: [id], onDelete: Restrict)
-  buyer   User    @relation("PaymentBuyer", fields: [buyerId], references: [id], onDelete: Restrict)
-  seller  User    @relation("PaymentSeller", fields: [sellerId], references: [id], onDelete: Restrict)
+  // NEW: Shipping flow tied to the payment escrow
+  shippingStatus ShippingStatus @default(pending) @map("shipping_status")
+  shippedAt      DateTime?      @map("shipped_at") @db.Timestamptz()
+  deliveredAt    DateTime?      @map("delivered_at") @db.Timestamptz()
 
-  // NOTE: No UNIQUE on auctionId — allows payment retries.
-  // Add partial unique index via raw SQL migration:
-  // CREATE UNIQUE INDEX idx_payments_auction_paid ON payments (auction_id) WHERE status = 'paid';
+  note      String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  auction  Auction   @relation(fields: [auctionId], references: [id], onDelete: Restrict)
+  buyer    User      @relation("PaymentBuyer", fields: [buyerId], references: [id], onDelete: Restrict)
+  seller   User      @relation("PaymentSeller", fields: [sellerId], references: [id], onDelete: Restrict)
+  disputes Dispute[] // Relation to disputes
 
   @@map("payments")
 }
@@ -370,7 +418,43 @@ enum PaymentStatus {
   paid
   refunded
   failed
-  disputed
+  escrow_released // Used when transaction is complete and funds given to seller
+}
+
+enum ShippingStatus {
+  pending
+  shipped
+  delivered
+  returned
+}
+
+// ============================================================================
+// DISPUTES
+// ============================================================================
+
+model Dispute {
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  paymentId      String        @map("payment_id") @db.Uuid
+  openedById     String        @map("opened_by_id") @db.Uuid
+  reason         String        @db.Text
+  status         DisputeStatus @default(opened)
+  resolutionNote String?       @map("resolution_note") @db.Text
+  resolvedById   String?       @map("resolved_by_id") @db.Uuid
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt      DateTime?     @updatedAt @map("updated_at") @db.Timestamptz()
+
+  payment    Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  openedBy   User    @relation("DisputeOpener", fields: [openedById], references: [id], onDelete: Restrict)
+  resolvedBy User?   @relation("DisputeResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  @@map("disputes")
+}
+
+enum DisputeStatus {
+  opened
+  under_review
+  resolved_buyer // Buyer wins -> Refund
+  resolved_seller // Seller wins -> Release Escrow
 }
 
 // ============================================================================
@@ -408,7 +492,7 @@ enum NotificationType {
 }
 
 // ============================================================================
-// REVIEWS & ADDRESSES (NEW)
+// REVIEWS & ADDRESSES
 // ============================================================================
 
 model Review {
