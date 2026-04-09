@@ -1,311 +1,280 @@
 "use client";
 
-import React, { useState } from "react";
-import {
-  ArrowUpCircle,
-  ShieldCheck,
-  Store,
-  TrendingUp,
-  Gavel,
-  CheckCircle2,
-  Phone,
-  Loader2,
-  PartyPopper,
-} from "lucide-react";
+import React, { useState, useEffect } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Playfair_Display } from "next/font/google";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import OtpInput from "@/components/auth/OtpInput";
 
-// ─── Step indicator ──────────────────────────────────────────────────────────
-function StepIndicator({ currentStep }: { currentStep: number }) {
-  const steps = ["Giới thiệu", "Số điện thoại", "Nhập OTP", "Hoàn tất"];
-  return (
-    <div className="flex items-center justify-center gap-1 mb-8">
-      {steps.map((label, i) => {
-        const stepNum = i + 1;
-        const isActive = stepNum === currentStep;
-        const isDone = stepNum < currentStep;
-        return (
-          <React.Fragment key={i}>
-            <div className="flex flex-col items-center gap-1">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300
-                ${isDone ? "bg-emerald-500 text-white" : isActive ? "bg-primary text-primary-foreground ring-4 ring-primary/20" : "bg-muted text-muted-foreground"}`}>
-                {isDone ? <CheckCircle2 className="w-4 h-4" /> : stepNum}
-              </div>
-              <span className={`text-[10px] font-medium ${isActive ? "text-primary" : "text-muted-foreground"}`}>{label}</span>
-            </div>
-            {i < 3 && (
-              <div className={`w-8 h-0.5 rounded-full mb-4 transition-colors ${isDone ? "bg-emerald-500" : "bg-muted"}`} />
-            )}
-          </React.Fragment>
-        );
-      })}
-    </div>
-  );
-}
+const playfairDisplay = Playfair_Display({
+  subsets: ["latin", "vietnamese"],
+  weight: ["700", "800"],
+});
 
-// ─── Benefit Item ────────────────────────────────────────────────────────────
-function BenefitItem({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
-  return (
-    <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/50 dark:bg-muted/30">
-      <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-        {icon}
-      </div>
-      <div>
-        <p className="text-sm font-semibold text-foreground">{title}</p>
-        <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
-      </div>
-    </div>
-  );
-}
-
-// ═════════════════════════════════════════════════════════════════════════════
 export default function UpgradePage() {
+  const router = useRouter();
   const [step, setStep] = useState(1);
   const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [countdown, setCountdown] = useState(300); // 5 min
-  const [isSuccess, setIsSuccess] = useState(false);
+  const [otpValue, setOtpValue] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [countdown, setCountdown] = useState(60); // 60 giây
+  const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
 
-  // ── OTP input handler ──
-  const handleOtpChange = (index: number, value: string) => {
-    if (!/^\d*$/.test(value)) return;
-    const newOtp = [...otp];
-    newOtp[index] = value.slice(-1);
-    setOtp(newOtp);
-    if (value && index < 5) {
-      const next = document.getElementById(`otp-${index + 1}`);
-      next?.focus();
-    }
-  };
-
-  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === "Backspace" && !otp[index] && index > 0) {
-      const prev = document.getElementById(`otp-${index - 1}`);
-      prev?.focus();
-    }
-  };
-
-  // ── Simulate send OTP ──
-  const handleSendOtp = () => {
-    if (phone.length < 9) return;
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      setStep(3);
-      // Start countdown
-      let t = 300;
-      const interval = setInterval(() => {
-        t--;
-        setCountdown(t);
-        if (t <= 0) clearInterval(interval);
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (step === 2 && countdown > 0) {
+      timer = setInterval(() => {
+        setCountdown((prev) => prev - 1);
       }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [countdown, step]);
+
+  const handleSendOtp = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (phone.length < 9) {
+      setErrorMsg("Số điện thoại không hợp lệ");
+      return;
+    }
+    setErrorMsg("");
+    setIsSubmitting(true);
+    setTimeout(() => {
+      setIsSubmitting(false);
+      setStep(2);
+      setCountdown(60);
     }, 1500);
   };
 
-  // ── Simulate verify OTP ──
-  const handleVerifyOtp = () => {
-    const code = otp.join("");
-    if (code.length < 6) return;
-    setIsLoading(true);
+  const handleVerifyOtp = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (otpValue.length !== 6) return;
+    setErrorMsg("");
+    setIsSubmitting(true);
     setTimeout(() => {
-      setIsLoading(false);
-      setStep(4);
-      setIsSuccess(true);
+      setIsSubmitting(false);
+      setStep(3); // Thành công
     }, 1500);
+  };
+
+  const handleResendOtp = () => {
+    if (countdown > 0) return;
+    setCountdown(60);
+    setSuccessMsg("Đã gửi lại mã OTP.");
+    setTimeout(() => setSuccessMsg(""), 3000);
   };
 
   const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
 
   return (
-    <div className="min-h-screen bg-background flex items-start justify-center py-12 px-4">
-      <div className="w-full max-w-md">
-        <div className="bg-card rounded-2xl border border-border p-6 sm:p-8 shadow-sm">
+    <div className="fixed inset-0 z-50 flex min-h-screen overflow-y-auto bg-background-light dark:bg-background-dark">
+      {/* LEFT PANEL - IMAGE BACKGROUND ONLY (Hidden on small screens) */}
+      <div className="relative hidden w-1/2 overflow-hidden bg-primary-main lg:flex">
+        <Image
+          src="/otp-illustration.png"
+          alt="Upgrade Illustration"
+          fill
+          className="absolute inset-0 object-cover"
+          unoptimized
+        />
+        <div className="absolute inset-0 bg-primary-main/30" />
+      </div>
 
-          <StepIndicator currentStep={step} />
+      {/* RIGHT PANEL - FORM */}
+      <div className="flex w-full flex-col items-center justify-center p-6 lg:w-1/2 lg:p-16">
+        <div className="w-full max-w-md space-y-8 relative">
 
-          {/* ── Step 1: Giới thiệu lợi ích ──────────────────────────── */}
+          {/* Decorative Corner Element (Brutalist motif) */}
+          <div className="absolute -top-12 -right-6 h-20 w-20 border-r-4 border-t-4 border-primary-main/20 hidden md:block" />
+
+          {/* ── Step 1: Nhập Số điện thoại ── */}
           {step === 1 && (
-            <div className="space-y-4 animate-in fade-in duration-300">
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                  <ArrowUpCircle className="w-8 h-8 text-primary" />
+            <>
+              <div className="space-y-3 text-center">
+                <div className="mb-2 flex justify-center">
+                  <div className="inline-flex size-16 items-center justify-center rounded-2xl bg-primary/10 shadow-[4px_4px_0px_#E2B9A1]">
+                    <Image src="/logo.jpeg" alt="COCOFLY Logo" width={34} height={34} className="rounded-md" />
+                  </div>
                 </div>
-                <h2 className="text-xl font-bold text-foreground">Nâng cấp lên Seller</h2>
-                <p className="text-sm text-muted-foreground mt-1">Mở khóa khả năng đấu giá và bán hàng</p>
+                <h1 className={`${playfairDisplay.className} text-4xl font-extrabold text-slate-900 dark:text-white`}>
+                  Nâng cấp Seller
+                </h1>
+                <p className="text-base text-slate-600 dark:text-slate-400">
+                  Xác minh số điện thoại qua Zalo để mở khóa tính năng bán hàng và tạo phiên đấu giá.
+                </p>
               </div>
 
-              <BenefitItem
-                icon={<Store className="w-4 h-4" />}
-                title="Tạo phiên đấu giá"
-                desc="Đăng sản phẩm và tổ chức đấu giá trực tuyến"
-              />
-              <BenefitItem
-                icon={<TrendingUp className="w-4 h-4" />}
-                title="Tiếp cận hàng ngàn người mua"
-                desc="Sản phẩm hiển thị cho cộng đồng COCOFLY"
-              />
-              <BenefitItem
-                icon={<Gavel className="w-4 h-4" />}
-                title="Quản lý đấu giá chuyên nghiệp"
-                desc="Dashboard theo dõi đơn hàng và thanh toán"
-              />
-              <BenefitItem
-                icon={<ShieldCheck className="w-4 h-4" />}
-                title="Thanh toán an toàn"
-                desc="Hệ thống Escrow bảo vệ cả người mua và bán"
-              />
+              <form onSubmit={handleSendOtp} className="space-y-8">
+                <div className="space-y-4">
+                  {errorMsg && (
+                    <div className="rounded-md bg-red-50 p-3 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
+                      {errorMsg}
+                    </div>
+                  )}
 
-              <button
-                onClick={() => setStep(2)}
-                className="w-full mt-4 py-3 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors"
-              >
-                Bắt đầu xác thực
-              </button>
-            </div>
+                  <label className="mb-2 block text-sm font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-300">
+                    Số điện thoại (*)
+                  </label>
+                  <div className="flex gap-2">
+                    <span className="flex border-2 border-slate-300 shadow-[4px_4px_0px_#cbd5e1] items-center justify-center px-4 bg-slate-100 text-slate-600 font-bold dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:shadow-[4px_4px_0px_#334155]">
+                      +84
+                    </span>
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={e => setPhone(e.target.value.replace(/\D/g, ""))}
+                      placeholder="909 123 456"
+                      maxLength={10}
+                      required
+                      className="h-14 w-full flex-1 border-2 border-slate-300 bg-white px-4 text-lg font-medium text-slate-900 shadow-[4px_4px_0px_#cbd5e1] outline-none transition-all focus:-translate-y-1 focus:border-primary-main focus:shadow-[6px_6px_0px_#E2B9A1] focus:ring-0 dark:bg-slate-900 dark:border-slate-700 dark:text-white dark:shadow-[4px_4px_0px_#334155] dark:focus:border-primary-main"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
+                  <Button
+                    type="submit"
+                    className="group relative h-14 w-full overflow-hidden rounded-none border-2 border-primary-main bg-primary-main text-lg font-bold text-white shadow-[4px_4px_0px_#E2B9A1] transition-all hover:-translate-y-1 hover:shadow-[6px_6px_0px_#E2B9A1] disabled:opacity-70 disabled:hover:translate-y-0 disabled:hover:shadow-[4px_4px_0px_#E2B9A1] sm:w-64"
+                    disabled={isSubmitting || phone.length < 9}
+                  >
+                    {isSubmitting ? "Đang xử lý..." : (
+                      <span className="relative z-10 flex items-center justify-center gap-2">
+                        Gửi OTP Zalo
+                        <ArrowRight className="size-5 transition-transform group-hover:translate-x-1" />
+                      </span>
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => router.back()}
+                    className="h-14 w-full rounded-none border-2 border-slate-300 bg-white text-lg font-bold text-slate-700 shadow-[4px_4px_0px_#cbd5e1] transition-all hover:-translate-y-1 hover:bg-slate-50 hover:shadow-[6px_6px_0px_#cbd5e1] dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300 dark:shadow-[4px_4px_0px_#334155] sm:w-36"
+                  >
+                    Hủy
+                  </Button>
+                </div>
+              </form>
+            </>
           )}
 
-          {/* ── Step 2: Nhập SĐT ────────────────────────────────────── */}
+          {/* ── Step 2: Nhập OTP ── */}
           {step === 2 && (
-            <div className="space-y-5 animate-in fade-in duration-300">
-              <div className="text-center mb-4">
-                <div className="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center mx-auto mb-3">
-                  <Phone className="w-7 h-7 text-blue-600" />
+            <>
+              <div className="space-y-3 text-center">
+                <div className="mb-2 flex justify-center">
+                  <div className="inline-flex size-16 items-center justify-center rounded-2xl bg-primary/10 shadow-[4px_4px_0px_#E2B9A1]">
+                    <Image src="/logo.jpeg" alt="COCOFLY Logo" width={34} height={34} className="rounded-md" />
+                  </div>
                 </div>
-                <h2 className="text-lg font-bold text-foreground">Xác thực số điện thoại</h2>
-                <p className="text-sm text-muted-foreground mt-1">Nhập SĐT để nhận mã OTP qua Zalo</p>
+                <h1 className={`${playfairDisplay.className} text-4xl font-extrabold text-slate-900 dark:text-white`}>
+                  Nhập mã OTP
+                </h1>
+                <p className="text-base text-slate-600 dark:text-slate-400">
+                  Vui lòng nhập mã bảo mật 6 số đã được gửi qua Zalo tới số điện thoại{" "}
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">+84 {phone}</span>.
+                </p>
               </div>
 
-              <div>
-                <label className="text-sm font-medium text-foreground mb-1.5 block">Số điện thoại</label>
-                <div className="flex gap-2">
-                  <span className="flex items-center justify-center px-3 rounded-lg border border-input bg-muted text-sm font-medium text-muted-foreground">
-                    +84
+              <form onSubmit={handleVerifyOtp} className="space-y-8">
+                <div className="space-y-4">
+                  {successMsg && (
+                    <div className="rounded-md bg-green-50 p-3 text-sm text-green-600 dark:bg-green-900/20 dark:text-green-400">
+                      {successMsg}
+                    </div>
+                  )}
+                  {errorMsg && (
+                    <div className="rounded-md bg-red-50 p-3 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
+                      {errorMsg}
+                    </div>
+                  )}
+
+                  <label className="mb-2 block text-sm font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-300">
+                    Nhập mã bảo mật
+                  </label>
+
+                  <OtpInput
+                    length={6}
+                    onComplete={(val) => setOtpValue(val)}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium text-slate-500">
+                    Chưa nhận được mã?
                   </span>
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={e => setPhone(e.target.value.replace(/\D/g, ""))}
-                    placeholder="909 123 456"
-                    maxLength={10}
-                    className="flex-1 h-11 rounded-lg border border-input bg-transparent px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30 transition-all"
-                  />
-                </div>
-              </div>
-
-              <button
-                onClick={handleSendOtp}
-                disabled={phone.length < 9 || isLoading}
-                className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {isLoading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    <svg viewBox="0 0 48 48" className="w-5 h-5" fill="currentColor">
-                      <path d="M24 4C12.95 4 4 12.95 4 24c0 4.15 1.27 8 3.43 11.19L4 44l9.19-3.43C16 42.73 19.85 44 24 44c11.05 0 20-8.95 20-20S35.05 4 24 4z" />
-                    </svg>
-                    Gửi OTP qua Zalo
-                  </>
-                )}
-              </button>
-
-              <button onClick={() => setStep(1)} className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-2">
-                ← Quay lại
-              </button>
-            </div>
-          )}
-
-          {/* ── Step 3: Nhập OTP ─────────────────────────────────────── */}
-          {step === 3 && (
-            <div className="space-y-5 animate-in fade-in duration-300">
-              <div className="text-center mb-4">
-                <h2 className="text-lg font-bold text-foreground">Nhập mã xác thực</h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Mã 6 số đã gửi đến <span className="font-semibold text-foreground">+84 {phone}</span>
-                </p>
-              </div>
-
-              {/* OTP Inputs */}
-              <div className="flex justify-center gap-2">
-                {otp.map((digit, i) => (
-                  <input
-                    key={i}
-                    id={`otp-${i}`}
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={1}
-                    value={digit}
-                    onChange={e => handleOtpChange(i, e.target.value)}
-                    onKeyDown={e => handleOtpKeyDown(i, e)}
-                    className="w-12 h-14 text-center text-xl font-bold rounded-xl border-2 border-input bg-transparent outline-none
-                      focus:border-primary focus:ring-2 focus:ring-primary/30 transition-all"
-                  />
-                ))}
-              </div>
-
-              {/* Countdown Timer */}
-              <div className="text-center">
-                {countdown > 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    Mã hết hạn sau <span className="font-semibold text-foreground">{formatTime(countdown)}</span>
-                  </p>
-                ) : (
-                  <button className="text-sm font-medium text-primary hover:underline">
-                    Gửi lại mã OTP
+                  <button
+                    type="button"
+                    className="font-bold text-primary-main transition-colors hover:text-primary hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={handleResendOtp}
+                    disabled={countdown > 0}
+                  >
+                    {countdown > 0 ? `Đợi ${formatTime(countdown)}` : "Gửi lại mã"}
                   </button>
-                )}
-              </div>
+                </div>
 
-              <button
-                onClick={handleVerifyOtp}
-                disabled={otp.join("").length < 6 || isLoading}
-                className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Xác nhận"}
-              </button>
-
-              <button onClick={() => setStep(2)} className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-2">
-                ← Đổi số điện thoại
-              </button>
-            </div>
+                <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
+                  <Button
+                    type="submit"
+                    className="group relative h-14 w-full overflow-hidden rounded-none border-2 border-primary-main bg-primary-main text-lg font-bold text-white shadow-[4px_4px_0px_#E2B9A1] transition-all hover:-translate-y-1 hover:shadow-[6px_6px_0px_#E2B9A1] disabled:opacity-70 disabled:hover:translate-y-0 disabled:hover:shadow-[4px_4px_0px_#E2B9A1] sm:w-64"
+                    disabled={isSubmitting || otpValue.length !== 6}
+                  >
+                    {isSubmitting ? "Đang xử lý..." : (
+                      <span className="relative z-10 flex items-center justify-center gap-2">
+                        Xác nhận OTP
+                        <ArrowRight className="size-5 transition-transform group-hover:translate-x-1" />
+                      </span>
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => { setStep(1); setOtpValue(""); }}
+                    className="h-14 w-full rounded-none border-2 border-slate-300 bg-white text-lg font-bold text-slate-700 shadow-[4px_4px_0px_#cbd5e1] transition-all hover:-translate-y-1 hover:bg-slate-50 hover:shadow-[6px_6px_0px_#cbd5e1] dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300 dark:shadow-[4px_4px_0px_#334155] sm:w-36"
+                  >
+                    Đổi SĐT
+                  </Button>
+                </div>
+              </form>
+            </>
           )}
 
-          {/* ── Step 4: Thành công ───────────────────────────────────── */}
-          {step === 4 && (
-            <div className="text-center space-y-4 animate-in fade-in zoom-in-95 duration-500">
-              <div className="relative w-20 h-20 mx-auto">
-                <div className="absolute inset-0 rounded-full bg-emerald-500/20 animate-ping" />
-                <div className="relative w-20 h-20 rounded-full bg-emerald-500 flex items-center justify-center">
-                  <CheckCircle2 className="w-10 h-10 text-white" />
+          {/* ── Step 3: Thành công ── */}
+          {step === 3 && (
+            <div className="space-y-6 text-center animate-in fade-in zoom-in-95 duration-500">
+              <div className="mb-6 flex justify-center">
+                <div className="relative w-24 h-24">
+                  <div className="absolute inset-0 rounded-full bg-emerald-500/20 animate-ping" />
+                  <div className="relative flex h-full w-full items-center justify-center rounded-full bg-emerald-500 shadow-[6px_6px_0px_#059669]">
+                    <CheckCircle2 className="h-12 w-12 text-white" />
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <h2 className="text-xl font-bold text-foreground">🎉 Chúc mừng!</h2>
-                <p className="text-sm text-muted-foreground mt-1">Bạn đã trở thành <span className="font-semibold text-emerald-600">SELLER</span> trên COCOFLY</p>
-              </div>
+              <h1 className={`${playfairDisplay.className} text-4xl font-extrabold text-slate-900 dark:text-white`}>
+                🎉 Chúc mừng!
+              </h1>
+              <p className="text-lg text-slate-600 dark:text-slate-400">
+                Bạn đã nâng cấp thành công thành <span className="font-bold text-emerald-600">SELLER</span>.
+              </p>
 
-              <div className="bg-emerald-500/5 rounded-xl p-4 border border-emerald-500/20">
-                <p className="text-sm text-foreground">
-                  Bây giờ bạn có thể tạo phiên đấu giá, quản lý sản phẩm và nhận thanh toán qua hệ thống Escrow an toàn.
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-2 pt-2">
-                <a
-                  href="/my-listings"
-                  className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors text-center"
+              <div className="flex flex-col gap-4 mt-8 pt-4">
+                <Button
+                  onClick={() => router.push("/my-listings")}
+                  className="group relative h-14 w-full overflow-hidden rounded-none border-2 border-primary-main bg-primary-main text-lg font-bold text-white shadow-[4px_4px_0px_#E2B9A1] transition-all hover:-translate-y-1 hover:shadow-[6px_6px_0px_#E2B9A1]"
                 >
-                  Bắt đầu đăng sản phẩm
-                </a>
-                <a
-                  href="/"
-                  className="w-full py-3 rounded-xl border border-border text-foreground font-medium hover:bg-muted transition-colors text-center"
+                  <span className="relative z-10">Đăng sản phẩm đầu tiên</span>
+                </Button>
+                <Button
+                  onClick={() => router.push("/")}
+                  className="h-14 w-full rounded-none border-2 border-slate-300 bg-white text-lg font-bold text-slate-700 shadow-[4px_4px_0px_#cbd5e1] transition-all hover:-translate-y-1 hover:bg-slate-50 hover:shadow-[6px_6px_0px_#cbd5e1] dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300 dark:shadow-[4px_4px_0px_#334155]"
                 >
                   Về trang chủ
-                </a>
+                </Button>
               </div>
             </div>
           )}
+
         </div>
       </div>
     </div>
