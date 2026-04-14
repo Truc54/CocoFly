@@ -6,6 +6,7 @@ import { env } from './config/env';
 import { authRoutes } from './routes/auth.routes';
 import { oauthRoutes } from './routes/oauth.routes';
 import { auctionRoutes } from './routes/auction.routes';
+import { userRoutes } from './routes/user.routes';
 import { errorHandler } from './middlewares/errorHandler';
 
 const app = express();
@@ -32,6 +33,7 @@ app.set('trust proxy', 1);
 app.use('/auth', authRoutes);
 app.use('/auth', oauthRoutes);
 app.use('/api/auctions', auctionRoutes);
+app.use('/api/users', userRoutes);
 
 // Global Error Handler (must be last)
 app.use(errorHandler);

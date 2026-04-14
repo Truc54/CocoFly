@@ -76,4 +76,11 @@ export class UserRepository {
       },
     });
   }
+
+  async upgradeToSeller(id: string, phone: string) {
+    return prisma.user.update({
+      where: { id },
+      data: { role: 'seller', phone },
+    });
+  }
 }
