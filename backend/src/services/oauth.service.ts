@@ -156,8 +156,8 @@ export class OAuthService {
       });
 
       // Auto-verify if not yet verified
-      if (!existingUser.isVerified) {
-        await userRepository.updateIsVerified(existingUser.id, true);
+      if (existingUser.accountStatus === 'unverified') {
+        await userRepository.updateAccountStatus(existingUser.id, 'active');
       }
 
       await userRepository.updateLastLogin(existingUser.id);
@@ -187,7 +187,7 @@ export class OAuthService {
       passwordHash: null,
       fullName: info.name,
       avatarUrl: uploadedAvatarUrl,
-      isVerified: true,
+      accountStatus: 'active',
     });
 
     await userRepository.createOAuth({

@@ -1,16 +1,22 @@
 import { Router } from 'express';
 import { AuctionController } from '../controllers/auction.controller';
+import { authGuard } from '../middlewares/authGuard';
+import { validate } from '../middlewares/validate';
+import { createAuctionSchema } from '../validators/auction.validator';
 
-/**
- * Route Mapping:
- * Only connects an HTTP verb + path to a specific Controller method.
- * Optionally injects global/route-specific Middleware (Validate, Auth).
- */
 export const auctionRoutes = Router();
 const auctionController = new AuctionController();
 
-// FUTURE MIDDLEWARE INTEGRATION:
-// auctionRoutes.post('/:auctionId/bids', authMiddleware, validateMiddleware(BidSchema), auctionController.placeBid.bind(auctionController));
+// Create auction (Seller only — authGuard verifies JWT, service verifies role)
+auctionRoutes.post(
+  '/',
+  authGuard,
+  validate(createAuctionSchema),
+  auctionController.createAuction.bind(auctionController),
+);
 
-auctionRoutes.post('/:auctionId/bids', auctionController.placeBid.bind(auctionController));
-auctionRoutes.get('/:auctionId', auctionController.getAuction.bind(auctionController));
+// Get auction details (public)
+auctionRoutes.get(
+  '/:auctionId',
+  auctionController.getAuction.bind(auctionController),
+);

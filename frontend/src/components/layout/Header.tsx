@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Bell } from "lucide-react";
+import { Bell, Plus } from "lucide-react";
 import { authStorage } from "@/lib/auth-storage";
 import AccountDropdown from "@/components/account/AccountDropdown";
 
@@ -19,12 +19,15 @@ export default function Header() {
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
     const checkAuth = () => {
       const token = authStorage.getToken();
       setIsLoggedIn(!!token);
+      const user = authStorage.getUser() as { role?: string } | null;
+      setUserRole(user?.role || null);
     };
     checkAuth();
     window.addEventListener("auth-change", checkAuth);
@@ -46,7 +49,14 @@ export default function Header() {
         </Link>
         
         <nav className="hidden md:flex items-center gap-8 lg:gap-10">
-          {NAV_LINKS.map((link) => {
+          {(userRole === "seller"
+            ? [
+                NAV_LINKS[0],
+                { href: "/create-auction", label: "Tạo đấu giá" },
+                ...NAV_LINKS.slice(1)
+              ]
+            : NAV_LINKS
+          ).map((link) => {
             const isActive =
               link.href === "/"
                 ? pathname === "/"

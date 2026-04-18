@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import {
   User,
   Lock,
@@ -164,52 +165,18 @@ export default function SettingsPage() {
           </SettingsSection>
 
           {/* ── Security ───────────────────────────────────────────────── */}
-          <SettingsSection title="Bảo mật" description="Đổi mật khẩu đăng nhập">
-            <div className="space-y-4">
-              <FieldInput
-                label="Mật khẩu hiện tại"
-                icon={<Lock className="w-4 h-4" />}
-                type={showCurrentPw ? "text" : "password"}
-                value={currentPassword}
-                onChange={setCurrentPassword}
-                suffix={
-                  <button onClick={() => setShowCurrentPw(!showCurrentPw)} className="text-muted-foreground hover:text-foreground transition-colors">
-                    {showCurrentPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                }
-              />
-              <FieldInput
-                label="Mật khẩu mới"
-                icon={<Lock className="w-4 h-4" />}
-                type={showNewPw ? "text" : "password"}
-                value={newPassword}
-                onChange={setNewPassword}
-                suffix={
-                  <button onClick={() => setShowNewPw(!showNewPw)} className="text-muted-foreground hover:text-foreground transition-colors">
-                    {showNewPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                }
-              />
-              <FieldInput
-                label="Xác nhận mật khẩu mới"
-                icon={<Lock className="w-4 h-4" />}
-                type="password"
-                value={confirmPassword}
-                onChange={setConfirmPassword}
-              />
-
-              {newPassword && confirmPassword && newPassword !== confirmPassword && (
-                <p className="text-xs text-destructive">Mật khẩu xác nhận không khớp</p>
-              )}
-
-              <button
-                onClick={handleChangePassword}
-                disabled={!currentPassword || !newPassword || newPassword !== confirmPassword || isSaving}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
-                Đổi mật khẩu
-              </button>
+          <SettingsSection title="Bảo mật" description="Bảo vệ tài khoản với mật khẩu an toàn">
+            <div className="flex items-center justify-between border-t border-border pt-4 mt-2">
+               <div>
+                  <p className="text-sm font-medium text-foreground mb-1">Mật khẩu</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Cập nhật mật khẩu để bảo vệ tài khoản</p>
+               </div>
+               <Link
+                  href="/change-password"
+                  className="px-4 py-2 rounded-lg bg-secondary text-secondary-foreground text-sm font-medium hover:bg-secondary/80 transition-colors inline-block"
+                >
+                  Đổi mật khẩu
+               </Link>
             </div>
           </SettingsSection>
         </div>

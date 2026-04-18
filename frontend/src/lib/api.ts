@@ -1,21 +1,87 @@
+import { authStorage } from "./auth-storage";
+
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-export async function fetchApi(endpoint: string, options: RequestInit = {}) {
+let isRefreshing = false;
+let refreshSubscribers: ((token: string) => void)[] = [];
+
+function onTokenRefreshed(newToken: string) {
+  refreshSubscribers.forEach((cb) => cb(newToken));
+  refreshSubscribers = [];
+}
+
+function addRefreshSubscriber(cb: (token: string) => void) {
+  refreshSubscribers.push(cb);
+}
+
+export async function fetchApi(endpoint: string, options: RequestInit = {}): Promise<any> {
   const url = `${API_URL}${endpoint}`;
   
-  // Mặc định gọi API kèm credentials để gửi/nhận cookie (refresh token)
+  // Use 'include' to securely send the HttpOnly refresh cookie to the backend
   const defaultOptions: RequestInit = {
-    credentials: "omit", // tạm thời omit vì backend CORS chưa config allow-credentials hoàn chỉnh cho mọi request, hoặc tùy ý. Đặc tả ghi refresh token dùng cookie HttpOnly, login cũng trả cookie.
+    credentials: "include", 
   };
+
+  let token = authStorage.getToken();
+  
+  // Helper to build headers
+  const getHeaders = (accessToken: string | null) => ({
+    "Content-Type": "application/json",
+    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    ...options.headers,
+  });
 
   const response = await fetch(url, {
     ...defaultOptions,
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
+    headers: getHeaders(token),
   });
+
+  // Handle Token Expiry
+  if (response.status === 401 && endpoint !== "/auth/login" && endpoint !== "/auth/refresh") {
+    if (!isRefreshing) {
+      isRefreshing = true;
+
+      try {
+        // Automatically ask for a new token using the HttpOnly cookie
+        const refreshResponse = await fetch(`${API_URL}/auth/refresh`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+        });
+
+        if (!refreshResponse.ok) {
+          throw new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+        }
+
+        const refreshData = await refreshResponse.json();
+        
+        // Save the new access token silently
+        const currentUser = authStorage.getUser() || {};
+        authStorage.save(refreshData.accessToken, currentUser);
+        
+        onTokenRefreshed(refreshData.accessToken);
+        isRefreshing = false;
+
+        // Retry the original request with the new token
+        options.headers = getHeaders(refreshData.accessToken);
+        return fetchApi(endpoint, options);
+      } catch (err) {
+        isRefreshing = false;
+        authStorage.clear();
+        window.dispatchEvent(new Event("auth-change"));
+        throw new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+      }
+    } else {
+      // If another request is already refreshing the token, wait for it
+      return new Promise((resolve) => {
+        addRefreshSubscriber((newToken) => {
+          options.headers = getHeaders(newToken);
+          resolve(fetchApi(endpoint, options));
+        });
+      });
+    }
+  }
 
   const data = await response.json().catch(() => null);
 
@@ -23,14 +89,15 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}) {
     let errorMessage = "Có lỗi xảy ra, vui lòng thử lại sau.";
     if (data) {
       if (Array.isArray(data.message)) {
-        errorMessage = data.message.join("\\n");
+        errorMessage = data.message.join("\n");
       } else if (typeof data.message === "string") {
         errorMessage = data.message;
       } else if (data.error) {
         errorMessage = data.error;
       }
     }
-    throw new Error(errorMessage);
+    // Make sure we pass the raw 401 error message for component catches if needed
+    throw new Error(errorMessage || `Request Failed: ${response.status}`);
   }
 
   return data;
@@ -41,12 +108,34 @@ export const authApi = {
   login: (data: any) => fetchApi("/auth/login", { 
     method: "POST", 
     body: JSON.stringify(data),
-    credentials: "omit", // Login/register cơ bản trước
+    credentials: "include", // Allow cookie creation on login
   }),
   verifyOtp: (data: { email: string; otp: string }) => fetchApi("/auth/verify-otp", { method: "POST", body: JSON.stringify({ email: data.email, code: data.otp }) }),
   resendOtp: (data: { email: string }) => fetchApi("/auth/resend-otp", { method: "POST", body: JSON.stringify(data) }),
-  logout: () => fetchApi("/auth/logout", { method: "POST", credentials: "omit" }),
+  logout: () => fetchApi("/auth/logout", { method: "POST", credentials: "include" }),
   forgotPassword: (data: { email: string }) => fetchApi("/auth/forgot-password", { method: "POST", body: JSON.stringify(data) }),
   verifyResetOtp: (data: { email: string; otp: string }) => fetchApi("/auth/verify-reset-otp", { method: "POST", body: JSON.stringify({ email: data.email, code: data.otp }) }),
   resetPassword: (data: { email: string; token: string; newPassword: string }) => fetchApi("/auth/reset-password", { method: "POST", body: JSON.stringify(data) }),
+};
+
+export const userApi = {
+  upgradeRole: async (phoneNumber: string, token: string) => {
+    // Instead of raw fetch, we use our fetchApi so it benefits from the auto-refresh and standard error handling
+    return fetchApi('/api/users/upgrade-role', {
+      method: 'POST',
+      body: JSON.stringify({ phoneNumber }),
+    });
+  },
+};
+
+export const mediaApi = {
+  getUploadSignature: () => fetchApi('/api/media/sign', { method: 'POST' }),
+};
+
+export const auctionApi = {
+  create: (data: any) => fetchApi('/api/auctions', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  getById: (id: string) => fetchApi(`/api/auctions/${id}`),
 };

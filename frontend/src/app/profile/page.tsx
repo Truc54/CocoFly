@@ -25,7 +25,7 @@ import { Badge } from "@/components/ui/badge";
 const MOCK_USER = {
   fullName: "Trực Trần",
   email: "truc@gmail.com",
-  role: "buyer" as const,
+  role: "buyer" as string,
   avatarUrl: "/default-avatar.svg",
   rating: 4.9,
   totalReviews: 120,
@@ -127,9 +127,11 @@ export default function ProfilePage() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3 flex-wrap">
                 <h1 className="text-2xl font-bold text-foreground">{user.fullName}</h1>
-                <Badge variant={isSeller ? "default" : "secondary"} className="text-xs">
-                  {isSeller ? "SELLER" : "BUYER"}
-                </Badge>
+                {isSeller && (
+                  <Badge variant="default" className="text-xs">
+                    SELLER
+                  </Badge>
+                )}
               </div>
 
               <div className="flex items-center gap-4 mt-2 flex-wrap">
