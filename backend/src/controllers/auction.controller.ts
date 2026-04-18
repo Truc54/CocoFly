@@ -1,30 +1,35 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { AuctionService } from '../services/auction.service';
 
-/**
- * Controller Layer:
- * Responsible ONLY for handling HTTP requests (req, res).
- * Extracts data from body/params/query, calls the Service layer,
- * and formats the final HTTP response. DO NOT put business logic here.
- */
+const auctionService = new AuctionService();
+
 export class AuctionController {
-  private auctionService = new AuctionService();
-
-  public async placeBid(req: Request, res: Response): Promise<void> {
+  async createAuction(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const auctionId = req.params.auctionId as string;
-      const bidData = req.body;
+      const sellerId = req.user!.userId;
+      const result = await auctionService.createAuction(sellerId, req.body);
 
-      const result = await this.auctionService.processBid(auctionId, bidData);
-
-      res.status(result.success ? 200 : 400).json(result);
-    } catch (error) {
-      // Pass to global error middleware in a real app
-      res.status(500).json({ success: false, message: 'Internal Server Error' });
+      res.status(201).json({
+        success: true,
+        message: 'Đấu giá đã được tạo và lên lịch thành công',
+        data: result,
+      });
+    } catch (err) {
+      next(err);
     }
   }
 
-  public async getAuction(req: Request, res: Response): Promise<void> {
-    // Basic signature
+  async getAuction(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const auctionId = req.params.auctionId as string;
+      const auction = await auctionService.getAuctionById(auctionId);
+
+      res.status(200).json({
+        success: true,
+        data: auction,
+      });
+    } catch (err) {
+      next(err);
+    }
   }
 }

@@ -9,14 +9,14 @@ export class UserRepository {
     return prisma.user.findUnique({ where: { id } });
   }
 
-  async create(data: { email: string; passwordHash: string | null; fullName: string; avatarUrl?: string | null; isVerified?: boolean }) {
+  async create(data: { email: string; passwordHash: string | null; fullName: string; avatarUrl?: string | null; accountStatus?: 'unverified' | 'active' | 'suspended' | 'banned' }) {
     return prisma.user.create({
       data: {
         email: data.email,
         passwordHash: data.passwordHash,
         fullName: data.fullName,
         avatarUrl: data.avatarUrl,
-        isVerified: data.isVerified ?? false,
+        accountStatus: data.accountStatus ?? 'unverified',
       },
     });
   }
@@ -25,10 +25,10 @@ export class UserRepository {
     return prisma.user.delete({ where: { id } });
   }
 
-  async updateIsVerified(id: string, isVerified: boolean) {
+  async updateAccountStatus(id: string, accountStatus: 'unverified' | 'active' | 'suspended' | 'banned') {
     return prisma.user.update({
       where: { id },
-      data: { isVerified },
+      data: { accountStatus },
     });
   }
 

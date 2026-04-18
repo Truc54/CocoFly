@@ -3,6 +3,7 @@ import { env } from './config/env';
 import prisma from './config/prisma';
 import redis from './config/redis';
 import app from './app';
+import { startAuctionWorker, stopAuctionWorker } from './workers/auction.worker';
 
 const server = http.createServer(app);
 
@@ -20,6 +21,9 @@ async function start() {
     // import { initSocket } from './config/socket';
     // initSocket(server);
 
+    // Start BullMQ worker for auction lifecycle
+    startAuctionWorker();
+
     server.listen(env.PORT, () => {
       console.log(`🚀 Server running on port ${env.PORT}`);
     });
@@ -32,6 +36,7 @@ async function start() {
 // Graceful shutdown
 async function shutdown() {
   console.log('\n🔄 Shutting down gracefully...');
+  await stopAuctionWorker();
   await prisma.$disconnect();
   redis.disconnect();
   server.close(() => {

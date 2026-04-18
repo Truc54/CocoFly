@@ -127,3 +127,15 @@ export const userApi = {
     });
   },
 };
+
+export const mediaApi = {
+  getUploadSignature: () => fetchApi('/api/media/sign', { method: 'POST' }),
+};
+
+export const auctionApi = {
+  create: (data: any) => fetchApi('/api/auctions', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  getById: (id: string) => fetchApi(`/api/auctions/${id}`),
+};
