@@ -40,15 +40,12 @@ export class AuctionService {
     // Move images from temp to permanent folder on Cloudinary
     if (input.media && input.media.length > 0) {
       const movePromises = input.media.map(async (m) => {
-        if (m.storageKey.startsWith('cocofly/temp/')) {
-          const newStorageKey = m.storageKey.replace('cocofly/temp/', 'cocofly/auctions/');
-          try {
-            await cloudinary.uploader.rename(m.storageKey, newStorageKey);
-            m.storageKey = newStorageKey;
-            m.cdnUrl = m.cdnUrl.replace('cocofly/temp/', 'cocofly/auctions/');
-          } catch (error) {
-            console.error(`[AuctionService] Failed to move image ${m.storageKey} to ${newStorageKey}:`, error);
-          }
+        try {
+          await cloudinary.api.update(m.storageKey, {
+            asset_folder: 'cocofly/auctions',
+          });
+        } catch (error) {
+          console.error(`[AuctionService] Failed to move image ${m.storageKey}:`, error);
         }
       });
       await Promise.all(movePromises);
