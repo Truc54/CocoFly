@@ -23,7 +23,7 @@ export class AuthService {
     const existingUser = await this.userRepository.findByEmail(email);
 
     if (existingUser) {
-      if (existingUser.isVerified) {
+      if (existingUser.accountStatus === 'active') {
         throw new AppError('Email đã được sử dụng', 409);
       }
       // Unverified user — delete and re-create
@@ -77,7 +77,7 @@ export class AuthService {
     // Success
     await redis.del(`otp:${email}`);
     await redis.del(`otp:attempts:${email}`);
-    await this.userRepository.updateIsVerified(user.id, true);
+    await this.userRepository.updateAccountStatus(user.id, 'active');
 
     return { message: 'Xác minh thành công' };
   }
@@ -118,11 +118,11 @@ export class AuthService {
       throw new AppError('Email hoặc mật khẩu không đúng', 401);
     }
 
-    if (!user.isVerified) {
+    if (user.accountStatus === 'unverified') {
       throw new AppError('Tài khoản chưa xác minh. Kiểm tra email của bạn', 403);
     }
 
-    if (user.isBanned) {
+    if (user.accountStatus === 'banned' || user.accountStatus === 'suspended') {
       throw new AppError(`Tài khoản đã bị khóa: ${user.banReason || 'Vi phạm chính sách'}`, 403);
     }
 
@@ -215,7 +215,7 @@ export class AuthService {
   async forgotPassword(email: string) {
     const user = await this.userRepository.findByEmail(email);
 
-    if (!user || !user.isVerified) {
+    if (!user || user.accountStatus === 'unverified') {
       throw new AppError('Email không tồn tại hoặc chưa được xác minh', 404);
     }
 

@@ -10,23 +10,40 @@ import { AuctionService } from '../services/auction.service';
 export class AuctionController {
   private auctionService = new AuctionService();
 
-  async placeBid(req: Request, res: Response): Promise<void> {
+  // ── Create Auction ─────────────────────────────────────────────────────────
+
+  async createAuction(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const auctionId = req.params.auctionId as string;
-      const bidData = req.body;
+      const sellerId = req.user!.userId;
+      const result = await this.auctionService.createAuction(sellerId, req.body);
 
-      const result = await this.auctionService.processBid(auctionId, bidData);
-
-      res.status(result.success ? 200 : 400).json(result);
-    } catch (error) {
-      // Pass to global error middleware in a real app
-      res.status(500).json({ success: false, message: 'Internal Server Error' });
+      res.status(201).json({
+        success: true,
+        message: 'Đấu giá đã được tạo và lên lịch thành công',
+        data: result,
+      });
+    } catch (err) {
+      next(err);
     }
   }
 
-  async getAuction(req: Request, res: Response): Promise<void> {
-    // Basic signature
+  // ── Get Single Auction ─────────────────────────────────────────────────────
+
+  async getAuction(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const auctionId = req.params.auctionId as string;
+      const auction = await this.auctionService.getAuctionById(auctionId);
+
+      res.status(200).json({
+        success: true,
+        data: auction,
+      });
+    } catch (err) {
+      next(err);
+    }
   }
+
+  // ── Listing pages ──────────────────────────────────────────────────────────
 
   async getLiveAuctions(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
@@ -54,6 +71,21 @@ export class AuctionController {
       const result = await this.auctionService.getUpcomingAuctions({ page, limit, categoryId, period, search });
 
       res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // ── Place Bid (placeholder) ────────────────────────────────────────────────
+
+  async placeBid(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const auctionId = req.params.auctionId as string;
+      const bidData = req.body;
+
+      const result = await this.auctionService.processBid(auctionId, bidData);
+
+      res.status(result.success ? 200 : 400).json(result);
     } catch (error) {
       next(error);
     }

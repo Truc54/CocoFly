@@ -7,6 +7,7 @@ import { authRoutes } from './routes/auth.routes';
 import { oauthRoutes } from './routes/oauth.routes';
 import { auctionRoutes } from './routes/auction.routes';
 import { userRoutes } from './routes/user.routes';
+import { mediaRoutes } from './routes/media.routes';
 import { errorHandler } from './middlewares/errorHandler';
 
 const app = express();
@@ -34,6 +35,7 @@ app.use('/auth', authRoutes);
 app.use('/auth', oauthRoutes);
 app.use('/api/auctions', auctionRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/media', mediaRoutes);
 
 // Global Error Handler (must be last)
 app.use(errorHandler);

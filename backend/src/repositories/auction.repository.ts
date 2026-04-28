@@ -1,5 +1,14 @@
 import prisma from '../config/prisma';
 import { AuctionStatus, Prisma } from '@prisma/client';
+import { CreateAuctionInput } from '../validators/auction.validator';
+import { Decimal } from '@prisma/client/runtime/library';
+
+// ─── Interfaces ───────────────────────────────────────────────────────────────
+
+export interface CreateAuctionResult {
+  auctionId: string;
+  itemId: string;
+}
 
 interface ListOptions {
   page: number;
@@ -16,6 +25,8 @@ interface UpcomingAuctionOptions extends ListOptions {
   search?: string;
 }
 
+// ─── Shared Prisma Include ────────────────────────────────────────────────────
+
 const AUCTION_INCLUDE = {
   item: {
     include: {
@@ -27,6 +38,8 @@ const AUCTION_INCLUDE = {
     select: { id: true, fullName: true, avatarUrl: true, rating: true },
   },
 } satisfies Prisma.AuctionInclude;
+
+// ─── Sort/Filter Helpers ──────────────────────────────────────────────────────
 
 function buildSortOrder(sort?: string): Prisma.AuctionOrderByWithRelationInput {
   switch (sort) {
@@ -67,18 +80,97 @@ function buildPeriodFilter(period?: string): Prisma.AuctionWhereInput {
   }
 }
 
+// ─── Repository ───────────────────────────────────────────────────────────────
+
 export class AuctionRepository {
-  async create(data: any): Promise<string> {
-    return 'new-auction-id';
+  // ── Create ─────────────────────────────────────────────────────────────────
+
+  public async createAuctionWithItem(
+    sellerId: string,
+    input: CreateAuctionInput,
+  ): Promise<CreateAuctionResult> {
+    const result = await prisma.$transaction(async (tx) => {
+      // a. Create Item
+      const item = await tx.item.create({
+        data: {
+          sellerId,
+          categoryId: input.categoryId,
+          title: input.title,
+          description: input.description,
+          condition: input.condition,
+          brand: input.brand,
+          location: input.location,
+          status: 'in_auction',
+        },
+      });
+
+      // b. Create ItemMedia (bulk)
+      await tx.itemMedia.createMany({
+        data: input.media.map((m) => ({
+          itemId: item.id,
+          uploaderId: sellerId,
+          type: 'image' as const,
+          purpose: m.sortOrder === 0 ? 'thumbnail' as const : 'gallery' as const,
+          storageKey: m.storageKey,
+          cdnUrl: m.cdnUrl,
+          mimeType: m.mimeType,
+          fileSize: m.fileSize ? BigInt(m.fileSize) : null,
+          width: m.width,
+          height: m.height,
+          sortOrder: m.sortOrder,
+          processStatus: 'ready' as const,
+        })),
+      });
+
+      // c. Create Auction
+      const auction = await tx.auction.create({
+        data: {
+          itemId: item.id,
+          sellerId,
+          startingPrice: new Decimal(input.startingPrice),
+          currentPrice: new Decimal(input.startingPrice),
+          buyoutPrice: input.buyoutPrice ? new Decimal(input.buyoutPrice) : null,
+          bidIncrement: new Decimal(input.bidIncrement),
+          auctionType: input.auctionType,
+          status: 'scheduled',
+          scheduledStart: new Date(input.scheduledStart),
+          endTime: new Date(input.endTime),
+          autoExtend: input.autoExtend,
+          autoExtendMinutes: input.autoExtendMinutes,
+          autoExtendThreshold: input.autoExtendThreshold,
+        },
+      });
+
+      // d. Create ChatRoom
+      await tx.chatRoom.create({
+        data: {
+          auctionId: auction.id,
+        },
+      });
+
+      return { auctionId: auction.id, itemId: item.id };
+    });
+
+    return result;
   }
 
-  async saveBid(auctionId: string, bidData: any): Promise<void> {
-    // prisma.bid.create({ data: { ... }})
+  // ── Read Single ────────────────────────────────────────────────────────────
+
+  public async findById(id: string) {
+    return prisma.auction.findUnique({
+      where: { id },
+      include: {
+        item: {
+          include: { media: { orderBy: { sortOrder: 'asc' } } },
+        },
+        seller: {
+          select: { id: true, fullName: true, avatarUrl: true, rating: true },
+        },
+      },
+    });
   }
 
-  async findById(id: string): Promise<any> {
-    return null;
-  }
+  // ── Read List (Listing pages) ──────────────────────────────────────────────
 
   async findActiveAuctions(options: ActiveAuctionOptions) {
     const { page, limit, categoryId, sort } = options;
@@ -126,5 +218,11 @@ export class AuctionRepository {
     ]);
 
     return { auctions, total };
+  }
+
+  // ── Bid (placeholder for future) ──────────────────────────────────────────
+
+  async saveBid(auctionId: string, bidData: any): Promise<void> {
+    // prisma.bid.create({ data: { ... }})
   }
 }

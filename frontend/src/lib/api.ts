@@ -96,7 +96,6 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}): Pro
         errorMessage = data.error;
       }
     }
-    // Make sure we pass the raw 401 error message for component catches if needed
     throw new Error(errorMessage || `Request Failed: ${response.status}`);
   }
 
@@ -108,7 +107,7 @@ export const authApi = {
   login: (data: any) => fetchApi("/auth/login", { 
     method: "POST", 
     body: JSON.stringify(data),
-    credentials: "include", // Allow cookie creation on login
+    credentials: "include",
   }),
   verifyOtp: (data: { email: string; otp: string }) => fetchApi("/auth/verify-otp", { method: "POST", body: JSON.stringify({ email: data.email, code: data.otp }) }),
   resendOtp: (data: { email: string }) => fetchApi("/auth/resend-otp", { method: "POST", body: JSON.stringify(data) }),
@@ -120,7 +119,6 @@ export const authApi = {
 
 export const userApi = {
   upgradeRole: async (phoneNumber: string, token: string) => {
-    // Instead of raw fetch, we use our fetchApi so it benefits from the auto-refresh and standard error handling
     return fetchApi('/api/users/upgrade-role', {
       method: 'POST',
       body: JSON.stringify({ phoneNumber }),
@@ -128,7 +126,12 @@ export const userApi = {
   },
 };
 
+export const mediaApi = {
+  getUploadSignature: () => fetchApi('/api/media/sign', { method: 'POST' }),
+};
+
 export const auctionApi = {
+  // ── Listing pages
   getLive: (params?: { page?: number; limit?: number; categoryId?: number; sort?: string }) => {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.set('page', String(params.page));
@@ -148,4 +151,11 @@ export const auctionApi = {
     const qs = searchParams.toString();
     return fetchApi(`/api/auctions/upcoming${qs ? `?${qs}` : ''}`);
   },
+  // ── Single auction
+  getById: (id: string) => fetchApi(`/api/auctions/${id}`),
+  // ── Create auction
+  create: (data: any) => fetchApi('/api/auctions', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
 };
