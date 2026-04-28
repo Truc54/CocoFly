@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { AuctionService } from '../services/auction.service';
 
 /**
@@ -10,7 +10,7 @@ import { AuctionService } from '../services/auction.service';
 export class AuctionController {
   private auctionService = new AuctionService();
 
-  public async placeBid(req: Request, res: Response): Promise<void> {
+  async placeBid(req: Request, res: Response): Promise<void> {
     try {
       const auctionId = req.params.auctionId as string;
       const bidData = req.body;
@@ -24,7 +24,38 @@ export class AuctionController {
     }
   }
 
-  public async getAuction(req: Request, res: Response): Promise<void> {
+  async getAuction(req: Request, res: Response): Promise<void> {
     // Basic signature
+  }
+
+  async getLiveAuctions(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 20));
+      const categoryId = req.query.categoryId ? parseInt(req.query.categoryId as string) : undefined;
+      const sort = (req.query.sort as string) || 'ending_soon';
+
+      const result = await this.auctionService.getLiveAuctions({ page, limit, categoryId, sort });
+
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getUpcomingAuctions(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 20));
+      const categoryId = req.query.categoryId ? parseInt(req.query.categoryId as string) : undefined;
+      const period = (req.query.period as string) || 'all';
+      const search = (req.query.search as string) || undefined;
+
+      const result = await this.auctionService.getUpcomingAuctions({ page, limit, categoryId, period, search });
+
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
   }
 }

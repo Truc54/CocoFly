@@ -9,6 +9,10 @@ import { AuctionController } from '../controllers/auction.controller';
 export const auctionRoutes = Router();
 const auctionController = new AuctionController();
 
+// Public listing routes — MUST be before /:auctionId to avoid Express treating "live"/"upcoming" as a UUID
+auctionRoutes.get('/live', auctionController.getLiveAuctions.bind(auctionController));
+auctionRoutes.get('/upcoming', auctionController.getUpcomingAuctions.bind(auctionController));
+
 // FUTURE MIDDLEWARE INTEGRATION:
 // auctionRoutes.post('/:auctionId/bids', authMiddleware, validateMiddleware(BidSchema), auctionController.placeBid.bind(auctionController));
 

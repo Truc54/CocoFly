@@ -127,3 +127,25 @@ export const userApi = {
     });
   },
 };
+
+export const auctionApi = {
+  getLive: (params?: { page?: number; limit?: number; categoryId?: number; sort?: string }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.set('page', String(params.page));
+    if (params?.limit) searchParams.set('limit', String(params.limit));
+    if (params?.categoryId) searchParams.set('categoryId', String(params.categoryId));
+    if (params?.sort) searchParams.set('sort', params.sort);
+    const qs = searchParams.toString();
+    return fetchApi(`/api/auctions/live${qs ? `?${qs}` : ''}`);
+  },
+  getUpcoming: (params?: { page?: number; limit?: number; categoryId?: number; period?: string; search?: string }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.set('page', String(params.page));
+    if (params?.limit) searchParams.set('limit', String(params.limit));
+    if (params?.categoryId) searchParams.set('categoryId', String(params.categoryId));
+    if (params?.period) searchParams.set('period', params.period);
+    if (params?.search) searchParams.set('search', params.search);
+    const qs = searchParams.toString();
+    return fetchApi(`/api/auctions/upcoming${qs ? `?${qs}` : ''}`);
+  },
+};

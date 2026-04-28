@@ -2,117 +2,125 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { auctionApi } from "@/lib/api";
 
-const LIVE_AUCTIONS = [
-  {
-    id: 1,
-    title: "iPhone 15 Pro Max",
-    price: "25.000.000đ",
-    timeLeft: "04:22:15",
-    activeBidders: 18,
-    category: "Công nghệ",
-    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuA4a25dDQ7_BoHv9jPPsBrzK8pCoacotFh4rj2EbadQxLUZJb6cgm2WFrulnz_oKYWUlVRqhJe9VDK-qcvsbchTduj7uebB3DwpLruZAcw0v5XwX5ludpx35uPPsRWjFevZX7F9jPJZtqyt679m-wzBmEMQrmwKUnZn1-heHLZXIwSqyiX6AY15BkBf6oEajTicPzqGnNPTklzu3fwA90fP0zn0vCO6pZQpQFblj7XIjWuIDXeMNLv-Ws9z5eR_zVO0k7Oj-CKhRrbk",
-  },
-  {
-    id: 2,
-    title: "MacBook Pro M3",
-    price: "45.000.000đ",
-    timeLeft: "02:15:30",
-    activeBidders: 12,
-    category: "Công nghệ",
-    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuBYfyyLXiyVQPUR0qZVHlXkqxdAsOBOwe6p7_woDvvJRR8KbKSTiT4my1PLt7bE3ttDdAzIs4DaP5GV7j7mwc6sURi2Tl-GZ_8AWYf-eKXEtytJNrxHHrkrQdQXcQrdL9dl5v5aZK9PbMGZ5pdU_1zks08kqgIuhtPofoMVr9fZGR7j5SNJ5aSeb08mTV2pIWw-0-RpF_o5wFU2GkuovVYbyPIxLmLhvCvRZnOW04h0zVV8rdM-xH8BOFz1JwQJqkPVAngodA5A-V4R",
-  },
-  {
-    id: 3,
-    title: "Sony WH-1000XM5",
-    price: "6.200.000đ",
-    timeLeft: "01:45:00",
-    activeBidders: 8,
-    category: "Công nghệ",
-    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuCQfvUXFE65sSLZ2IXh0jKTKiqGW4HteCjaoIn7nPOkGZNb5QY7sWC3sRN6dOcsj5qxLrv8pzi1X7AF5OY1aIWG7fDhdEeatxkhBwU6WZ6lHdl3ftwotVAah-JW87rkNkasem5pseRcGFB4iHteLu0lYk_45v9JdomFCJxhFTq1UAfSQs8Z5V8-6FS8fEG7TUwUGd8OrflCQ2-fvL7ivCoTYN_yQf38Vv92l5MqfYrrdzlQxJbKmP1X4FMc7ze2KHtfqgPQuW-94k00",
-  },
-  {
-    id: 4,
-    title: "Đồng hồ Rolex Daytona",
-    price: "1.250.000.000đ",
-    timeLeft: "06:30:45",
-    activeBidders: 24,
-    category: "Thời trang",
-    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuDQ1_eZdI7SfaLzXHrLPFejTE5oq_79VOkahGxTCaX7UsFYdPij7bFQlF91NATxViIfo1_O54JfK8p4I44cmz_pjT8Up-6lKkCR5bCMGeUpoBNJL5hVjR7xlzeaF040eybKWaAqFd2OQ7Dz-Lp2UVGpt-w7HVHumwUlLHHTKkcjpY_8ZNwiGpy5ZGCK5Uqukw0KwlrXJzWm3SJDOOZAaT0yH0TcSo6563uyZmg4rrsecm12BEzT1PBiSTQBZLNBAWBnL5E_t0lH33ip",
-  },
-  {
-    id: 5,
-    title: "Tranh sơn dầu phong cảnh",
-    price: "85.000.000đ",
-    timeLeft: "03:10:22",
-    activeBidders: 6,
-    category: "Nghệ thuật",
-    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuDMhTwnzOtPaS7lh-P0RPx1NqyN2L3y3FNKCXtSnn3IHVnsxEKBUSN-BL5Grv2T-JbWbhhAYpSEa-tKFzAtCWxf6VQg9dS6PuIBf7dcP-zKo6IQy3HasuIZkE03qDqS3iR0g1zjfTUn1SrtkuJTOVDhe5vHIj9WFxLMJEy-wPDI1iRchW8RCwrcd-pmOotmZ0K9HlwmkbgTtNSkV450rltmU2IkRXeqP2i5tEgyfddFH2tu0rPEvVmOZhqUuZ_3_-_5Dh-zOJPGYmDU",
-  },
-  {
-    id: 6,
-    title: "iPad Pro M2 12.9",
-    price: "22.500.000đ",
-    timeLeft: "05:55:10",
-    activeBidders: 15,
-    category: "Công nghệ",
-    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAzpD9mw1WAy6OfuYXKy7PrdKT94ud97mMOwQvIdBpK2CiQy28GlqZualekmgAs6aUTkXVjjd_1hQEwB7RMkPSQG3HX0ioanafptmihC7wzEN_OzRzSS4RbCFbkxYEeMqrBv7KPJLksJFdOzbvAonqD1RB-kETQ9d02LgzvXvSlIxWWJISfZV1BF0aM9WrMgos-qn9rCRXT5OZcu5EP9M7QyeXIRBBMIUGGccVXJn4t0WLBIeMC8xD_uDJhVqg6kT-mTqZUvF9IQbtO",
-  },
-  {
-    id: 7,
-    title: "Samsung Galaxy S24 Ultra",
-    price: "28.500.000đ",
-    timeLeft: "03:45:20",
-    activeBidders: 10,
-    category: "Công nghệ",
-    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAbZbZhHzJfOF8mkjtpCNGgFz9N_NW80stwh0Os0lT6cLlYbq8xTT9kVUszUf9Ijrpw7xExty70sxJnDdmyxUoKa81byc5-NTlDlKFqiMaRaFxGFTfRJBNwZe1aG2iLlILRXLJ7bm2iAcNJ0q3zU-egL6BByZgbnKbjiP22qGNOucnBbjhAzY38ZoFA3L9d5Q1r76qWA_fqWPRv6WLrpVU0dm8Lp-9BOLhn31yTae1Dk6ARXx-P1gvGJcud16WumgW1ib5mYx3TfwNQ",
-  },
-  {
-    id: 8,
-    title: "Túi xách Gucci Marmont",
-    price: "35.000.000đ",
-    timeLeft: "07:20:00",
-    activeBidders: 9,
-    category: "Thời trang",
-    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuDNV1sxmWooGJfzm4dzG9tx2ff6SRtKhzZCYS732G-eCRNp2nyUdvZNLO-P_YceZPttkJKsFiomN822mKKoC9ZwRqOiVRUCUXCwUuUIwvc61Wvdt8rwX3OvPIUWd6eUinWmivrVtzzhKaH9vxTIEVr5ZVnaZWJnrJ2P2IivnoBkhpVCHK1324cFdxBOP60FbASnz7WZstFnvebN14Vi_CsM7BioPjBMR7WVROK9tF6iUwAlZdC3Ls3f9nIm8iuudZzby6658TETHjkI",
-  },
-  {
-    id: 9,
-    title: "Bình gốm cổ Bát Tràng",
-    price: "120.000.000đ",
-    timeLeft: "08:10:33",
-    activeBidders: 5,
-    category: "Cổ vật",
-    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAnvG5fYlLmLJJlsp9bXEmy5QaY0mqQiuVFblIINfb6j9XePA6VqUAt7EzZA-KPdbKKunhYbtAD5zcTdHVusRnEKFjZ2opagufdYEnepBK9KTGaFHk1O3WnbJHTDjYjNvmVDe_h3C8o44B2rsBggtYUxkXdHZMMAA0MsFBBdeu_nLCrmtYBC2nX3e1iG_Jx8qZfkdr7eXCrFMFu9hKa46c5Fzfr_PBaxEAwvDRaR8u6VwbWvxYCXN_V0qH3c9xU8XIabKDiKi-ycCtR",
-  },
-  {
-    id: 10,
-    title: "Đĩa than Beatles Abbey Road",
-    price: "15.000.000đ",
-    timeLeft: "02:00:15",
-    activeBidders: 4,
-    category: "Cổ vật",
-    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuBSOTZ45dJyx3H9gwXSwtQtZE_M9HJk2zH2zJO6qjoCiNMXcFBIHMfgFWaSJJd_SUrcPBWZd0GBD-5mAimopqK7gmfm0XhNrtB2euCIQiuIs7H4e6lWkt5W1_uVaSUc7-A6h-MCkq5bRngTt0nYBsXUoCrrCrEbODea75-EDxoexj_kmL5ELFBh6XLfFMz27H0NPe4ty0AE1QmuAe3DRq4-C3n0V55LfCfCfaUra_6gAtQBe0DVlicHWPvGxHGjf-BFm-3jHZAii7s3",
-  },
-];
+interface AuctionItem {
+  id: string;
+  title: string;
+  thumbnailUrl: string | null;
+  category: { id: number; name: string } | null;
+  condition: string;
+  location: string;
+  currentPrice: number;
+  startingPrice: number;
+  bidIncrement: number;
+  endTime: string;
+  totalBids: number;
+  totalWatchers: number;
+  seller: {
+    id: string;
+    fullName: string;
+    avatarUrl: string | null;
+    rating: number;
+  } | null;
+}
+
+interface PaginationInfo {
+  page: number;
+  limit: number;
+  totalItems: number;
+  totalPages: number;
+}
 
 const CATEGORIES = [
-  { name: "Tất cả", icon: "apps" },
-  { name: "Công nghệ", icon: "devices" },
-  { name: "Thời trang", icon: "checkroom" },
-  { name: "Cổ vật", icon: "account_balance" },
-  { name: "Nghệ thuật", icon: "palette" },
-  { name: "Khác", icon: "dashboard_customize" },
+  { name: "Tất cả", icon: "apps", id: undefined },
+  { name: "Công nghệ", icon: "devices", id: 1 },
+  { name: "Thời trang", icon: "checkroom", id: 2 },
+  { name: "Cổ vật", icon: "account_balance", id: 3 },
+  { name: "Nghệ thuật", icon: "palette", id: 4 },
+  { name: "Khác", icon: "dashboard_customize", id: 5 },
 ];
+
+function formatVND(value: number): string {
+  return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(value);
+}
+
+function useCountdown(endTimes: string[]) {
+  const [timeLefts, setTimeLefts] = useState<string[]>([]);
+  const endTimesKey = JSON.stringify(endTimes);
+
+  useEffect(() => {
+    const times: string[] = JSON.parse(endTimesKey);
+    if (times.length === 0) {
+      setTimeLefts([]);
+      return;
+    }
+
+    function calc() {
+      return times.map((endTime: string) => {
+        const diff = new Date(endTime).getTime() - Date.now();
+        if (diff <= 0) return "00:00:00";
+        const h = String(Math.floor(diff / 3600000)).padStart(2, "0");
+        const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2, "0");
+        const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, "0");
+        return `${h}:${m}:${s}`;
+      });
+    }
+    setTimeLefts(calc());
+    const timer = setInterval(() => setTimeLefts(calc()), 1000);
+    return () => clearInterval(timer);
+  }, [endTimesKey]);
+
+  return timeLefts;
+}
 
 export default function LiveAuctionsPage() {
   const [activeCategory, setActiveCategory] = useState("Tất cả");
+  const [auctions, setAuctions] = useState<AuctionItem[]>([]);
+  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [sort, setSort] = useState("ending_soon");
 
-  const filtered =
-    activeCategory === "Tất cả"
-      ? LIVE_AUCTIONS
-      : LIVE_AUCTIONS.filter((a) => a.category === activeCategory);
+  const fetchAuctions = useCallback(async (page: number, append = false) => {
+    try {
+      if (page === 1) setLoading(true);
+      else setLoadingMore(true);
+      setError(null);
+
+      const selectedCat = CATEGORIES.find((c) => c.name === activeCategory);
+      const res = await auctionApi.getLive({
+        page,
+        limit: 20,
+        categoryId: selectedCat?.id,
+        sort,
+      });
+
+      const { auctions: data, pagination: pag } = res.data;
+      setAuctions((prev) => (append ? [...prev, ...data] : data));
+      setPagination(pag);
+    } catch (err: any) {
+      setError(err.message || "Không thể tải danh sách đấu giá");
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  }, [activeCategory, sort]);
+
+  useEffect(() => {
+    fetchAuctions(1);
+  }, [fetchAuctions]);
+
+  const endTimes = useMemo(() => auctions.map((a) => a.endTime), [auctions]);
+  const timeLefts = useCountdown(endTimes);
+
+  const handleLoadMore = () => {
+    if (pagination && pagination.page < pagination.totalPages) {
+      fetchAuctions(pagination.page + 1, true);
+    }
+  };
 
   return (
     <>
@@ -177,8 +185,26 @@ export default function LiveAuctionsPage() {
             <div className="mt-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm p-4">
               <div className="flex items-center gap-2 text-sm text-slate-500">
                 <span className="material-symbols-outlined text-green-500 text-base">circle</span>
-                <span className="font-bold">{filtered.length} phiên đang hoạt động</span>
+                <span className="font-bold">
+                  {loading ? "..." : `${pagination?.totalItems ?? 0} phiên đang hoạt động`}
+                </span>
               </div>
+            </div>
+
+            {/* Sort selector */}
+            <div className="mt-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm p-4">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Sắp xếp</label>
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 text-sm bg-white dark:bg-slate-700 focus:ring-2 focus:ring-primary/20 outline-none"
+              >
+                <option value="ending_soon">Sắp kết thúc</option>
+                <option value="newest">Mới nhất</option>
+                <option value="most_bids">Nhiều lượt đấu giá</option>
+                <option value="price_asc">Giá thấp → cao</option>
+                <option value="price_desc">Giá cao → thấp</option>
+              </select>
             </div>
           </aside>
 
@@ -203,57 +229,134 @@ export default function LiveAuctionsPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
-              {filtered.map((auction, idx) => (
-                <Link
-                  href={`/auction/${auction.id}`}
-                  key={auction.id}
-                  className="group bg-white dark:bg-slate-800 rounded-xl overflow-hidden border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer"
-                  style={{ animationDelay: `${idx * 80}ms` }}
-                >
-                  <div className="relative aspect-square overflow-hidden bg-slate-100">
-                    <Image
-                      className="object-cover group-hover:scale-105 transition-transform duration-700"
-                      alt={auction.title}
-                      src={auction.image}
-                      fill
-                      unoptimized
-                    />
-                    <span className="absolute top-2 left-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur px-2 py-0.5 rounded-full text-[10px] font-bold text-red-600 flex items-center gap-1 shadow-sm">
-                      <span className="material-symbols-outlined text-xs">groups</span>
-                      🔥 {auction.activeBidders}
-                    </span>
-                    <div className="absolute top-2 right-2 bg-red-500/90 backdrop-blur px-2 py-0.5 rounded-full text-[9px] font-bold text-white flex items-center gap-1">
-                      <span className="w-1 h-1 rounded-full bg-white animate-pulse"></span>
-                      LIVE
+            {/* Loading skeleton */}
+            {loading && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <div key={i} className="bg-white dark:bg-slate-800 rounded-xl overflow-hidden border border-slate-100 dark:border-slate-700 shadow-sm animate-pulse">
+                    <div className="aspect-square bg-slate-200 dark:bg-slate-700" />
+                    <div className="p-3 space-y-2">
+                      <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-16" />
+                      <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-full" />
+                      <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-24" />
+                      <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded w-full mt-2" />
                     </div>
                   </div>
+                ))}
+              </div>
+            )}
 
-                  <div className="p-3 space-y-2">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{auction.category}</span>
-                    <h3 className="text-sm font-bold line-clamp-1">{auction.title}</h3>
-                    <div className="flex justify-between items-end">
-                      <div>
-                        <p className="text-[10px] text-slate-500 font-medium">Giá hiện tại</p>
-                        <p className="text-sm font-bold text-primary">{auction.price}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-[10px] text-slate-500 font-medium">Còn lại</p>
-                        <p className="text-xs text-red-500 font-bold flex items-center justify-end gap-0.5">
-                          <span className="material-symbols-outlined text-xs">schedule</span>
-                          {auction.timeLeft}
-                        </p>
-                      </div>
-                    </div>
-                    <div
-                      className="w-full py-2 bg-primary text-white text-center text-xs font-bold rounded-lg mt-1 hover:bg-primary/90 active:scale-[0.98] transition-all cursor-pointer"
+            {/* Error state */}
+            {error && !loading && (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <span className="material-symbols-outlined text-5xl text-red-400 mb-4">error</span>
+                <p className="text-lg font-bold text-slate-700 dark:text-slate-300 mb-2">Đã xảy ra lỗi</p>
+                <p className="text-slate-500 mb-4">{error}</p>
+                <button
+                  onClick={() => fetchAuctions(1)}
+                  className="px-6 py-2 bg-primary text-white rounded-lg font-bold hover:bg-primary/90 transition-all"
+                >
+                  Thử lại
+                </button>
+              </div>
+            )}
+
+            {/* Empty state */}
+            {!loading && !error && auctions.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <span className="material-symbols-outlined text-5xl text-slate-300 mb-4">gavel</span>
+                <p className="text-lg font-bold text-slate-700 dark:text-slate-300 mb-2">Chưa có phiên đấu giá nào</p>
+                <p className="text-slate-500">Hiện tại chưa có phiên đấu giá nào đang diễn ra. Hãy quay lại sau!</p>
+              </div>
+            )}
+
+            {/* Auction grid */}
+            {!loading && !error && auctions.length > 0 && (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
+                  {auctions.map((auction, idx) => (
+                    <Link
+                      href={`/auction/${auction.id}`}
+                      key={auction.id}
+                      className="group bg-white dark:bg-slate-800 rounded-xl overflow-hidden border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer"
+                      style={{ animationDelay: `${idx * 80}ms` }}
                     >
-                      Đặt giá ngay
-                    </div>
+                      <div className="relative aspect-square overflow-hidden bg-slate-100">
+                        {auction.thumbnailUrl ? (
+                          <Image
+                            className="object-cover group-hover:scale-105 transition-transform duration-700"
+                            alt={auction.title}
+                            src={auction.thumbnailUrl}
+                            fill
+                            unoptimized
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-slate-200 dark:bg-slate-700">
+                            <span className="material-symbols-outlined text-4xl text-slate-400">image</span>
+                          </div>
+                        )}
+                        <span className="absolute top-2 left-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur px-2 py-0.5 rounded-full text-[10px] font-bold text-red-600 flex items-center gap-1 shadow-sm">
+                          <span className="material-symbols-outlined text-xs">groups</span>
+                          🔥 {auction.totalBids}
+                        </span>
+                        <div className="absolute top-2 right-2 bg-red-500/90 backdrop-blur px-2 py-0.5 rounded-full text-[9px] font-bold text-white flex items-center gap-1">
+                          <span className="w-1 h-1 rounded-full bg-white animate-pulse"></span>
+                          LIVE
+                        </div>
+                      </div>
+
+                      <div className="p-3 space-y-2">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          {auction.category?.name ?? "Khác"}
+                        </span>
+                        <h3 className="text-sm font-bold line-clamp-1">{auction.title}</h3>
+                        <div className="flex justify-between items-end">
+                          <div>
+                            <p className="text-[10px] text-slate-500 font-medium">Giá hiện tại</p>
+                            <p className="text-sm font-bold text-primary">{formatVND(auction.currentPrice)}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-[10px] text-slate-500 font-medium">Còn lại</p>
+                            <p className="text-xs text-red-500 font-bold flex items-center justify-end gap-0.5">
+                              <span className="material-symbols-outlined text-xs">schedule</span>
+                              {timeLefts[idx] || "--:--:--"}
+                            </p>
+                          </div>
+                        </div>
+                        <div
+                          className="w-full py-2 bg-primary text-white text-center text-xs font-bold rounded-lg mt-1 hover:bg-primary/90 active:scale-[0.98] transition-all cursor-pointer"
+                        >
+                          Đặt giá ngay
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+
+                {/* Load more */}
+                {pagination && pagination.page < pagination.totalPages && (
+                  <div className="flex justify-center mt-10">
+                    <button
+                      onClick={handleLoadMore}
+                      disabled={loadingMore}
+                      className="px-8 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-primary font-bold rounded-xl hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      {loadingMore ? (
+                        <>
+                          <span className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                          Đang tải...
+                        </>
+                      ) : (
+                        <>
+                          <span className="material-symbols-outlined text-lg">expand_more</span>
+                          Xem thêm ({pagination.totalItems - auctions.length} phiên còn lại)
+                        </>
+                      )}
+                    </button>
                   </div>
-                </Link>
-              ))}
-            </div>
+                )}
+              </>
+            )}
           </div>
         </div>
       </section>
