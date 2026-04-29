@@ -67,6 +67,9 @@ function buildPeriodFilter(period?: string): Prisma.AuctionWhereInput {
   const endOfWeek = new Date(startOfToday);
   endOfWeek.setDate(endOfWeek.getDate() + (7 - endOfWeek.getDay()));
 
+  // status is the single source of truth — worker manages transitions.
+  // Period filter only adds time-range narrowing for user-selected filters.
+  // 'all' adds no extra constraint: status: 'scheduled' already covers it.
   switch (period) {
     case 'today':
       return { scheduledStart: { gte: startOfToday, lt: startOfTomorrow } };
@@ -76,7 +79,7 @@ function buildPeriodFilter(period?: string): Prisma.AuctionWhereInput {
       return { scheduledStart: { gte: startOfToday, lt: endOfWeek } };
     case 'all':
     default:
-      return { scheduledStart: { gt: now } };
+      return {}; // No time constraint — rely solely on status: 'scheduled'
   }
 }
 
@@ -175,6 +178,9 @@ export class AuctionRepository {
   async findActiveAuctions(options: ActiveAuctionOptions) {
     const { page, limit, categoryId, sort } = options;
 
+    // status: 'active' is the single source of truth.
+    // The worker sets status → 'ended' when endTime arrives,
+    // so no endTime filter needed here.
     const where: Prisma.AuctionWhereInput = {
       status: AuctionStatus.active,
       ...(categoryId ? { item: { categoryId } } : {}),
