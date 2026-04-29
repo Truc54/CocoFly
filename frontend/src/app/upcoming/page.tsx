@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useState, useEffect, useCallback } from "react";
-import { auctionApi } from "@/lib/api";
+import { auctionApi, categoryApi } from "@/lib/api";
 
 interface AuctionItem {
   id: string;
@@ -33,6 +33,13 @@ interface PaginationInfo {
   totalPages: number;
 }
 
+interface CategoryItem {
+  id: number;
+  name: string;
+  slug: string;
+  iconUrl: string | null;
+}
+
 const PERIOD_TABS = [
   { label: "Hôm nay", value: "today" },
   { label: "Ngày mai", value: "tomorrow" },
@@ -50,11 +57,13 @@ function formatScheduledStart(dateStr: string): string {
   const minutes = String(date.getMinutes()).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   const month = String(date.getMonth() + 1).padStart(2, "0");
-  return `Bắt đầu lúc ${hours}:${minutes} - ${day}/${month}`;
+  return `${hours}:${minutes} — ${day}/${month}`;
 }
 
 export default function UpcomingPage() {
   const [activePeriod, setActivePeriod] = useState("all");
+  const [activeCategoryId, setActiveCategoryId] = useState<number | undefined>(undefined);
+  const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [auctions, setAuctions] = useState<AuctionItem[]>([]);
   const [pagination, setPagination] = useState<PaginationInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,7 +72,14 @@ export default function UpcomingPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  // Debounce search input (300ms)
+  // Fetch categories
+  useEffect(() => {
+    categoryApi.getAll().then((res) => {
+      if (res?.data) setCategories(res.data);
+    }).catch(() => {});
+  }, []);
+
+  // Debounce search
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
     return () => clearTimeout(timer);
@@ -78,6 +94,7 @@ export default function UpcomingPage() {
       const res = await auctionApi.getUpcoming({
         page,
         limit: 20,
+        categoryId: activeCategoryId,
         period: activePeriod,
         search: debouncedSearch || undefined,
       });
@@ -91,7 +108,7 @@ export default function UpcomingPage() {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [activePeriod, debouncedSearch]);
+  }, [activePeriod, activeCategoryId, debouncedSearch]);
 
   useEffect(() => {
     fetchAuctions(1);
@@ -103,64 +120,102 @@ export default function UpcomingPage() {
     }
   };
 
-  return (
-    <>
-      <section className="px-6 lg:px-20 py-10">
-        <div className="max-w-7xl mx-auto">
-          <div
-            className="relative overflow-hidden rounded-xl bg-primary px-10 py-16 flex flex-col items-center justify-center text-center shadow-2xl"
-            style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.05) 1px, transparent 0)', backgroundSize: '24px 24px' }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-tr from-primary via-primary/90 to-primary/80 opacity-90"></div>
-            <div className="relative z-10 flex flex-col items-center gap-4 max-w-2xl animate-in fade-in zoom-in-95 duration-700">
-              <h2 className="font-display text-4xl md:text-5xl font-bold text-white tracking-tight">Sắp diễn ra</h2>
-              <p className="text-white/90 text-lg font-medium leading-relaxed">
-                Đừng bỏ lỡ những siêu phẩm sắp lên sàn. Đặt lịch nhắc nhở ngay để trở thành người sở hữu đầu tiên!
-              </p>
-              <div className="mt-4 flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full text-white/80 text-sm">
-                <span className="material-symbols-outlined text-sm">schedule</span>
-                <span>Cập nhật liên tục mỗi giờ</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+  const activeCategoryName = activeCategoryId
+    ? categories.find((c) => c.id === activeCategoryId)?.name
+    : null;
 
-      <section className="px-6 lg:px-20 pb-8">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 border-b border-primary/10 pb-6 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150">
-          <div className="flex items-center bg-white dark:bg-background-dark p-1.5 rounded-xl shadow-sm border border-primary/5">
-            {PERIOD_TABS.map((tab) => (
+  return (
+    <section className="max-w-[1400px] mx-auto px-4 lg:px-6 py-6">
+      {/* Page title */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+          {activeCategoryName
+            ? `Sắp diễn ra — ${activeCategoryName}`
+            : "Phiên đấu giá sắp diễn ra"}
+        </h1>
+        {!loading && pagination && (
+          <p className="text-sm text-slate-500 mt-1">{pagination.totalItems} phiên sắp diễn ra</p>
+        )}
+      </div>
+
+      {/* Filter bar */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
+        <div className="flex items-center bg-white dark:bg-background-dark p-1.5 rounded-xl shadow-sm border border-primary/5">
+          {PERIOD_TABS.map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => setActivePeriod(tab.value)}
+              className={`px-5 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer ${
+                activePeriod === tab.value
+                  ? "bg-primary text-white shadow-md"
+                  : "text-slate-500 hover:text-primary"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        <div className="w-full md:w-80 relative group">
+          <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">search</span>
+          <input
+            className="w-full pl-12 pr-4 py-2.5 rounded-xl bg-white dark:bg-background-dark border border-primary/10 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all shadow-sm text-sm"
+            placeholder="Tìm kiếm sản phẩm..."
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="flex gap-6">
+        {/* Category Sidebar */}
+        <aside className="hidden lg:block w-56 shrink-0 self-start sticky top-[102px]">
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+              <h3 className="font-bold text-sm flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-lg">filter_list</span>
+                Danh mục
+              </h3>
+            </div>
+            <nav className="py-2">
               <button
-                key={tab.value}
-                onClick={() => setActivePeriod(tab.value)}
-                className={`px-6 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer ${
-                  activePeriod === tab.value
-                    ? "bg-primary text-white shadow-md"
-                    : "text-slate-500 hover:text-primary"
+                onClick={() => setActiveCategoryId(undefined)}
+                className={`w-full flex items-center gap-3 px-5 py-3 text-sm font-medium transition-all cursor-pointer ${
+                  !activeCategoryId
+                    ? "bg-primary/10 text-primary font-bold border-l-3 border-primary"
+                    : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-primary"
                 }`}
               >
-                {tab.label}
+                <span className="material-symbols-outlined text-lg">apps</span>
+                Tất cả
               </button>
-            ))}
+              {categories.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setActiveCategoryId(cat.id)}
+                  className={`w-full flex items-center gap-3 px-5 py-3 text-sm font-medium transition-all cursor-pointer ${
+                    activeCategoryId === cat.id
+                      ? "bg-primary/10 text-primary font-bold border-l-3 border-primary"
+                      : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-primary"
+                  }`}
+                >
+                  {cat.iconUrl && (
+                    <span className={`material-symbols-outlined text-lg ${activeCategoryId === cat.id ? "text-primary" : "text-slate-400"}`}>
+                      {cat.iconUrl}
+                    </span>
+                  )}
+                  {cat.name}
+                </button>
+              ))}
+            </nav>
           </div>
-          <div className="w-full md:w-96 relative group">
-            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">search</span>
-            <input
-              className="w-full pl-12 pr-4 py-3 rounded-xl bg-white dark:bg-background-dark border border-primary/10 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all shadow-sm focus:shadow-md"
-              placeholder="Tìm kiếm sản phẩm, thương hiệu..."
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-        </div>
-      </section>
+        </aside>
 
-      <section className="px-6 lg:px-20 pb-20">
-        <div className="max-w-7xl mx-auto">
+        {/* Main grid */}
+        <div className="flex-1 min-w-0">
           {/* Loading skeleton */}
           {loading && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="bg-white dark:bg-background-dark rounded-xl overflow-hidden border border-primary/5 shadow-sm animate-pulse">
                   <div className="aspect-square bg-slate-200 dark:bg-slate-700" />
@@ -206,12 +261,12 @@ export default function UpcomingPage() {
           {/* Auction grid */}
           {!loading && !error && auctions.length > 0 && (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {auctions.map((auction, idx) => (
                   <div
                     key={auction.id}
-                    className="group bg-white dark:bg-background-dark rounded-xl overflow-hidden border border-primary/5 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 animate-in fade-in zoom-in-95 cursor-pointer"
-                    style={{ animationDelay: `${200 + idx * 50}ms`, animationFillMode: 'both' }}
+                    className="group bg-white dark:bg-background-dark rounded-xl overflow-hidden border border-primary/5 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer"
+                    style={{ animationDelay: `${idx * 50}ms` }}
                   >
                     <div className="relative aspect-square overflow-hidden bg-slate-100">
                       {auction.thumbnailUrl ? (
@@ -227,18 +282,30 @@ export default function UpcomingPage() {
                           <span className="material-symbols-outlined text-4xl text-slate-400">image</span>
                         </div>
                       )}
-                      <div className="absolute top-4 left-4">
-                        <span className="bg-primary/90 backdrop-blur-md text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg shadow-lg">
+                      <div className="absolute top-3 left-3">
+                        <span className="bg-primary/90 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-lg shadow-lg flex items-center gap-1">
+                          <span className="material-symbols-outlined text-xs">schedule</span>
                           {formatScheduledStart(auction.scheduledStart)}
                         </span>
                       </div>
+                      {auction.category && (
+                        <div className="absolute top-3 right-3">
+                          <span className="bg-white/90 dark:bg-slate-900/80 backdrop-blur-sm text-[10px] font-bold text-slate-600 px-2 py-0.5 rounded-full">
+                            {auction.category.name}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                    <div className="p-5 flex flex-col gap-1">
-                      <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 line-clamp-1">{auction.title}</h3>
+                    <div className="p-4 flex flex-col gap-1">
+                      <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 line-clamp-1">{auction.title}</h3>
                       <p className="text-sm font-medium text-slate-500">Giá khởi điểm:</p>
                       <p className="text-lg font-extrabold text-primary">{formatVND(auction.startingPrice)}</p>
-                      <button className="mt-4 w-full flex items-center justify-center gap-2 py-3 border-2 border-primary text-primary font-bold rounded-xl hover:bg-primary hover:text-white transition-all">
-                        <span className="material-symbols-outlined text-[20px]">notifications_active</span>
+                      <div className="flex items-center gap-1 text-[11px] text-slate-400 mt-1">
+                        <span className="material-symbols-outlined text-xs">visibility</span>
+                        {auction.totalWatchers} người theo dõi
+                      </div>
+                      <button className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 border-2 border-primary text-primary font-bold rounded-xl hover:bg-primary hover:text-white transition-all text-sm">
+                        <span className="material-symbols-outlined text-[18px]">notifications_active</span>
                         Nhắc tôi
                       </button>
                     </div>
@@ -271,7 +338,7 @@ export default function UpcomingPage() {
             </>
           )}
         </div>
-      </section>
-    </>
+      </div>
+    </section>
   );
 }

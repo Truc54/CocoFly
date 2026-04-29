@@ -118,6 +118,7 @@ export class AuctionService {
     limit: number;
     categoryId?: number;
     sort?: string;
+    search?: string;
   }): Promise<PaginatedResult> {
     const { auctions, total } = await this.auctionRepository.findActiveAuctions(options);
 

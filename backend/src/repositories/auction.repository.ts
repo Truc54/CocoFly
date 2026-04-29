@@ -18,6 +18,7 @@ interface ListOptions {
 
 interface ActiveAuctionOptions extends ListOptions {
   sort?: string;
+  search?: string;
 }
 
 interface UpcomingAuctionOptions extends ListOptions {
@@ -176,7 +177,7 @@ export class AuctionRepository {
   // ── Read List (Listing pages) ──────────────────────────────────────────────
 
   async findActiveAuctions(options: ActiveAuctionOptions) {
-    const { page, limit, categoryId, sort } = options;
+    const { page, limit, categoryId, sort, search } = options;
 
     // status: 'active' is the single source of truth.
     // The worker sets status → 'ended' when endTime arrives,
@@ -184,6 +185,17 @@ export class AuctionRepository {
     const where: Prisma.AuctionWhereInput = {
       status: AuctionStatus.active,
       ...(categoryId ? { item: { categoryId } } : {}),
+      ...(search
+        ? {
+            item: {
+              ...(categoryId ? { categoryId } : {}),
+              OR: [
+                { title: { contains: search, mode: 'insensitive' as const } },
+                { description: { contains: search, mode: 'insensitive' as const } },
+              ],
+            },
+          }
+        : {}),
     };
 
     const [auctions, total] = await Promise.all([

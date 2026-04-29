@@ -297,7 +297,7 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
               <span className="material-symbols-outlined text-primary">local_fire_department</span>
               Đấu giá tương tự
             </h2>
-            <Link href="/live" className="text-primary font-bold hover:underline flex items-center gap-1 cursor-pointer">
+            <Link href="/live" className="text-primary font-bold flex items-center gap-1 cursor-pointer hover:text-primary/90 transition-colors">
               Xem tất cả <span className="material-symbols-outlined text-sm">arrow_forward</span>
             </Link>
           </div>

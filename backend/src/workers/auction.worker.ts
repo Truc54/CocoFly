@@ -112,7 +112,6 @@ async function fixStaleAuctions(): Promise<void> {
     console.log(`💓 Health-check fixed ${total} stale auction(s)`);
   }
 }
-}
 
 // ── Worker setup ──────────────────────────────────────────────────────────────
 

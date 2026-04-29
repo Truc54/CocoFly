@@ -42,7 +42,7 @@ export default function LiveAuctionsSection() {
             </h2>
             <Link
               href="/live"
-              className="text-primary font-bold hover:underline flex items-center gap-1"
+              className="text-primary font-bold flex items-center gap-1 hover:text-primary/90 transition-colors"
             >
               Xem tất cả <span className="material-symbols-outlined text-sm">arrow_forward</span>
             </Link>

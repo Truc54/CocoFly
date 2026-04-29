@@ -51,8 +51,9 @@ export class AuctionController {
       const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 20));
       const categoryId = req.query.categoryId ? parseInt(req.query.categoryId as string) : undefined;
       const sort = (req.query.sort as string) || 'ending_soon';
+      const search = (req.query.search as string) || undefined;
 
-      const result = await this.auctionService.getLiveAuctions({ page, limit, categoryId, sort });
+      const result = await this.auctionService.getLiveAuctions({ page, limit, categoryId, sort, search });
 
       res.json({ success: true, data: result });
     } catch (error) {

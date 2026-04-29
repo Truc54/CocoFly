@@ -132,12 +132,13 @@ export const mediaApi = {
 
 export const auctionApi = {
   // ── Listing pages
-  getLive: (params?: { page?: number; limit?: number; categoryId?: number; sort?: string }) => {
+  getLive: (params?: { page?: number; limit?: number; categoryId?: number; sort?: string; search?: string }) => {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.set('page', String(params.page));
     if (params?.limit) searchParams.set('limit', String(params.limit));
     if (params?.categoryId) searchParams.set('categoryId', String(params.categoryId));
     if (params?.sort) searchParams.set('sort', params.sort);
+    if (params?.search) searchParams.set('search', params.search);
     const qs = searchParams.toString();
     return fetchApi(`/api/auctions/live${qs ? `?${qs}` : ''}`);
   },
@@ -158,4 +159,15 @@ export const auctionApi = {
     method: 'POST',
     body: JSON.stringify(data),
   }),
+};
+
+export const categoryApi = {
+  getAll: () => fetchApi('/api/categories'),
+};
+
+export const notificationApi = {
+  getUnreadCount: async (): Promise<number> => {
+    // TODO: Replace with real API when notification endpoints are built
+    return 3;
+  },
 };

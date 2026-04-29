@@ -147,6 +147,15 @@
   .brand-text {
     @apply font-brand uppercase tracking-wide;
   }
+  .hide-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
   /* Global pointer cursor for all interactive elements */
   a, button, [role="button"], input[type="submit"], summary, select,
   label[for], [onclick], .cursor-pointer {
