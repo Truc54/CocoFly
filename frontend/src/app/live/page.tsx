@@ -98,6 +98,7 @@ export default function LiveAuctionsPage() {
   const [auctions, setAuctions] = useState<AuctionItem[]>([]);
   const [pagination, setPagination] = useState<PaginationInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isRefetching, setIsRefetching] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sort, setSort] = useState(urlSort || "ending_soon");
@@ -125,8 +126,12 @@ export default function LiveAuctionsPage() {
 
   const fetchAuctions = useCallback(async (page: number, append = false) => {
     try {
-      if (page === 1) setLoading(true);
-      else setLoadingMore(true);
+      if (page === 1) {
+        if (!append && !loading) setIsRefetching(true);
+        else setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
       setError(null);
 
       const res = await auctionApi.getLive({
@@ -143,6 +148,7 @@ export default function LiveAuctionsPage() {
       setError(err.message || "Không thể tải danh sách đấu giá");
     } finally {
       setLoading(false);
+      setIsRefetching(false);
       setLoadingMore(false);
     }
   }, [activeCategoryId, sort]);
@@ -442,7 +448,7 @@ export default function LiveAuctionsPage() {
         </aside>
 
         {/* Product Grid */}
-        <div className="flex-1 min-w-0">
+        <div className={`flex-1 min-w-0 transition-opacity duration-200 ${isRefetching ? "opacity-40 pointer-events-none" : "opacity-100"}`}>
           {/* Mobile filters */}
           <div className="lg:hidden mb-6">
             <details className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden group">

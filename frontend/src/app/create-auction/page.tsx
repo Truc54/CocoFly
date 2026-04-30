@@ -19,7 +19,8 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { mediaApi, auctionApi } from "@/lib/api";
+import { mediaApi, auctionApi, categoryApi } from "@/lib/api";
+import { CustomSelect, CustomDateTimePicker } from "./custom-inputs";
 
 const playfairDisplay = Playfair_Display({
   subsets: ["latin", "vietnamese"],
@@ -41,15 +42,7 @@ const CONDITIONS = [
   { value: "poor", label: "Cần sửa chữa" },
 ];
 
-const CATEGORIES = [
-  { id: 1, name: "Điện tử" },
-  { id: 2, name: "Thời trang" },
-  { id: 3, name: "Đồ gia dụng" },
-  { id: 4, name: "Xe cộ" },
-  { id: 5, name: "Sưu tầm" },
-  { id: 6, name: "Nghệ thuật" },
-  { id: 7, name: "Khác" },
-];
+
 
 interface MediaItem {
   cdnUrl: string;
@@ -119,6 +112,22 @@ export default function CreateAuctionPage() {
   const [submitError, setSubmitError] = useState("");
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [isClosingToast, setIsClosingToast] = useState(false);
+  const [categories, setCategories] = useState<{id: number, name: string}[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+
+  React.useEffect(() => {
+    async function fetchCategories() {
+      try {
+        const res = await categoryApi.getAll();
+        if (res.success) setCategories(res.data);
+      } catch (err) {
+        console.error("Failed to fetch categories:", err);
+      } finally {
+        setIsLoadingCategories(false);
+      }
+    }
+    fetchCategories();
+  }, []);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -388,29 +397,24 @@ export default function CreateAuctionPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
                     <label className={labelClass}>Danh mục *</label>
-                    <select
-                      value={form.categoryId || ""}
-                      onChange={(e) => updateForm({ categoryId: e.target.value ? parseInt(e.target.value) : null })}
-                      className={inputClass}
-                    >
-                      <option value="">-- Chọn danh mục --</option>
-                      {CATEGORIES.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                    </select>
+                    <CustomSelect
+                      value={form.categoryId}
+                      onChange={(val) => updateForm({ categoryId: val ? parseInt(val as string) : null })}
+                      options={categories.map(c => ({ value: c.id, label: c.name }))}
+                      placeholder={isLoadingCategories ? "Đang tải..." : "-- Chọn danh mục --"}
+                      hasError={!!errors.categoryId}
+                    />
                     {errors.categoryId && <p className={errorClass}>{errors.categoryId}</p>}
                   </div>
                   <div>
                     <label className={labelClass}>Tình trạng *</label>
-                    <select
+                    <CustomSelect
                       value={form.condition}
-                      onChange={(e) => updateForm({ condition: e.target.value })}
-                      className={inputClass}
-                    >
-                      {CONDITIONS.map((c) => (
-                        <option key={c.value} value={c.value}>{c.label}</option>
-                      ))}
-                    </select>
+                      onChange={(val) => updateForm({ condition: val as string })}
+                      options={CONDITIONS.map(c => ({ value: c.value, label: c.label }))}
+                      placeholder="-- Chọn tình trạng --"
+                      hasError={!!errors.condition}
+                    />
                     {errors.condition && <p className={errorClass}>{errors.condition}</p>}
                   </div>
                 </div>
@@ -603,21 +607,21 @@ export default function CreateAuctionPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className={labelClass}>Bắt đầu *</label>
-                  <input
-                    type="datetime-local"
+                  <CustomDateTimePicker
                     value={form.scheduledStart}
-                    onChange={(e) => updateForm({ scheduledStart: e.target.value })}
-                    className={inputClass}
+                    onChange={(val) => updateForm({ scheduledStart: val })}
+                    placeholder="Chọn thời gian bắt đầu"
+                    hasError={!!errors.scheduledStart}
                   />
                   {errors.scheduledStart && <p className={errorClass}>{errors.scheduledStart}</p>}
                 </div>
                 <div>
                   <label className={labelClass}>Kết thúc *</label>
-                  <input
-                    type="datetime-local"
+                  <CustomDateTimePicker
                     value={form.endTime}
-                    onChange={(e) => updateForm({ endTime: e.target.value })}
-                    className={inputClass}
+                    onChange={(val) => updateForm({ endTime: val })}
+                    placeholder="Chọn thời gian kết thúc"
+                    hasError={!!errors.endTime}
                   />
                   {errors.endTime && <p className={errorClass}>{errors.endTime}</p>}
                 </div>
@@ -691,7 +695,7 @@ export default function CreateAuctionPage() {
                   <div className="min-w-0">
                     <h3 className="text-xl font-bold text-slate-900 dark:text-white truncate">{form.title}</h3>
                     <p className="text-sm text-slate-500 mt-1">
-                      {CATEGORIES.find((c) => c.id === form.categoryId)?.name || "Không rõ"} • {CONDITIONS.find((c) => c.value === form.condition)?.label}
+                      {categories.find((c) => c.id === form.categoryId)?.name || "Không rõ"} • {CONDITIONS.find((c) => c.value === form.condition)?.label}
                     </p>
                     {form.brand && <p className="text-sm text-slate-500">Thương hiệu: {form.brand}</p>}
                     {form.location && <p className="text-sm text-slate-500">Địa điểm: {form.location}</p>}
