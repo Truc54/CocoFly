@@ -24,6 +24,7 @@ interface ActiveAuctionOptions extends ListOptions {
 interface UpcomingAuctionOptions extends ListOptions {
   period?: string;
   search?: string;
+  sort?: string;
 }
 
 // ─── Shared Prisma Include ────────────────────────────────────────────────────
@@ -45,13 +46,15 @@ const AUCTION_INCLUDE = {
 function buildSortOrder(sort?: string): Prisma.AuctionOrderByWithRelationInput {
   switch (sort) {
     case 'newest':
-      return { createdAt: 'desc' };
+      return { scheduledStart: 'desc' };
     case 'most_bids':
       return { totalBids: 'desc' };
     case 'price_asc':
       return { currentPrice: 'asc' };
     case 'price_desc':
       return { currentPrice: 'desc' };
+    case 'starts_soon':
+      return { scheduledStart: 'asc' };
     case 'ending_soon':
     default:
       return { endTime: 'asc' };
@@ -224,11 +227,14 @@ export class AuctionRepository {
         : {}),
     };
 
+    const orderBy = buildSortOrder(options.sort || 'starts_soon');
+    console.log('OPTIONS SORT', options.sort, 'ORDER BY', orderBy);
+
     const [auctions, total] = await Promise.all([
       prisma.auction.findMany({
         where,
         include: AUCTION_INCLUDE,
-        orderBy: { scheduledStart: 'asc' },
+        orderBy,
         skip: (page - 1) * limit,
         take: limit,
       }),

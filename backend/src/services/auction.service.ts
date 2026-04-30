@@ -139,6 +139,7 @@ export class AuctionService {
     categoryId?: number;
     period?: string;
     search?: string;
+    sort?: string;
   }): Promise<PaginatedResult> {
     const { auctions, total } = await this.auctionRepository.findUpcomingAuctions(options);
 

@@ -1,7 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { auctionApi, categoryApi } from "@/lib/api";
 
 interface AuctionItem {
@@ -40,13 +42,6 @@ interface CategoryItem {
   iconUrl: string | null;
 }
 
-const PERIOD_TABS = [
-  { label: "Hôm nay", value: "today" },
-  { label: "Ngày mai", value: "tomorrow" },
-  { label: "Tuần này", value: "this_week" },
-  { label: "Tất cả", value: "all" },
-];
-
 function formatVND(value: number): string {
   return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(value);
 }
@@ -60,34 +55,96 @@ function formatScheduledStart(dateStr: string): string {
   return `${hours}:${minutes} — ${day}/${month}`;
 }
 
-export default function UpcomingPage() {
-  const [activePeriod, setActivePeriod] = useState("all");
-  const [activeCategoryId, setActiveCategoryId] = useState<number | undefined>(undefined);
+function parseNumber(value: string): number | undefined {
+  if (value.trim() === "") return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function getHoursLeft(endTime: string, nowMs: number): number {
+  const diffMs = new Date(endTime).getTime() - nowMs;
+  return diffMs <= 0 ? 0 : diffMs / 3600000;
+}
+
+function useCountdown(endTimes: string[]) {
+  const [timeLefts, setTimeLefts] = useState<string[]>([]);
+  const endTimesKey = JSON.stringify(endTimes);
+
+  useEffect(() => {
+    const times: string[] = JSON.parse(endTimesKey);
+    if (times.length === 0) { setTimeLefts([]); return; }
+
+    function calc() {
+      return times.map((endTime: string) => {
+        const diff = new Date(endTime).getTime() - Date.now();
+        if (diff <= 0) return "00:00:00";
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const h = String(Math.floor((diff % (1000 * 60 * 60 * 24)) / 3600000)).padStart(2, "0");
+        const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2, "0");
+        const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, "0");
+        if (days > 0) {
+          return `${days}d ${h}:${m}:${s}`;
+        }
+        return `${h}:${m}:${s}`;
+      });
+    }
+    setTimeLefts(calc());
+    const timer = setInterval(() => setTimeLefts(calc()), 1000);
+    return () => clearInterval(timer);
+  }, [endTimesKey]);
+
+  return timeLefts;
+}
+
+const PERIOD_TABS = [
+  { label: "Hôm nay", value: "today" },
+  { label: "Ngày mai", value: "tomorrow" },
+  { label: "Tuần này", value: "this_week" },
+  { label: "Tất cả", value: "all" },
+];
+
+export default function UpcomingAuctionsPage() {
+  const searchParams = useSearchParams();
+  const urlCategoryId = searchParams.get("categoryId");
+  const urlSort = searchParams.get("sort");
+
+  const [activeCategoryId, setActiveCategoryId] = useState<number | undefined>(
+    urlCategoryId ? parseInt(urlCategoryId) : undefined
+  );
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [auctions, setAuctions] = useState<AuctionItem[]>([]);
   const [pagination, setPagination] = useState<PaginationInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isRefetching, setIsRefetching] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [sort, setSort] = useState(urlSort || "starts_soon");
+  const [activePeriod, setActivePeriod] = useState("all");
+  const [ratingFilter, setRatingFilter] = useState(0);
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [hoursLeft, setHoursLeft] = useState("");
+  const [pendingRating, setPendingRating] = useState(0);
+  const [pendingMinPrice, setPendingMinPrice] = useState("");
+  const [pendingMaxPrice, setPendingMaxPrice] = useState("");
+  const [pendingHoursLeft, setPendingHoursLeft] = useState("");
 
-  // Fetch categories
+  // Sync URL params on mount
+  useEffect(() => {
+    if (urlCategoryId) setActiveCategoryId(parseInt(urlCategoryId));
+    if (urlSort) setSort(urlSort);
+  }, [urlCategoryId, urlSort]);
+
+  // Fetch categories for sidebar
   useEffect(() => {
     categoryApi.getAll().then((res) => {
       if (res?.data) setCategories(res.data);
     }).catch(() => {});
   }, []);
 
-  // Debounce search
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
-
   const fetchAuctions = useCallback(async (page: number, append = false) => {
     try {
-      if (page === 1) setLoading(true);
+      if (page === 1) setIsRefetching(true);
       else setLoadingMore(true);
       setError(null);
 
@@ -95,8 +152,8 @@ export default function UpcomingPage() {
         page,
         limit: 20,
         categoryId: activeCategoryId,
+        sort,
         period: activePeriod,
-        search: debouncedSearch || undefined,
       });
 
       const { auctions: data, pagination: pag } = res.data;
@@ -107,12 +164,36 @@ export default function UpcomingPage() {
     } finally {
       setLoading(false);
       setLoadingMore(false);
+      setIsRefetching(false);
     }
-  }, [activePeriod, activeCategoryId, debouncedSearch]);
+  }, [activeCategoryId, sort, activePeriod]);
 
   useEffect(() => {
     fetchAuctions(1);
   }, [fetchAuctions]);
+
+  const endTimes = useMemo(() => auctions.map((a) => a.endTime), [auctions]);
+  const timeLefts = useCountdown(endTimes);
+  const timeLeftsById = useMemo(
+    () => new Map(auctions.map((auction, index) => [auction.id, timeLefts[index]])),
+    [auctions, timeLefts]
+  );
+
+  const filteredAuctions = useMemo(() => {
+    const minPriceValue = parseNumber(minPrice);
+    const maxPriceValue = parseNumber(maxPrice);
+
+    return auctions.filter((auction) => {
+      const sellerRating = auction.seller?.rating ?? 0;
+      if (ratingFilter > 0 && sellerRating < ratingFilter) return false;
+      if (minPriceValue !== undefined && auction.currentPrice < minPriceValue) return false;
+      if (maxPriceValue !== undefined && auction.currentPrice > maxPriceValue) return false;
+
+
+
+      return true;
+    });
+  }, [auctions, ratingFilter, minPrice, maxPrice]);
 
   const handleLoadMore = () => {
     if (pagination && pagination.page < pagination.totalPages) {
@@ -120,110 +201,329 @@ export default function UpcomingPage() {
     }
   };
 
-  const activeCategoryName = activeCategoryId
-    ? categories.find((c) => c.id === activeCategoryId)?.name
-    : null;
+  const handleResetFilters = () => {
+    setRatingFilter(0);
+    setMinPrice("");
+    setMaxPrice("");
+    setPendingRating(0);
+    setPendingMinPrice("");
+    setPendingMaxPrice("");
+  };
 
-  return (
-    <section className="max-w-[1400px] mx-auto px-4 lg:px-6 py-6">
-      {/* Page title */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
-          {activeCategoryName
-            ? `Sắp diễn ra — ${activeCategoryName}`
-            : "Phiên đấu giá sắp diễn ra"}
-        </h1>
-        {!loading && pagination && (
-          <p className="text-sm text-slate-500 mt-1">{pagination.totalItems} phiên sắp diễn ra</p>
-        )}
+  const handleApplyFilters = () => {
+    setRatingFilter(pendingRating);
+    setMinPrice(pendingMinPrice);
+    setMaxPrice(pendingMaxPrice);
+  };
+
+  const ratingOptions = [
+    { value: 0, label: "Tất cả" },
+    { value: 4.5, label: "Từ 4.5 trở lên" },
+    { value: 4, label: "Từ 4.0 trở lên" },
+    { value: 3.5, label: "Từ 3.5 trở lên" },
+    { value: 3, label: "Từ 3.0 trở lên" },
+  ];
+
+  const hasPendingChanges =
+    pendingRating !== ratingFilter ||
+    pendingMinPrice.trim() !== minPrice.trim() ||
+    pendingMaxPrice.trim() !== maxPrice.trim();
+
+  const hasActiveFilters = Boolean(
+    ratingFilter > 0 ||
+    minPrice.trim() ||
+    maxPrice.trim() ||
+    pendingRating > 0 ||
+    pendingMinPrice.trim() ||
+    pendingMaxPrice.trim()
+  );
+
+  const renderFilterFields = () => (
+    <div className="space-y-5">
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+          <span className="material-symbols-outlined text-base text-amber-500">star</span>
+          Đánh giá người bán
+        </div>
+        <div className="grid gap-1.5">
+          {ratingOptions.map((option) => {
+            const isActive = pendingRating === option.value;
+            const starCount = option.value === 0 ? 5 : option.value;
+            const fullStars = Math.floor(starCount);
+            const hasHalf = starCount % 1 !== 0;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setPendingRating(option.value)}
+                aria-pressed={isActive}
+                className={`group flex items-center gap-2 px-3 py-2.5 border-2 text-sm font-semibold transition-all duration-200 ${
+                  isActive
+                    ? "border-primary bg-primary/5 text-primary shadow-[3px_3px_0px_#E2B9A1]"
+                    : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-primary/50 hover:bg-primary/5 hover:shadow-[2px_2px_0px_#E2B9A1]"
+                }`}
+              >
+                <div className="flex items-center gap-0.5">
+                  {Array.from({ length: 5 }).map((_, i) => {
+                    const filled = option.value === 0 ? true : i < fullStars;
+                    const half = option.value === 0 ? false : !filled && hasHalf && i === fullStars;
+                    return (
+                      <span
+                        key={i}
+                        className={`material-symbols-outlined text-sm transition-colors ${
+                          filled || half ? "text-amber-400" : "text-slate-300 dark:text-slate-600"
+                        }`}
+                        style={{ fontVariationSettings: filled ? "'FILL' 1" : half ? "'FILL' 1" : "'FILL' 0" }}
+                      >
+                        {half ? "star_half" : "star"}
+                      </span>
+                    );
+                  })}
+                </div>
+                <span className="text-xs flex-1">
+                  {option.value === 0 ? "Tất cả" : `${option.value}+`}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Filter bar */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
-        <div className="flex items-center bg-white dark:bg-background-dark p-1.5 rounded-xl shadow-sm border border-primary/5">
-          {PERIOD_TABS.map((tab) => (
-            <button
-              key={tab.value}
-              onClick={() => setActivePeriod(tab.value)}
-              className={`px-5 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer ${
-                activePeriod === tab.value
-                  ? "bg-primary text-white shadow-md"
-                  : "text-slate-500 hover:text-primary"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+          <span className="material-symbols-outlined text-sm text-emerald-500">payments</span>
+          Khoảng giá
         </div>
-        <div className="w-full md:w-80 relative group">
-          <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">search</span>
+        <div className="grid grid-cols-2 gap-2">
           <input
-            className="w-full pl-12 pr-4 py-2.5 rounded-xl bg-white dark:bg-background-dark border border-primary/10 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all shadow-sm text-sm"
-            placeholder="Tìm kiếm sản phẩm..."
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            type="number"
+            min={0}
+            step={1000}
+            value={pendingMinPrice}
+            onChange={(e) => setPendingMinPrice(e.target.value)}
+            placeholder="Từ"
+            className="w-full px-3 py-2 border-2 border-slate-200 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 focus:border-slate-300 dark:focus:border-slate-600 outline-none transition-all"
+          />
+          <input
+            type="number"
+            min={0}
+            step={1000}
+            value={pendingMaxPrice}
+            onChange={(e) => setPendingMaxPrice(e.target.value)}
+            placeholder="Đến"
+            className="w-full px-3 py-2 border-2 border-slate-200 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 focus:border-slate-300 dark:focus:border-slate-600 outline-none transition-all"
           />
         </div>
       </div>
 
-      <div className="flex gap-6">
-        {/* Category Sidebar */}
-        <aside className="hidden lg:block w-56 shrink-0 self-start sticky top-[102px]">
-          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700">
-              <h3 className="font-bold text-sm flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary text-lg">filter_list</span>
+
+    </div>
+  );
+
+  return (
+    <section className="max-w-[1400px] mx-auto px-4 lg:px-6 py-6">
+            <div className="flex gap-6">
+        {/* Filter Sidebar */}
+        <aside className="hidden lg:block w-64 shrink-0 self-start sticky top-[102px]">
+          {/* Filter Panel */}
+          <div className="bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] overflow-hidden animate-in fade-in slide-in-from-left-2 duration-500">
+            {/* Header */}
+            <div className="px-4 py-3 border-b-2 border-slate-200 dark:border-slate-700 flex items-center justify-between bg-primary/5">
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 bg-primary flex items-center justify-center">
+                  <span className="material-symbols-outlined text-white text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>tune</span>
+                </div>
+                <h3 className="text-xs font-black uppercase tracking-widest text-slate-700 dark:text-slate-200 whitespace-nowrap">
+                  Bộ lọc
+                </h3>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  onClick={handleResetFilters}
+                  disabled={!hasActiveFilters}
+                  className="text-[10px] font-bold uppercase tracking-wide text-slate-500 hover:text-primary border-2 border-slate-200 dark:border-slate-600 px-2 py-1 transition-all disabled:opacity-30 hover:border-primary whitespace-nowrap"
+                >
+                  Xóa tất cả
+                </button>
+                <button
+                  onClick={handleApplyFilters}
+                  disabled={!hasPendingChanges}
+                  className="text-[10px] font-bold uppercase tracking-wide bg-primary text-white border-2 border-primary px-2 py-1 transition-all disabled:opacity-40 hover:shadow-[2px_2px_0px_#E2B9A1] hover:-translate-y-[1px] whitespace-nowrap active:translate-y-0 active:shadow-none"
+                >
+                  Áp dụng
+                </button>
+              </div>
+            </div>
+            <div className="p-4">
+              {renderFilterFields()}
+            </div>
+          </div>
+
+          {/* Category Panel */}
+          <div className="mt-3 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] overflow-hidden">
+            <div className="px-4 py-3 border-b-2 border-slate-200 dark:border-slate-700 bg-primary/5">
+              <h3 className="text-xs font-black uppercase tracking-widest text-slate-700 dark:text-slate-200 flex items-center gap-2">
+                <div className="w-5 h-5 bg-primary flex items-center justify-center">
+                  <span className="material-symbols-outlined text-white text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>category</span>
+                </div>
                 Danh mục
               </h3>
             </div>
-            <nav className="py-2">
+            <nav className="py-1">
               <button
                 onClick={() => setActiveCategoryId(undefined)}
-                className={`w-full flex items-center gap-3 px-5 py-3 text-sm font-medium transition-all cursor-pointer ${
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold transition-all cursor-pointer border-l-4 ${
                   !activeCategoryId
-                    ? "bg-primary/10 text-primary font-bold border-l-3 border-primary"
-                    : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-primary"
+                    ? "border-primary bg-primary/5 text-primary"
+                    : "border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-primary hover:border-primary/40"
                 }`}
               >
-                <span className="material-symbols-outlined text-lg">apps</span>
+                <span className="material-symbols-outlined text-base">apps</span>
                 Tất cả
               </button>
               {categories.map((cat) => (
                 <button
                   key={cat.id}
                   onClick={() => setActiveCategoryId(cat.id)}
-                  className={`w-full flex items-center gap-3 px-5 py-3 text-sm font-medium transition-all cursor-pointer ${
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold transition-all cursor-pointer border-l-4 ${
                     activeCategoryId === cat.id
-                      ? "bg-primary/10 text-primary font-bold border-l-3 border-primary"
-                      : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-primary"
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-primary hover:border-primary/40"
                   }`}
                 >
                   {cat.iconUrl && (
-                    <span className={`material-symbols-outlined text-lg ${activeCategoryId === cat.id ? "text-primary" : "text-slate-400"}`}>
+                    <span className={`material-symbols-outlined text-base ${activeCategoryId === cat.id ? "text-primary" : "text-slate-400"}`}>
                       {cat.iconUrl}
                     </span>
                   )}
-                  {cat.name}
+                  <span className="truncate">{cat.name}</span>
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          {/* Sort Panel */}
+          <div className="mt-3 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] overflow-hidden">
+            <div className="px-4 py-3 border-b-2 border-slate-200 dark:border-slate-700 bg-primary/5">
+              <h3 className="text-xs font-black uppercase tracking-widest text-slate-700 dark:text-slate-200 flex items-center gap-2">
+                <div className="w-5 h-5 bg-primary flex items-center justify-center">
+                  <span className="material-symbols-outlined text-white text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>sort</span>
+                </div>
+                Sắp xếp
+              </h3>
+            </div>
+            <nav className="py-1">
+              {[
+                { value: "starts_soon", label: "Sắp diễn ra", icon: "alarm" },
+                { value: "price_asc", label: "Giá thấp → cao", icon: "arrow_upward" },
+                { value: "price_desc", label: "Giá cao → thấp", icon: "arrow_downward" },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setSort(opt.value)}
+                  className={`w-full flex items-center gap-3 px-4 py-2 text-xs font-semibold transition-all text-left border-l-4 ${
+                    sort === opt.value
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-primary hover:border-primary/40"
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-sm">{opt.icon}</span>
+                  {opt.label}
                 </button>
               ))}
             </nav>
           </div>
         </aside>
 
-        {/* Main grid */}
+        {/* Product Grid */}
         <div className="flex-1 min-w-0">
+          <div className="flex justify-end mb-4">
+            <div className="flex items-center bg-white dark:bg-slate-800 p-1.5 border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1]">
+              {PERIOD_TABS.map((tab) => (
+                <button
+                  key={tab.value}
+                  onClick={() => setActivePeriod(tab.value)}
+                  className={`px-5 py-2 text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    activePeriod === tab.value
+                      ? "bg-primary/10 text-primary border-b-2 border-primary"
+                      : "text-slate-500 hover:text-primary border-b-2 border-transparent"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          {/* Mobile filters */}
+          <div className="lg:hidden mb-6">
+            <details className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden group">
+              <summary className="list-none px-4 py-3 flex items-center justify-between cursor-pointer">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary">tune</span>
+                  <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Bộ lọc tìm kiếm</span>
+                </div>
+                <span className="material-symbols-outlined text-slate-400 transition-transform group-open:rotate-180">expand_more</span>
+              </summary>
+              <div className="border-t border-slate-100 dark:border-slate-700 p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] text-slate-400">Tinh chỉnh kết quả nhanh chóng</p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleResetFilters}
+                      disabled={!hasActiveFilters}
+                      className="px-3 py-1.5 rounded-full text-[11px] font-bold border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:border-primary/40 hover:text-primary transition-all disabled:opacity-50"
+                    >
+                      Xóa tất cả
+                    </button>
+                    <button
+                      onClick={handleApplyFilters}
+                      disabled={!hasPendingChanges}
+                      className="px-3 py-1.5 rounded-full text-[11px] font-bold bg-primary text-white border border-primary transition-all disabled:opacity-50"
+                    >
+                      Áp dụng
+                    </button>
+                  </div>
+                </div>
+                {renderFilterFields()}
+              </div>
+            </details>
+          </div>
+
+          {/* Mobile Category Tabs */}
+          <div className="lg:hidden mb-6">
+            <div className="flex items-center bg-white dark:bg-background-dark p-1.5 rounded-xl shadow-sm border border-primary/5 overflow-x-auto">
+              <button
+                onClick={() => setActiveCategoryId(undefined)}
+                className={`px-5 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition-all cursor-pointer ${
+                  !activeCategoryId ? "bg-primary text-white shadow-md" : "text-slate-500 hover:text-primary"
+                }`}
+              >
+                Tất cả
+              </button>
+              {categories.slice(0, 6).map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setActiveCategoryId(cat.id)}
+                  className={`px-5 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition-all cursor-pointer ${
+                    activeCategoryId === cat.id ? "bg-primary text-white shadow-md" : "text-slate-500 hover:text-primary"
+                  }`}
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Loading skeleton */}
           {loading && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 transition-opacity duration-200 ${isRefetching ? "opacity-40 pointer-events-none" : ""}`}>
               {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="bg-white dark:bg-background-dark rounded-xl overflow-hidden border border-primary/5 shadow-sm animate-pulse">
-                  <div className="aspect-square bg-slate-200 dark:bg-slate-700" />
-                  <div className="p-5 space-y-3">
-                    <div className="h-5 bg-slate-200 dark:bg-slate-700 rounded w-3/4" />
+                <div key={i} className="bg-white dark:bg-slate-800 overflow-hidden border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] animate-pulse">
+                  <div className="aspect-[4/3] bg-slate-200 dark:bg-slate-700" />
+                  <div className="p-3 space-y-2">
+                    <div className="h-2.5 bg-slate-200 dark:bg-slate-700 rounded w-16" />
+                    <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-full" />
                     <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-24" />
-                    <div className="h-5 bg-slate-200 dark:bg-slate-700 rounded w-32" />
-                    <div className="h-10 bg-slate-200 dark:bg-slate-700 rounded w-full mt-2" />
                   </div>
                 </div>
               ))}
@@ -248,70 +548,80 @@ export default function UpcomingPage() {
           {/* Empty state */}
           {!loading && !error && auctions.length === 0 && (
             <div className="flex flex-col items-center justify-center py-20 text-center">
-              <span className="material-symbols-outlined text-5xl text-slate-300 mb-4">event_upcoming</span>
+              <span className="material-symbols-outlined text-5xl text-slate-300 mb-4">gavel</span>
               <p className="text-lg font-bold text-slate-700 dark:text-slate-300 mb-2">Chưa có phiên đấu giá nào</p>
-              <p className="text-slate-500">
-                {debouncedSearch
-                  ? `Không tìm thấy kết quả cho "${debouncedSearch}"`
-                  : "Hiện tại chưa có phiên đấu giá nào sắp diễn ra. Hãy quay lại sau!"}
-              </p>
+              <p className="text-slate-500">Hiện tại chưa có phiên đấu giá nào sắp diễn ra. Hãy quay lại sau!</p>
             </div>
           )}
 
           {/* Auction grid */}
           {!loading && !error && auctions.length > 0 && (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {auctions.map((auction, idx) => (
-                  <div
-                    key={auction.id}
-                    className="group bg-white dark:bg-background-dark rounded-xl overflow-hidden border border-primary/5 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer"
-                    style={{ animationDelay: `${idx * 50}ms` }}
-                  >
-                    <div className="relative aspect-square overflow-hidden bg-slate-100">
-                      {auction.thumbnailUrl ? (
-                        <Image
-                          alt={auction.title}
-                          className="object-cover group-hover:scale-110 transition-transform duration-500"
-                          src={auction.thumbnailUrl}
-                          fill
-                          unoptimized
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-slate-200 dark:bg-slate-700">
-                          <span className="material-symbols-outlined text-4xl text-slate-400">image</span>
-                        </div>
-                      )}
-                      <div className="absolute top-3 left-3">
-                        <span className="bg-primary/90 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-lg shadow-lg flex items-center gap-1">
-                          <span className="material-symbols-outlined text-xs">schedule</span>
-                          {formatScheduledStart(auction.scheduledStart)}
-                        </span>
-                      </div>
-                      {auction.category && (
-                        <div className="absolute top-3 right-3">
-                          <span className="bg-white/90 dark:bg-slate-900/80 backdrop-blur-sm text-[10px] font-bold text-slate-600 px-2 py-0.5 rounded-full">
-                            {auction.category.name}
+              {filteredAuctions.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                  <span className="material-symbols-outlined text-5xl text-slate-300 mb-4">filter_alt_off</span>
+                  <p className="text-lg font-bold text-slate-700 dark:text-slate-300 mb-2">
+                    Không có phiên phù hợp bộ lọc
+                  </p>
+                  <p className="text-slate-500">Hãy thử điều chỉnh bộ lọc hoặc bấm "Xóa tất cả".</p>
+                </div>
+              ) : (
+                <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 transition-opacity duration-200 ${isRefetching ? "opacity-40 pointer-events-none" : ""}`}>
+                  {filteredAuctions.map((auction, idx) => (
+                    <Link
+                      href={`/auction/${auction.id}`}
+                      key={auction.id}
+                      className="group bg-white dark:bg-slate-800/60 overflow-hidden border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] hover:-translate-y-1 hover:shadow-[6px_6px_0px_#E2B9A1] transition-all duration-300 cursor-pointer"
+                      style={{ animationDelay: `${idx * 40}ms` }}
+                    >
+                      {/* Image */}
+                      <div className="relative aspect-[4/3] overflow-hidden bg-slate-100 dark:bg-slate-700">
+                        {auction.thumbnailUrl ? (
+                          <Image
+                            className="object-cover group-hover:scale-105 transition-transform duration-500"
+                            alt={auction.title}
+                            src={auction.thumbnailUrl}
+                            fill
+                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 33vw, 25vw"
+                            unoptimized
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-slate-200 dark:bg-slate-700">
+                            <span className="material-symbols-outlined text-4xl text-slate-400">image</span>
+                          </div>
+                        )}
+                        <div className="absolute top-3 left-3">
+                          <span className="bg-primary/90 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 shadow-[2px_2px_0px_rgba(0,0,0,0.2)] flex items-center gap-1">
+                            <span className="material-symbols-outlined text-xs">schedule</span>
+                            {formatScheduledStart(auction.scheduledStart)}
                           </span>
                         </div>
-                      )}
-                    </div>
-                    <div className="p-4 flex flex-col gap-1">
-                      <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 line-clamp-1">{auction.title}</h3>
-                      <p className="text-sm font-medium text-slate-500">Giá khởi điểm:</p>
-                      <p className="text-lg font-extrabold text-primary">{formatVND(auction.startingPrice)}</p>
-                      <div className="flex items-center gap-1 text-[11px] text-slate-400 mt-1">
-                        <span className="material-symbols-outlined text-xs">visibility</span>
-                        {auction.totalWatchers} người theo dõi
                       </div>
-                      <button className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 border-2 border-primary text-primary font-bold rounded-xl hover:bg-primary hover:text-white transition-all text-sm">
-                        <span className="material-symbols-outlined text-[18px]">notifications_active</span>
-                        Nhắc tôi
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+
+                      {/* Content */}
+                      <div className="p-3 space-y-1.5">
+                        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                          {auction.category?.name ?? "Khác"}
+                        </span>
+                        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 line-clamp-2 leading-snug">
+                          {auction.title}
+                        </h3>
+                        <div className="space-y-1 mt-1">
+
+                          <div>
+                            <p className="text-[10px] text-slate-500 font-medium">Giá khởi điểm</p>
+                            <p className="text-sm font-bold text-primary">{formatVND(auction.startingPrice)}</p>
+                          </div>
+                          <button className="mt-2 w-full flex items-center justify-center gap-2 py-2 border-2 border-primary text-primary font-bold hover:bg-primary/5 hover:shadow-[2px_2px_0px_#E2B9A1] transition-all text-xs active:translate-y-px active:shadow-none bg-white dark:bg-slate-800">
+                            <span className="material-symbols-outlined text-[16px]">notifications_active</span>
+                            Nhắc tôi
+                          </button>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
 
               {/* Load more */}
               {pagination && pagination.page < pagination.totalPages && (

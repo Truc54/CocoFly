@@ -68,8 +68,9 @@ export class AuctionController {
       const categoryId = req.query.categoryId ? parseInt(req.query.categoryId as string) : undefined;
       const period = (req.query.period as string) || 'all';
       const search = (req.query.search as string) || undefined;
+      const sort = (req.query.sort as string) || 'starts_soon';
 
-      const result = await this.auctionService.getUpcomingAuctions({ page, limit, categoryId, period, search });
+      const result = await this.auctionService.getUpcomingAuctions({ page, limit, categoryId, period, search, sort });
 
       res.json({ success: true, data: result });
     } catch (error) {
