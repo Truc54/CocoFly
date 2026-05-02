@@ -5,8 +5,24 @@ import { AppError } from '../utils/AppError';
 import prisma from '../config/prisma';
 import cloudinary from '../config/cloudinary.config';
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface PaginatedResult {
+  auctions: any[];
+  pagination: {
+    page: number;
+    limit: number;
+    totalItems: number;
+    totalPages: number;
+  };
+}
+
+// ─── Service ──────────────────────────────────────────────────────────────────
+
 export class AuctionService {
   private auctionRepository = new AuctionRepository();
+
+  // ── Create Auction ─────────────────────────────────────────────────────────
 
   public async createAuction(sellerId: string, input: CreateAuctionInput): Promise<CreateAuctionResult> {
     // Verify seller account status
@@ -65,6 +81,8 @@ export class AuctionService {
     return result;
   }
 
+  // ── Get Single Auction ─────────────────────────────────────────────────────
+
   public async getAuctionById(auctionId: string) {
     const auction = await this.auctionRepository.findById(auctionId);
 
@@ -73,5 +91,96 @@ export class AuctionService {
     }
 
     return auction;
+  }
+
+  // ── Process Bid (placeholder) ──────────────────────────────────────────────
+
+  async processBid(auctionId: string, bidData: any): Promise<{ success: boolean; message: string }> {
+    // 1. FUTURE CONCURRENCY CONTROL:
+    // const lock = await redis.set(`lock:${auctionId}`, '1', 'NX', 'EX', 5)
+    // if (!lock) return { success: false, message: 'Too many bids, retry' }
+
+    // 2. Business Logic: check if auction is active, valid bid amount, etc.
+
+    // 3. Database Write via Repository
+    // await this.auctionRepository.saveBid(auctionId, bidData);
+
+    // 4. FUTURE REAL-TIME BROADCAST:
+    // redis.publish('auction:bids', JSON.stringify({ auctionId, ...bidData }));
+
+    return { success: true, message: 'Bid placed successfully' };
+  }
+
+  // ── Listing pages ──────────────────────────────────────────────────────────
+
+  async getLiveAuctions(options: {
+    page: number;
+    limit: number;
+    categoryId?: number;
+    sort?: string;
+    search?: string;
+  }): Promise<PaginatedResult> {
+    const { auctions, total } = await this.auctionRepository.findActiveAuctions(options);
+
+    return {
+      auctions: auctions.map(this.formatAuctionResponse),
+      pagination: {
+        page: options.page,
+        limit: options.limit,
+        totalItems: total,
+        totalPages: Math.ceil(total / options.limit),
+      },
+    };
+  }
+
+  async getUpcomingAuctions(options: {
+    page: number;
+    limit: number;
+    categoryId?: number;
+    period?: string;
+    search?: string;
+    sort?: string;
+  }): Promise<PaginatedResult> {
+    const { auctions, total } = await this.auctionRepository.findUpcomingAuctions(options);
+
+    return {
+      auctions: auctions.map(this.formatAuctionResponse),
+      pagination: {
+        page: options.page,
+        limit: options.limit,
+        totalItems: total,
+        totalPages: Math.ceil(total / options.limit),
+      },
+    };
+  }
+
+  // ── Format helpers ─────────────────────────────────────────────────────────
+
+  private formatAuctionResponse(auction: any) {
+    const thumbnail = auction.item?.media?.[0];
+
+    return {
+      id: auction.id,
+      title: auction.item?.title,
+      thumbnailUrl: thumbnail?.cdnUrl ?? null,
+      category: auction.item?.category ?? null,
+      condition: auction.item?.condition,
+      location: auction.item?.location,
+      currentPrice: Number(auction.currentPrice),
+      startingPrice: Number(auction.startingPrice),
+      bidIncrement: Number(auction.bidIncrement),
+      scheduledStart: auction.scheduledStart,
+      endTime: auction.endTime,
+      totalBids: auction.totalBids,
+      totalWatchers: auction.totalWatchers,
+      seller: auction.seller
+        ? {
+            id: auction.seller.id,
+            fullName: auction.seller.fullName,
+            avatarUrl: auction.seller.avatarUrl,
+            rating: Number(auction.seller.rating),
+          }
+        : null,
+    };
   }
 }

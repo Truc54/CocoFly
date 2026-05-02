@@ -2,8 +2,8 @@
 
 import { usePathname } from "next/navigation";
 
-import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
+import HeaderNew from "@/components/layout/HeaderNew";
+import FooterNew from "@/components/layout/FooterNew";
 
 type AppChromeProps = {
   children: React.ReactNode;
@@ -26,9 +26,9 @@ export default function AppChrome({ children }: AppChromeProps) {
 
   return (
     <>
-      {!isAuthPage && <Header />}
+      {!isAuthPage && <HeaderNew />}
       <main className={isAuthPage ? "min-h-dvh" : "grow"}>{children}</main>
-      {!isAuthPage && <Footer />}
+      {!isAuthPage && <FooterNew />}
     </>
   );
 }

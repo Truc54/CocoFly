@@ -6,6 +6,7 @@ import { env } from './config/env';
 import { authRoutes } from './routes/auth.routes';
 import { oauthRoutes } from './routes/oauth.routes';
 import { auctionRoutes } from './routes/auction.routes';
+import { categoryRoutes } from './routes/category.routes';
 import { userRoutes } from './routes/user.routes';
 import { mediaRoutes } from './routes/media.routes';
 import { errorHandler } from './middlewares/errorHandler';
@@ -34,6 +35,7 @@ app.set('trust proxy', 1);
 app.use('/auth', authRoutes);
 app.use('/auth', oauthRoutes);
 app.use('/api/auctions', auctionRoutes);
+app.use('/api/categories', categoryRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/media', mediaRoutes);
 

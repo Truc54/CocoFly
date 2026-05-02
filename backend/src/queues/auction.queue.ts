@@ -27,8 +27,35 @@ export async function scheduleAuctionActivation(auctionId: string, scheduledStar
   await auctionQueue.add(
     'activate-auction',
     { auctionId },
-    { delay: Math.max(delay, 0), jobId: `activate:${auctionId}` },
+    { delay: Math.max(delay, 0), jobId: `activate-${auctionId}` },
   );
 
   console.log(`📅 Scheduled auction ${auctionId} activation in ${Math.round(delay / 1000)}s`);
+}
+
+export async function scheduleAuctionEnd(auctionId: string, endTime: Date): Promise<void> {
+  const delay = endTime.getTime() - Date.now();
+
+  await auctionQueue.add(
+    'end-auction',
+    { auctionId },
+    { delay: Math.max(delay, 0), jobId: `end-${auctionId}` },
+  );
+
+  console.log(`⏰ Scheduled auction ${auctionId} end in ${Math.round(delay / 1000)}s`);
+}
+
+// Repeatable health-check: runs every 5 minutes in production to catch auctions
+// whose BullMQ jobs were lost (e.g. Redis wiped without server restart).
+export async function scheduleHealthCheck(): Promise<void> {
+  await auctionQueue.add(
+    'health-check',
+    {},
+    {
+      repeat: { every: 5 * 60 * 1000 }, // every 5 minutes
+      jobId: 'auction-health-check',
+    },
+  );
+
+  console.log('💓 Auction health-check scheduled (every 5 min)');
 }

@@ -21,8 +21,8 @@ async function start() {
     // import { initSocket } from './config/socket';
     // initSocket(server);
 
-    // Start BullMQ worker for auction lifecycle
-    startAuctionWorker();
+    // Start BullMQ worker for auction lifecycle (includes startup recovery)
+    await startAuctionWorker();
 
     server.listen(env.PORT, () => {
       console.log(`🚀 Server running on port ${env.PORT}`);
