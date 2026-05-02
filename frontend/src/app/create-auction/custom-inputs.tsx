@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { ChevronDown, Calendar as CalendarIcon, Clock as ClockIcon, X } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ChevronDown, Calendar as CalendarIcon, Clock as ClockIcon } from "lucide-react";
 
 interface Option {
   value: string | number;

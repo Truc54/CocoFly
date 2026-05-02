@@ -228,7 +228,6 @@ export class AuctionRepository {
     };
 
     const orderBy = buildSortOrder(options.sort || 'starts_soon');
-    console.log('OPTIONS SORT', options.sort, 'ORDER BY', orderBy);
 
     const [auctions, total] = await Promise.all([
       prisma.auction.findMany({

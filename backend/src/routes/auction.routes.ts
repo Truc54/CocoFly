@@ -31,8 +31,9 @@ auctionRoutes.get(
   auctionController.getAuction.bind(auctionController),
 );
 
-// ── Place bid on an auction (placeholder — will add authGuard + validate later)
+// ── Place bid on an auction (temporarily unavailable until fully implemented)
 auctionRoutes.post(
   '/:auctionId/bids',
+  authGuard,
   auctionController.placeBid.bind(auctionController),
 );

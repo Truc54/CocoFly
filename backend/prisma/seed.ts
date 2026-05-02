@@ -33,13 +33,15 @@ async function main() {
   console.log('🌱 Seeding categories...');
 
   // 1. Update existing categories
+  let updated = 0;
   for (const item of EXISTING_UPDATES) {
-    await prisma.category.update({
+    const result = await prisma.category.updateMany({
       where: { slug: item.slug },
       data: item.update,
     });
+    updated += result.count;
   }
-  console.log(`  ✅ Updated ${EXISTING_UPDATES.length} existing categories`);
+  console.log(`  ✅ Updated ${updated} existing categories`);
 
   // 2. Reset autoincrement sequence to max existing id
   await prisma.$executeRawUnsafe(

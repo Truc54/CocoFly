@@ -177,13 +177,13 @@ export default function LiveAuctionsPage() {
       if (maxPriceValue !== undefined && auction.currentPrice > maxPriceValue) return false;
 
       if (hoursValue !== undefined) {
-        const hoursBucket = Math.max(0, Math.floor(getHoursLeft(auction.endTime, nowMs)));
-        if (hoursBucket !== Math.floor(hoursValue)) return false;
+        const actualHoursLeft = getHoursLeft(auction.endTime, nowMs);
+        if (actualHoursLeft > hoursValue) return false;
       }
 
       return true;
     });
-  }, [auctions, ratingFilter, minPrice, maxPrice, hoursLeft, timeLefts]);
+  }, [auctions, ratingFilter, minPrice, maxPrice, hoursLeft]);
 
   const handleLoadMore = () => {
     if (pagination && pagination.page < pagination.totalPages) {

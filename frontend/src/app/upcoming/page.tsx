@@ -61,40 +61,7 @@ function parseNumber(value: string): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-function getHoursLeft(endTime: string, nowMs: number): number {
-  const diffMs = new Date(endTime).getTime() - nowMs;
-  return diffMs <= 0 ? 0 : diffMs / 3600000;
-}
 
-function useCountdown(endTimes: string[]) {
-  const [timeLefts, setTimeLefts] = useState<string[]>([]);
-  const endTimesKey = JSON.stringify(endTimes);
-
-  useEffect(() => {
-    const times: string[] = JSON.parse(endTimesKey);
-    if (times.length === 0) { setTimeLefts([]); return; }
-
-    function calc() {
-      return times.map((endTime: string) => {
-        const diff = new Date(endTime).getTime() - Date.now();
-        if (diff <= 0) return "00:00:00";
-        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-        const h = String(Math.floor((diff % (1000 * 60 * 60 * 24)) / 3600000)).padStart(2, "0");
-        const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2, "0");
-        const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, "0");
-        if (days > 0) {
-          return `${days}d ${h}:${m}:${s}`;
-        }
-        return `${h}:${m}:${s}`;
-      });
-    }
-    setTimeLefts(calc());
-    const timer = setInterval(() => setTimeLefts(calc()), 1000);
-    return () => clearInterval(timer);
-  }, [endTimesKey]);
-
-  return timeLefts;
-}
 
 const PERIOD_TABS = [
   { label: "Hôm nay", value: "today" },
@@ -123,11 +90,9 @@ export default function UpcomingAuctionsPage() {
   const [ratingFilter, setRatingFilter] = useState(0);
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
-  const [hoursLeft, setHoursLeft] = useState("");
   const [pendingRating, setPendingRating] = useState(0);
   const [pendingMinPrice, setPendingMinPrice] = useState("");
   const [pendingMaxPrice, setPendingMaxPrice] = useState("");
-  const [pendingHoursLeft, setPendingHoursLeft] = useState("");
 
   // Sync URL params on mount
   useEffect(() => {
@@ -171,13 +136,6 @@ export default function UpcomingAuctionsPage() {
   useEffect(() => {
     fetchAuctions(1);
   }, [fetchAuctions]);
-
-  const endTimes = useMemo(() => auctions.map((a) => a.endTime), [auctions]);
-  const timeLefts = useCountdown(endTimes);
-  const timeLeftsById = useMemo(
-    () => new Map(auctions.map((auction, index) => [auction.id, timeLefts[index]])),
-    [auctions, timeLefts]
-  );
 
   const filteredAuctions = useMemo(() => {
     const minPriceValue = parseNumber(minPrice);

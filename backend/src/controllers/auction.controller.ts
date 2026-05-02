@@ -81,15 +81,10 @@ export class AuctionController {
   // ── Place Bid (placeholder) ────────────────────────────────────────────────
 
   async placeBid(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const auctionId = req.params.auctionId as string;
-      const bidData = req.body;
-
-      const result = await this.auctionService.processBid(auctionId, bidData);
-
-      res.status(result.success ? 200 : 400).json(result);
-    } catch (error) {
-      next(error);
-    }
+    // Return 501 Not Implemented until bidding is fully implemented
+    res.status(501).json({
+      success: false,
+      message: 'Tính năng đặt giá hiện chưa được hỗ trợ.',
+    });
   }
 }

@@ -34,7 +34,6 @@ async function recoverAuctions(): Promise<void> {
         await handleEndAuction({ auctionId: auction.id });
       } else {
         await handleActivateAuction({ auctionId: auction.id });
-        await scheduleAuctionEnd(auction.id, auction.endTime);
       }
     }
   }
@@ -94,7 +93,6 @@ async function fixStaleAuctions(): Promise<void> {
       await handleEndAuction({ auctionId: auction.id });
     } else {
       await handleActivateAuction({ auctionId: auction.id });
-      await scheduleAuctionEnd(auction.id, auction.endTime);
     }
   }
 
