@@ -74,6 +74,7 @@ export default function UpcomingAuctionsPage() {
   const searchParams = useSearchParams();
   const urlCategoryId = searchParams.get("categoryId");
   const urlSort = searchParams.get("sort");
+  const urlSearch = searchParams.get("search");
 
   const [activeCategoryId, setActiveCategoryId] = useState<number | undefined>(
     urlCategoryId ? parseInt(urlCategoryId) : undefined
@@ -87,6 +88,7 @@ export default function UpcomingAuctionsPage() {
   const [error, setError] = useState<string | null>(null);
   const [sort, setSort] = useState(urlSort || "starts_soon");
   const [activePeriod, setActivePeriod] = useState("all");
+  const [searchKeyword, setSearchKeyword] = useState(urlSearch || "");
   const [ratingFilter, setRatingFilter] = useState(0);
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
@@ -98,7 +100,8 @@ export default function UpcomingAuctionsPage() {
   useEffect(() => {
     if (urlCategoryId) setActiveCategoryId(parseInt(urlCategoryId));
     if (urlSort) setSort(urlSort);
-  }, [urlCategoryId, urlSort]);
+    setSearchKeyword(urlSearch || "");
+  }, [urlCategoryId, urlSort, urlSearch]);
 
   // Fetch categories for sidebar
   useEffect(() => {
@@ -119,6 +122,7 @@ export default function UpcomingAuctionsPage() {
         categoryId: activeCategoryId,
         sort,
         period: activePeriod,
+        search: searchKeyword || undefined,
       });
 
       const { auctions: data, pagination: pag } = res.data;
@@ -131,7 +135,7 @@ export default function UpcomingAuctionsPage() {
       setLoadingMore(false);
       setIsRefetching(false);
     }
-  }, [activeCategoryId, sort, activePeriod]);
+  }, [activeCategoryId, sort, activePeriod, searchKeyword]);
 
   useEffect(() => {
     fetchAuctions(1);
@@ -280,6 +284,14 @@ export default function UpcomingAuctionsPage() {
 
   return (
     <section className="max-w-[1400px] mx-auto px-4 lg:px-6 py-6">
+      {/* Search keyword banner */}
+      {searchKeyword && (
+        <div className="mb-6 flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+          <Link href="/" className="hover:text-primary transition-colors">Trang chủ</Link>
+          <span className="material-symbols-outlined text-[16px] mt-0.5">chevron_right</span>
+          <span>Kết quả tìm kiếm &quot;{searchKeyword}&quot;</span>
+        </div>
+      )}
             <div className="flex gap-6">
         {/* Filter Sidebar */}
         <aside className="hidden lg:block w-64 shrink-0 self-start sticky top-[102px]">

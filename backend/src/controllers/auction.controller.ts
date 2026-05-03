@@ -78,6 +78,26 @@ export class AuctionController {
     }
   }
 
+  // ── Search Suggestions ──────────────────────────────────────────────────
+
+  async getSuggestions(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const q = (req.query.q as string || '').trim();
+      if (q.length < 2) {
+        res.json({ success: true, data: [] });
+        return;
+      }
+
+      const limit = Math.min(10, Math.max(1, parseInt(req.query.limit as string) || 8));
+      const status = (req.query.status as string) || 'active';
+      const suggestions = await this.auctionService.getSuggestions(q, limit, status);
+
+      res.json({ success: true, data: suggestions });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // ── Place Bid (placeholder) ────────────────────────────────────────────────
 
   async placeBid(req: Request, res: Response, next: NextFunction): Promise<void> {

@@ -160,6 +160,9 @@ export const auctionApi = {
     method: 'POST',
     body: JSON.stringify(data),
   }),
+  // ── Search suggestions
+  getSuggestions: (q: string, status: 'active' | 'scheduled' = 'active', limit = 8) =>
+    fetchApi(`/api/auctions/suggestions?q=${encodeURIComponent(q)}&status=${status}&limit=${limit}`),
 };
 
 export const categoryApi = {
