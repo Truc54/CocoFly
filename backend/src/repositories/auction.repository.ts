@@ -243,6 +243,58 @@ export class AuctionRepository {
     return { auctions, total };
   }
 
+  // ── Search Suggestions ──────────────────────────────────────────────────
+
+  async searchSuggestions(query: string, limit: number, status: AuctionStatus) {
+    const suggestionSelect = {
+      id: true,
+      currentPrice: true,
+      scheduledStart: true,
+      status: true,
+      item: {
+        select: {
+          title: true,
+          media: { where: { sortOrder: 0 }, take: 1, select: { cdnUrl: true } },
+        },
+      },
+    } satisfies Prisma.AuctionSelect;
+
+    // Priority 1: title STARTS WITH keyword (most relevant)
+    const startsWithResults = await prisma.auction.findMany({
+      where: {
+        status,
+        item: { title: { startsWith: query, mode: 'insensitive' } },
+      },
+      select: suggestionSelect,
+      orderBy: { totalBids: 'desc' },
+      take: limit,
+    });
+
+    const remaining = limit - startsWithResults.length;
+    if (remaining <= 0) return startsWithResults;
+
+    const excludeIds = startsWithResults.map((a) => a.id);
+
+    // Priority 2: title OR description CONTAINS keyword
+    const containsResults = await prisma.auction.findMany({
+      where: {
+        status,
+        id: { notIn: excludeIds },
+        item: {
+          OR: [
+            { title: { contains: query, mode: 'insensitive' } },
+            { description: { contains: query, mode: 'insensitive' } },
+          ],
+        },
+      },
+      select: suggestionSelect,
+      orderBy: { totalBids: 'desc' },
+      take: remaining,
+    });
+
+    return [...startsWithResults, ...containsResults];
+  }
+
   // ── Bid (placeholder for future) ──────────────────────────────────────────
 
   async saveBid(auctionId: string, bidData: any): Promise<void> {

@@ -1,6 +1,7 @@
 import { AuctionRepository, CreateAuctionResult } from '../repositories/auction.repository';
 import { CreateAuctionInput } from '../validators/auction.validator';
 import { scheduleAuctionActivation } from '../queues/auction.queue';
+import { AuctionStatus } from '@prisma/client';
 import { AppError } from '../utils/AppError';
 import prisma from '../config/prisma';
 import cloudinary from '../config/cloudinary.config';
@@ -152,6 +153,21 @@ export class AuctionService {
         totalPages: Math.ceil(total / options.limit),
       },
     };
+  }
+
+  // ── Search Suggestions ─────────────────────────────────────────────────
+
+  async getSuggestions(query: string, limit: number, status: string) {
+    const auctionStatus = status === 'scheduled' ? AuctionStatus.scheduled : AuctionStatus.active;
+    const results = await this.auctionRepository.searchSuggestions(query, limit, auctionStatus);
+
+    return results.map((auction) => ({
+      id: auction.id,
+      title: auction.item.title,
+      thumbnailUrl: auction.item.media?.[0]?.cdnUrl ?? null,
+      currentPrice: auctionStatus === AuctionStatus.active ? Number(auction.currentPrice) : undefined,
+      scheduledStart: auctionStatus === AuctionStatus.scheduled ? auction.scheduledStart : undefined,
+    }));
   }
 
   // ── Format helpers ─────────────────────────────────────────────────────────

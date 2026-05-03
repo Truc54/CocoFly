@@ -90,6 +90,7 @@ export default function LiveAuctionsPage() {
   const searchParams = useSearchParams();
   const urlCategoryId = searchParams.get("categoryId");
   const urlSort = searchParams.get("sort");
+  const urlSearch = searchParams.get("search");
 
   const [activeCategoryId, setActiveCategoryId] = useState<number | undefined>(
     urlCategoryId ? parseInt(urlCategoryId) : undefined
@@ -102,6 +103,7 @@ export default function LiveAuctionsPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sort, setSort] = useState(urlSort || "ending_soon");
+  const [searchKeyword, setSearchKeyword] = useState(urlSearch || "");
   const [ratingFilter, setRatingFilter] = useState(0);
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
@@ -115,7 +117,8 @@ export default function LiveAuctionsPage() {
   useEffect(() => {
     if (urlCategoryId) setActiveCategoryId(parseInt(urlCategoryId));
     if (urlSort) setSort(urlSort);
-  }, [urlCategoryId, urlSort]);
+    setSearchKeyword(urlSearch || "");
+  }, [urlCategoryId, urlSort, urlSearch]);
 
   // Fetch categories for sidebar
   useEffect(() => {
@@ -139,6 +142,7 @@ export default function LiveAuctionsPage() {
         limit: 20,
         categoryId: activeCategoryId,
         sort,
+        search: searchKeyword || undefined,
       });
 
       const { auctions: data, pagination: pag } = res.data;
@@ -151,7 +155,7 @@ export default function LiveAuctionsPage() {
       setIsRefetching(false);
       setLoadingMore(false);
     }
-  }, [activeCategoryId, sort]);
+  }, [activeCategoryId, sort, searchKeyword]);
 
   useEffect(() => {
     fetchAuctions(1);
@@ -332,6 +336,14 @@ export default function LiveAuctionsPage() {
 
   return (
     <section className="max-w-[1400px] mx-auto px-4 lg:px-6 py-6">
+      {/* Search keyword banner */}
+      {searchKeyword && (
+        <div className="mb-6 flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+          <Link href="/" className="hover:text-primary transition-colors">Trang chủ</Link>
+          <span className="material-symbols-outlined text-[16px] mt-0.5">chevron_right</span>
+          <span>Kết quả tìm kiếm &quot;{searchKeyword}&quot;</span>
+        </div>
+      )}
       <div className="flex gap-6">
         {/* Filter Sidebar */}
         <aside className="hidden lg:block w-64 shrink-0 self-start sticky top-[102px]">

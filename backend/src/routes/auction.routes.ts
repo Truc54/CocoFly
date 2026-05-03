@@ -16,6 +16,7 @@ const auctionController = new AuctionController();
 //    "live" / "upcoming" as a UUID param
 auctionRoutes.get('/live', auctionController.getLiveAuctions.bind(auctionController));
 auctionRoutes.get('/upcoming', auctionController.getUpcomingAuctions.bind(auctionController));
+auctionRoutes.get('/suggestions', auctionController.getSuggestions.bind(auctionController));
 
 // ── Create auction (Seller only — authGuard verifies JWT, service verifies role)
 auctionRoutes.post(
