@@ -32,6 +32,12 @@ auctionRoutes.get(
   auctionController.getAuction.bind(auctionController),
 );
 
+// ── Get bid history for an auction (public)
+auctionRoutes.get(
+  '/:auctionId/bids',
+  auctionController.getBidHistory.bind(auctionController),
+);
+
 // ── Place bid on an auction (temporarily unavailable until fully implemented)
 auctionRoutes.post(
   '/:auctionId/bids',

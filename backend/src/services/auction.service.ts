@@ -91,7 +91,36 @@ export class AuctionService {
       throw new AppError('Phiên đấu giá không tồn tại', 404);
     }
 
-    return auction;
+    return this.formatAuctionDetail(auction);
+  }
+
+  // ── Get Bid History ────────────────────────────────────────────────────────
+
+  public async getBidHistory(auctionId: string, page: number, limit: number) {
+    // Verify auction exists
+    const exists = await this.auctionRepository.findById(auctionId);
+    if (!exists) throw new AppError('Phiên đấu giá không tồn tại', 404);
+
+    const { bids, total } = await this.auctionRepository.getBidHistory(auctionId, page, limit);
+
+    return {
+      bids: bids.map((b: any) => ({
+        id: b.id,
+        amount: Number(b.amount),
+        createdAt: b.createdAt,
+        bidder: {
+          id: b.bidder.id,
+          fullName: b.bidder.fullName,
+          avatarUrl: b.bidder.avatarUrl,
+        },
+      })),
+      pagination: {
+        page,
+        limit,
+        totalItems: total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   // ── Process Bid (placeholder) ──────────────────────────────────────────────
@@ -172,6 +201,7 @@ export class AuctionService {
 
   // ── Format helpers ─────────────────────────────────────────────────────────
 
+  // Used for listing pages (thumbnail only)
   private formatAuctionResponse(auction: any) {
     const thumbnail = auction.item?.media?.[0];
 
@@ -197,6 +227,57 @@ export class AuctionService {
             rating: Number(auction.seller.rating),
           }
         : null,
+    };
+  }
+
+  // Used for detail page (full media[], bids, chatRoomId)
+  private formatAuctionDetail(auction: any) {
+    return {
+      id: auction.id,
+      status: auction.status,
+      auctionType: auction.auctionType,
+      title: auction.item?.title,
+      description: auction.item?.description,
+      condition: auction.item?.condition,
+      brand: auction.item?.brand,
+      location: auction.item?.location,
+      category: auction.item?.category ?? null,
+      media: (auction.item?.media ?? []).map((m: any) => ({
+        id: m.id,
+        cdnUrl: m.cdnUrl,
+        sortOrder: m.sortOrder,
+        type: m.type,
+      })),
+      currentPrice: Number(auction.currentPrice),
+      startingPrice: Number(auction.startingPrice),
+      buyoutPrice: auction.buyoutPrice ? Number(auction.buyoutPrice) : null,
+      bidIncrement: Number(auction.bidIncrement),
+      scheduledStart: auction.scheduledStart,
+      endTime: auction.endTime,
+      autoExtend: auction.autoExtend,
+      autoExtendMinutes: auction.autoExtendMinutes,
+      autoExtendThreshold: auction.autoExtendThreshold,
+      totalBids: auction.totalBids,
+      totalWatchers: auction.totalWatchers,
+      chatRoomId: auction.chatRoom?.id ?? null,
+      seller: auction.seller
+        ? {
+            id: auction.seller.id,
+            fullName: auction.seller.fullName,
+            avatarUrl: auction.seller.avatarUrl,
+            rating: Number(auction.seller.rating),
+          }
+        : null,
+      recentBids: (auction.bids ?? []).map((b: any) => ({
+        id: b.id,
+        amount: Number(b.amount),
+        createdAt: b.createdAt,
+        bidder: {
+          id: b.bidder.id,
+          fullName: b.bidder.fullName,
+          avatarUrl: b.bidder.avatarUrl,
+        },
+      })),
     };
   }
 }

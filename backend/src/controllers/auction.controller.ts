@@ -107,4 +107,19 @@ export class AuctionController {
       message: 'Tính năng đặt giá hiện chưa được hỗ trợ.',
     });
   }
+
+  // ── Get Bid History ────────────────────────────────────────────────────────
+
+  async getBidHistory(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const auctionId = req.params.auctionId as string;
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 20));
+
+      const result = await this.auctionService.getBidHistory(auctionId, page, limit);
+      res.json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  }
 }

@@ -155,6 +155,9 @@ export const auctionApi = {
   },
   // ── Single auction
   getById: (id: string) => fetchApi(`/api/auctions/${id}`),
+  // ── Bid history for detail page
+  getBidHistory: (id: string, page = 1, limit = 20) =>
+    fetchApi(`/api/auctions/${id}/bids?page=${page}&limit=${limit}`),
   // ── Create auction
   create: (data: any) => fetchApi('/api/auctions', {
     method: 'POST',

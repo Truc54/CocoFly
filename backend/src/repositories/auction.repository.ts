@@ -168,13 +168,51 @@ export class AuctionRepository {
       where: { id },
       include: {
         item: {
-          include: { media: { orderBy: { sortOrder: 'asc' } } },
+          include: {
+            media: { orderBy: { sortOrder: 'asc' } },
+            category: { select: { id: true, name: true } },
+          },
         },
         seller: {
           select: { id: true, fullName: true, avatarUrl: true, rating: true },
         },
+        bids: {
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+          select: {
+            id: true,
+            amount: true,
+            createdAt: true,
+            bidder: { select: { id: true, fullName: true, avatarUrl: true } },
+          },
+        },
+        chatRoom: { select: { id: true } },
       },
     });
+  }
+
+  // ── Bid History (paginated) ────────────────────────────────────────────────
+
+  public async getBidHistory(auctionId: string, page: number, limit: number) {
+    const skip = (page - 1) * limit;
+
+    const [bids, total] = await Promise.all([
+      prisma.bid.findMany({
+        where: { auctionId },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          amount: true,
+          createdAt: true,
+          bidder: { select: { id: true, fullName: true, avatarUrl: true } },
+        },
+      }),
+      prisma.bid.count({ where: { auctionId } }),
+    ]);
+
+    return { bids, total };
   }
 
   // ── Read List (Listing pages) ──────────────────────────────────────────────
