@@ -233,7 +233,6 @@ model Auction {
 
   // Pricing
   startingPrice Decimal  @map("starting_price") @db.Decimal(18, 2)
-  reservePrice  Decimal? @map("reserve_price") @db.Decimal(18, 2)
   currentPrice  Decimal  @map("current_price") @db.Decimal(18, 2)
   buyoutPrice   Decimal? @map("buyout_price") @db.Decimal(18, 2)
   bidIncrement  Decimal  @default(1000) @map("bid_increment") @db.Decimal(18, 2)
