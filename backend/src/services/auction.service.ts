@@ -123,23 +123,27 @@ export class AuctionService {
     };
   }
 
-  // ── Process Bid (placeholder) ──────────────────────────────────────────────
+  // ── Get User's Bid Status ─────────────────────────────────────────────────
 
-  async processBid(auctionId: string, bidData: any): Promise<{ success: boolean; message: string }> {
-    // 1. FUTURE CONCURRENCY CONTROL:
-    // const lock = await redis.set(`lock:${auctionId}`, '1', 'NX', 'EX', 5)
-    // if (!lock) return { success: false, message: 'Too many bids, retry' }
+  public async getUserBidStatus(auctionId: string, userId: string) {
+    const highestBid = await this.auctionRepository.findHighestBid(auctionId);
+    const isLeading = highestBid ? highestBid.bidderId === userId : false;
+    
+    const hasBid = await this.auctionRepository.hasUserBid(auctionId, userId);
 
-    // 2. Business Logic: check if auction is active, valid bid amount, etc.
+    // Find user's active proxy bid
+    const allProxies = await this.auctionRepository.findActiveProxyBids(auctionId);
+    const userProxy = allProxies.find((p: any) => p.bidderId === userId);
+    const proxyMaxBid = userProxy?.maxAutoBid ? Number(userProxy.maxAutoBid) : null;
 
-    // 3. Database Write via Repository
-    // await this.auctionRepository.saveBid(auctionId, bidData);
-
-    // 4. FUTURE REAL-TIME BROADCAST:
-    // redis.publish('auction:bids', JSON.stringify({ auctionId, ...bidData }));
-
-    return { success: true, message: 'Bid placed successfully' };
+    return {
+      isLeading,
+      proxyMaxBid,
+      hasBid,
+    };
   }
+
+  // ── Bidding is handled via Socket.IO → BiddingService ───────────────────
 
   // ── Listing pages ──────────────────────────────────────────────────────────
 

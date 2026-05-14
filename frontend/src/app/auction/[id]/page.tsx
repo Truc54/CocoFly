@@ -4,27 +4,18 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect, use } from "react";
 import { auctionApi } from "@/lib/api";
-import type { AuctionDetail, RelatedAuction, BidEntry } from "@/lib/types/auction";
-import CountdownTimer from "@/components/auction/CountdownTimer";
+import { authStorage } from "@/lib/auth-storage";
+import type { AuctionDetail, RelatedAuction } from "@/lib/types/auction";
+import { useAuctionSocket } from "@/lib/hooks/useAuctionSocket";
 import AuctionDetailSkeleton from "@/components/auction/AuctionDetailSkeleton";
+import BiddingPanel from "@/components/auction/BiddingPanel";
+import BidHistoryList from "@/components/auction/BidHistoryList";
+import AuctionEndedOverlay from "@/components/auction/AuctionEndedOverlay";
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 
 function formatVND(n: number) {
   return n.toLocaleString("vi-VN");
-}
-
-function formatEndDate(iso: string) {
-  const d = new Date(iso);
-  return `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}, ${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1).toString().padStart(2, "0")}/${d.getFullYear()}`;
-}
-
-function timeAgo(iso: string) {
-  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (diff < 60) return `${diff} giây trước`;
-  if (diff < 3600) return `${Math.floor(diff / 60)} phút trước`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)} giờ trước`;
-  return `${Math.floor(diff / 86400)} ngày trước`;
 }
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
@@ -36,10 +27,13 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
   const [related, setRelated] = useState<RelatedAuction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [chatMessage, setChatMessage] = useState("");
-  const [isLeading, setIsLeading] = useState<boolean | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    setIsLoggedIn(!!authStorage.getToken());
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -52,7 +46,6 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
         const data = res.data as AuctionDetail;
         setAuction(data);
 
-        // Fetch related auctions by same category
         if (data.category?.id) {
           try {
             const relRes = await auctionApi.getLive({ categoryId: data.category.id, limit: 4 });
@@ -88,14 +81,70 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
     );
   }
 
-  const suggestedPrice = auction.currentPrice + auction.bidIncrement;
+  return <AuctionDetailContent auction={auction} related={related} activeImageIdx={activeImageIdx} setActiveImageIdx={setActiveImageIdx} chatMessage={chatMessage} setChatMessage={setChatMessage} isLoggedIn={isLoggedIn} />;
+}
+
+// ─── INNER COMPONENT (needs hooks after auction loads) ────────────────────────
+
+function AuctionDetailContent({
+  auction,
+  related,
+  activeImageIdx,
+  setActiveImageIdx,
+  chatMessage,
+  setChatMessage,
+  isLoggedIn,
+}: {
+  auction: AuctionDetail;
+  related: RelatedAuction[];
+  activeImageIdx: number;
+  setActiveImageIdx: (i: number) => void;
+  chatMessage: string;
+  setChatMessage: (s: string) => void;
+  isLoggedIn: boolean;
+}) {
+  const {
+    currentPrice,
+    totalBids,
+    endTime,
+    isExtended,
+    extendCount,
+    auctionStatus,
+    winnerId,
+    finalPrice,
+    bids,
+    isLeading,
+    hasBid,
+    proxyMessage,
+    proxyMaxBid,
+    error: bidError,
+    connected,
+    bidSuccess,
+    placeBid,
+    buyout,
+    clearError,
+    clearBidSuccess,
+  } = useAuctionSocket(auction.id, {
+    currentPrice: auction.currentPrice,
+    totalBids: auction.totalBids,
+    endTime: auction.endTime,
+    recentBids: auction.recentBids,
+    status: auction.status,
+  });
+
+  // Auto-dismiss success toast
+  useEffect(() => {
+    if (bidSuccess) {
+      const timer = setTimeout(clearBidSuccess, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [bidSuccess, clearBidSuccess]);
+
   const images = auction.media.length > 0
     ? auction.media.map((m) => m.cdnUrl)
     : ["https://placehold.co/800x600/f1f5f9/94a3b8?text=No+Image"];
 
-  const handleBid = () => {
-    setIsLeading(true);
-  };
+  const isEnded = auctionStatus === "ended" || auctionStatus === "buyout";
 
   return (
     <div className="max-w-[1400px] mx-auto px-4 lg:px-6 py-6">
@@ -126,13 +175,13 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
               {images.length > 1 && (
                 <>
                   <button
-                    onClick={() => setActiveImageIdx((p) => (p > 0 ? p - 1 : images.length - 1))}
+                    onClick={() => setActiveImageIdx(activeImageIdx > 0 ? activeImageIdx - 1 : images.length - 1)}
                     className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/80 hover:bg-white border-2 border-slate-800 rounded-full flex items-center justify-center text-slate-800 shadow-[2px_2px_0px_#1e293b] opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
                   >
                     <span className="material-symbols-outlined">chevron_left</span>
                   </button>
                   <button
-                    onClick={() => setActiveImageIdx((p) => (p < images.length - 1 ? p + 1 : 0))}
+                    onClick={() => setActiveImageIdx(activeImageIdx < images.length - 1 ? activeImageIdx + 1 : 0)}
                     className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/80 hover:bg-white border-2 border-slate-800 rounded-full flex items-center justify-center text-slate-800 shadow-[2px_2px_0px_#1e293b] opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
                   >
                     <span className="material-symbols-outlined">chevron_right</span>
@@ -198,12 +247,12 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
                 </span>
                 <span className="material-symbols-outlined text-slate-400 group-open:rotate-180 transition-transform">expand_more</span>
               </summary>
-              <div className="px-5 pb-5 text-sm text-slate-600 dark:text-slate-400 leading-relaxed border-t-2 border-slate-100 dark:border-slate-700 pt-4">
-                {auction.description}
+              <div className="px-5 pb-5 text-sm text-slate-600 dark:text-slate-400 leading-relaxed border-t-2 border-slate-100 dark:border-slate-700 pt-4 whitespace-pre-wrap">
+                {auction.description || <span className="italic text-slate-400">Sản phẩm hiện không có mô tả</span>}
               </div>
             </details>
 
-            <details className="bg-white dark:bg-slate-800 rounded-none border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#cbd5e1] group">
+            <details open className="bg-white dark:bg-slate-800 rounded-none border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#cbd5e1] group">
               <summary className="flex items-center justify-between p-5 cursor-pointer list-none outline-none select-none">
                 <span className="flex items-center gap-2 font-bold text-slate-800 dark:text-white uppercase tracking-wide text-sm">
                   <span className="material-symbols-outlined text-primary">verified</span>
@@ -211,8 +260,8 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
                 </span>
                 <span className="material-symbols-outlined text-slate-400 group-open:rotate-180 transition-transform">expand_more</span>
               </summary>
-              <div className="px-5 pb-5 text-sm text-slate-600 dark:text-slate-400 leading-relaxed border-t-2 border-slate-100 dark:border-slate-700 pt-4">
-                {auction.condition}
+              <div className="px-5 pb-5 text-sm text-slate-600 dark:text-slate-400 leading-relaxed border-t-2 border-slate-100 dark:border-slate-700 pt-4 whitespace-pre-wrap">
+                {auction.condition || <span className="italic text-slate-400">Chưa cập nhật tình trạng</span>}
               </div>
             </details>
           </div>
@@ -221,76 +270,71 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
         {/* ═══════ RIGHT COLUMN ═══════ */}
         <div className="lg:col-span-5 flex flex-col gap-6">
 
+          {/* Success Toast Notification - Top Right */}
+          {bidSuccess && (
+            <div className="fixed top-6 right-6 z-[200] animate-slide-in-right">
+              <div className="flex items-center gap-3 bg-white border-2 border-green-300 px-5 py-3.5 rounded-xl shadow-[4px_4px_0px_#86efac] min-w-[280px]">
+                <div className="w-8 h-8 rounded-full bg-green-100 border-2 border-green-300 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-green-600 text-lg">check</span>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-slate-800">Đặt giá thành công!</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Bạn đang dẫn đầu phiên đấu giá</p>
+                </div>
+                <button onClick={clearBidSuccess} className="text-slate-400 hover:text-slate-600 transition-colors shrink-0">
+                  <span className="material-symbols-outlined text-lg">close</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Title */}
           <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white leading-tight">{auction.title}</h1>
-              <span className="text-slate-500 font-medium flex items-center gap-1">
-                <span className="material-symbols-outlined text-lg">visibility</span>
-                <span className="text-base">{auction.totalWatchers}</span>
-              </span>
-            </div>
-          </div>
-
-          {/* Bidding Engine Box */}
-          <div className="bg-white dark:bg-slate-800 rounded-none border-2 border-slate-200 dark:border-slate-700 p-6 shadow-[4px_4px_0px_#E2B9A1]">
-            <div className="mb-6">
-              <p className="text-2xl sm:text-3xl font-extrabold text-slate-800 dark:text-white tabular-nums">
-                {formatVND(auction.currentPrice)} <span className="text-lg sm:text-xl text-slate-500 font-bold">VNĐ</span>
-              </p>
-              {auction.buyoutPrice && (
-                <p className="text-xs text-slate-400 mt-1">
-                  Mua ngay: <span className="font-bold text-orange-600">{formatVND(auction.buyoutPrice)} VNĐ</span>
-                </p>
-              )}
-              <div className="mt-4 flex items-center justify-between border-t-2 border-slate-100 dark:border-slate-700 pt-4">
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[16px]">schedule</span>
-                  Kết thúc lúc {formatEndDate(auction.endTime)}
-                </p>
-                <CountdownTimer endTime={auction.endTime} />
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white leading-tight">{auction.title}</h1>
+                <span className="text-slate-500 font-medium flex items-center gap-1 shrink-0">
+                  <span className="material-symbols-outlined text-lg">visibility</span>
+                  <span className="text-base">{auction.totalWatchers}</span>
+                </span>
               </div>
             </div>
 
-            {/* Bid Input */}
-            <div className="relative mb-5">
-              <input
-                type="text"
-                placeholder={`Nhập giá (Tối thiểu ${formatVND(suggestedPrice)} VNĐ)`}
-                className="w-full pl-4 pr-12 py-3 bg-white border-2 border-slate-300 rounded-none text-base font-bold text-slate-800 focus:border-slate-400 focus:ring-0 outline-none transition-all placeholder:text-slate-400 placeholder:font-normal shadow-[inset_2px_2px_0px_#f1f5f9]"
-              />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">VNĐ</span>
-            </div>
-
-            {/* CTA */}
-            <div className="space-y-3">
-              <button
-                onClick={handleBid}
-                disabled={auction.status !== "active"}
-                className="w-full py-3 bg-[#0066FF] text-white font-bold text-base rounded-full border-2 border-[#0066FF] shadow-[4px_4px_0px_#bfdbfe] hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_#bfdbfe] active:translate-y-0 active:shadow-[2px_2px_0px_#bfdbfe] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {auction.status === "active" ? "ĐẶT GIÁ NGAY" : auction.status === "scheduled" ? "CHƯA BẮT ĐẦU" : "ĐÃ KẾT THÚC"}
-              </button>
-              <button className="w-full py-3 bg-white text-slate-700 font-bold text-base rounded-full border-2 border-slate-200 shadow-[3px_3px_0px_#cbd5e1] hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#cbd5e1] active:translate-y-0 active:shadow-[1px_1px_0px_#cbd5e1] transition-all flex items-center justify-center gap-2 cursor-pointer">
-                <span className="material-symbols-outlined text-[18px]">favorite</span>
-                Thêm vào yêu thích
-              </button>
-            </div>
-
-            {/* Status Feedback */}
-            {isLeading === true && (
-              <div className="mt-5 flex items-center justify-center gap-2 text-sm text-green-700 bg-green-50 border-2 border-green-200 py-3 rounded-none font-bold shadow-[3px_3px_0px_#86efac]">
-                <span className="material-symbols-outlined text-lg">check_circle</span>
-                Bạn đang dẫn đầu phiên đấu giá!
-              </div>
-            )}
-            {isLeading === false && (
-              <div className="mt-5 flex items-center justify-center gap-2 text-sm text-red-700 bg-red-50 border-2 border-red-200 py-3 rounded-none font-bold shadow-[3px_3px_0px_#fca5a5]">
-                <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
-                Bạn vừa bị vượt giá! Đặt lại ngay.
+            {/* Connection status */}
+            {isLoggedIn && (
+              <div className={`flex items-center gap-1.5 text-[10px] font-bold ${connected ? "text-green-600" : "text-slate-400"}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${connected ? "bg-green-500 animate-pulse" : "bg-slate-300"}`}></span>
+                {connected ? "REALTIME" : "OFFLINE"}
               </div>
             )}
           </div>
+
+          {/* Bidding Panel or Ended Overlay */}
+          {isEnded ? (
+            <AuctionEndedOverlay
+              winnerId={winnerId}
+              finalPrice={finalPrice}
+              isBuyout={auctionStatus === "buyout"}
+            />
+          ) : (
+            <BiddingPanel
+              currentPrice={currentPrice}
+              bidIncrement={auction.bidIncrement}
+              buyoutPrice={auction.buyoutPrice}
+              endTime={endTime}
+              status={auctionStatus}
+              isLeading={isLeading}
+              proxyMessage={proxyMessage}
+              proxyMaxBid={proxyMaxBid}
+              error={bidError}
+              isExtended={isExtended}
+              extendCount={extendCount}
+              isLoggedIn={isLoggedIn}
+              onPlaceBid={placeBid}
+              onBuyout={buyout}
+              onClearError={clearError}
+            />
+          )}
 
           {/* Bid History + Chat Box */}
           <div className="bg-white dark:bg-slate-800 rounded-none border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] flex flex-col h-[550px]">
@@ -305,34 +349,14 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
               </div>
             </div>
 
-            {/* Bid History List */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0 bg-white dark:bg-slate-800">
-              {auction.recentBids.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-slate-400">
-                  <span className="material-symbols-outlined text-4xl mb-2">gavel</span>
-                  <p className="text-sm font-medium">Chưa có lượt đặt giá nào</p>
-                </div>
-              ) : (
-                auction.recentBids.map((bid: BidEntry) => (
-                  <div key={bid.id} className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full border-2 flex items-center justify-center text-xs font-bold shrink-0 bg-orange-50 border-orange-200 text-orange-600 shadow-[2px_2px_0px_#fed7aa]">
-                      <span className="material-symbols-outlined text-sm">gavel</span>
-                    </div>
-                    <div className="flex-1 min-w-0 pt-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-bold text-sm text-slate-800 dark:text-white">{bid.bidder.fullName}</span>
-                        <span className="text-[10px] text-slate-400 font-medium">{timeAgo(bid.createdAt)}</span>
-                      </div>
-                      <div className="inline-block bg-white border-2 border-orange-200 text-orange-700 font-bold text-xs px-3 py-1.5 rounded-none shadow-[2px_2px_0px_#fed7aa]">
-                        Đã đặt {formatVND(bid.amount)} VNĐ
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
+            {/* Real-time Bid History */}
+            <BidHistoryList
+              auctionId={auction.id}
+              bids={bids}
+              totalBids={totalBids}
+            />
 
-            {/* Chat Input (placeholder for Phase 3) */}
+            {/* Chat Input */}
             <div className="p-3 border-t-2 border-slate-200 dark:border-slate-700 shrink-0 bg-slate-50 dark:bg-slate-800">
               <div className="flex items-center gap-2">
                 <input

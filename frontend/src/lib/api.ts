@@ -166,6 +166,8 @@ export const auctionApi = {
   // ── Search suggestions
   getSuggestions: (q: string, status: 'active' | 'scheduled' = 'active', limit = 8) =>
     fetchApi(`/api/auctions/suggestions?q=${encodeURIComponent(q)}&status=${status}&limit=${limit}`),
+  // ── Get user's bid status for an auction (requires auth)
+  getMyBidStatus: (id: string) => fetchApi(`/api/auctions/${id}/my-status`),
 };
 
 export const categoryApi = {
@@ -177,4 +179,9 @@ export const notificationApi = {
     // TODO: Replace with real API when notification endpoints are built
     return 3;
   },
+};
+
+export const paymentApi = {
+  decline: (paymentId: string) =>
+    fetchApi(`/api/auctions/payments/${paymentId}/decline`, { method: 'POST' }),
 };

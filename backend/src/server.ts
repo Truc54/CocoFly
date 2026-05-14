@@ -4,6 +4,8 @@ import prisma from './config/prisma';
 import redis from './config/redis';
 import app from './app';
 import { startAuctionWorker, stopAuctionWorker } from './workers/auction.worker';
+import { startPaymentWorker, stopPaymentWorker } from './workers/payment.worker';
+import { initSocket } from './config/socket';
 
 const server = http.createServer(app);
 
@@ -17,12 +19,12 @@ async function start() {
     // Verify with a ping
     await redis.ping();
 
-    // FUTURE: Initialize Socket.IO here for realtime bidding
-    // import { initSocket } from './config/socket';
-    // initSocket(server);
+    // Initialize Socket.IO for realtime bidding
+    initSocket(server);
 
-    // Start BullMQ worker for auction lifecycle (includes startup recovery)
+    // Start BullMQ workers
     await startAuctionWorker();
+    await startPaymentWorker();
 
     server.listen(env.PORT, () => {
       console.log(`🚀 Server running on port ${env.PORT}`);
@@ -37,6 +39,7 @@ async function start() {
 async function shutdown() {
   console.log('\n🔄 Shutting down gracefully...');
   await stopAuctionWorker();
+  await stopPaymentWorker();
   await prisma.$disconnect();
   redis.disconnect();
   server.close(() => {
