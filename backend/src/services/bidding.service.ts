@@ -194,9 +194,13 @@ export class BiddingService {
       );
 
       if (proxyResult) {
+        if (proxyResult.isBuyout) {
+          await this.handleBuyoutEnd(auctionId, proxyResult.winnerId, proxyResult.bid.id, proxyResult.currentPrice);
+        }
+
         if (proxyResult.type === 'proxy_outbid') {
           // A proxy outbid the manual bidder — return proxy result
-          const antiSnipe = await this.checkAntiSniping(auctionId, auction);
+          const antiSnipe = proxyResult.isBuyout ? { extended: false } : await this.checkAntiSniping(auctionId, auction);
 
           return {
             bid: proxyResult.bid,
@@ -210,12 +214,12 @@ export class BiddingService {
             newEndTime: antiSnipe.newEndTime,
             extendCount: antiSnipe.extendCount,
             maxExtendCount: antiSnipe.maxExtendCount,
-            buyoutTriggered: false,
+            buyoutTriggered: proxyResult.isBuyout,
           };
         }
 
         // type === 'manual_wins' — manual bid already saved inside resolveProxyCompetition
-        const antiSnipe = await this.checkAntiSniping(auctionId, auction);
+        const antiSnipe = proxyResult.isBuyout ? { extended: false } : await this.checkAntiSniping(auctionId, auction);
 
         return {
           bid: proxyResult.bid,
@@ -228,7 +232,7 @@ export class BiddingService {
           newEndTime: antiSnipe.newEndTime,
           extendCount: antiSnipe.extendCount,
           maxExtendCount: antiSnipe.maxExtendCount,
-          buyoutTriggered: false,
+          buyoutTriggered: proxyResult.isBuyout,
         };
       }
 
@@ -350,6 +354,8 @@ export class BiddingService {
     currentPrice: number;
     proxyOwnerId?: string;
     bidsCreated: number;
+    isBuyout: boolean;
+    winnerId: string;
   } | null> {
     // Find all active proxy bids from OTHER users
     const allProxies = await this.repo.findActiveProxyBids(auctionId);
@@ -389,9 +395,17 @@ export class BiddingService {
       // OR by their explicitly typed flat amount, whichever is higher.
       let winningAmount = Math.max(manualAmount, bestProxyMax + bidIncrement);
       
+      let isBuyout = false;
       // Cap at buyout price if exists
       if (buyoutPrice && winningAmount >= buyoutPrice) {
         winningAmount = buyoutPrice;
+        isBuyout = true;
+      }
+
+      const auctionUpdates: Record<string, any> = {};
+      if (isBuyout) {
+        auctionUpdates.status = 'ended';
+        auctionUpdates.actualEndTime = new Date();
       }
 
       const winningBid = await this.repo.saveBidTransaction({
@@ -402,6 +416,7 @@ export class BiddingService {
         isAutoBid: false,
         ipAddress,
         newCurrentPrice: winningAmount,
+        auctionUpdates: Object.keys(auctionUpdates).length > 0 ? auctionUpdates : undefined,
       });
 
       return {
@@ -410,6 +425,8 @@ export class BiddingService {
         manualBid: dyingBreathAutoBid, // The losing proxy's dying breath
         currentPrice: winningAmount,
         bidsCreated,
+        isBuyout,
+        winnerId: manualBidderId,
       };
     } 
     
@@ -417,7 +434,13 @@ export class BiddingService {
     // The manual bidder's max is lower than or equal to the existing proxy.
     else {
       // 1. The manual bidder fights to their death
-      const manualRecordAmount = effectiveManualMax;
+      let manualRecordAmount = effectiveManualMax;
+      
+      // Cap the losing bid at buyout price as well to prevent illogical database records
+      if (buyoutPrice && manualRecordAmount >= buyoutPrice) {
+        manualRecordAmount = buyoutPrice;
+      }
+
       const manualBid = await this.repo.saveBidTransaction({
         auctionId,
         bidderId: manualBidderId,
@@ -437,9 +460,17 @@ export class BiddingService {
         proxyBidAmount = bestProxyMax;
       }
 
+      let isBuyout = false;
       // Cap at buyout price
       if (buyoutPrice && proxyBidAmount >= buyoutPrice) {
         proxyBidAmount = buyoutPrice;
+        isBuyout = true;
+      }
+
+      const auctionUpdates: Record<string, any> = {};
+      if (isBuyout) {
+        auctionUpdates.status = 'ended';
+        auctionUpdates.actualEndTime = new Date();
       }
 
       const autoBid = await this.repo.saveBidTransaction({
@@ -448,6 +479,7 @@ export class BiddingService {
         amount: proxyBidAmount,
         isAutoBid: true,
         newCurrentPrice: proxyBidAmount,
+        auctionUpdates: Object.keys(auctionUpdates).length > 0 ? auctionUpdates : undefined,
       });
 
       return {
@@ -457,6 +489,8 @@ export class BiddingService {
         currentPrice: proxyBidAmount,
         proxyOwnerId: bestProxy.bidderId,
         bidsCreated: 2,
+        isBuyout,
+        winnerId: bestProxy.bidderId,
       };
     }
   }
