@@ -138,20 +138,6 @@ export function initSocket(server: HttpServer): Server {
             maxExtendCount: result.maxExtendCount,
           });
         }
-
-        // Buyout triggered — auction ended immediately
-        if (result.buyoutTriggered) {
-          io!.to(`auction:${data.auctionId}`).emit('auction:buyout', {
-            auctionId: data.auctionId,
-            buyerId: userId,
-            price: result.currentPrice,
-          });
-          io!.to(`auction:${data.auctionId}`).emit('auction:ended', {
-            auctionId: data.auctionId,
-            winnerId: userId,
-            finalPrice: result.currentPrice,
-          });
-        }
       } catch (err: any) {
         socket.emit('bid:error', {
           message: err.message || 'Đặt giá thất bại',
