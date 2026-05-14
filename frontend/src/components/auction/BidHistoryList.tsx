@@ -59,7 +59,7 @@ export default function BidHistoryList({ auctionId, bids, totalBids }: BidHistor
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-4 max-h-[400px] hide-scrollbar flex flex-col bg-white dark:bg-slate-800">
+    <div className="flex-1 overflow-y-auto p-4 space-y-4 hide-scrollbar flex flex-col bg-white dark:bg-slate-800">
       {hasMore && (
         <button
           onClick={loadMore}
@@ -86,14 +86,14 @@ export default function BidHistoryList({ auctionId, bids, totalBids }: BidHistor
                 <span className="text-sm font-bold text-slate-800 dark:text-white">
                   {bid.bidder.fullName || "Người dùng ẩn danh"}
                 </span>
+                <span className="text-[10px] text-slate-400 font-medium">{timeAgo(bid.createdAt as any)}</span>
                 {isAuto && (
-                  <span className="text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 font-bold rounded-none border border-blue-200">
+                  <span className="text-[8px] leading-tight bg-blue-100 text-blue-700 px-1.5 py-0 font-bold rounded-full border border-blue-200">
                     AUTO
                   </span>
                 )}
-                <span className="text-[10px] text-slate-400 font-medium">{timeAgo(bid.createdAt as any)}</span>
               </div>
-              <div className="inline-block bg-white border-2 border-orange-200 text-orange-700 font-bold text-xs px-3 py-1.5 rounded-none shadow-[2px_2px_0px_#fed7aa] mt-1">
+              <div className="inline-block bg-white border-2 border-orange-200 text-red-600 font-bold text-xs px-3 py-1.5 rounded-none shadow-[2px_2px_0px_#fed7aa] mt-1">
                 Đã đặt {formatVND(bid.amount)} VNĐ
               </div>
             </div>

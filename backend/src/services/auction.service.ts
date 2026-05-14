@@ -108,6 +108,7 @@ export class AuctionService {
         id: b.id,
         amount: Number(b.amount),
         createdAt: b.createdAt,
+        isAutoBid: b.isAutoBid || b.maxAutoBid !== null,
         bidder: {
           id: b.bidder.id,
           fullName: b.bidder.fullName,
@@ -276,6 +277,7 @@ export class AuctionService {
         id: b.id,
         amount: Number(b.amount),
         createdAt: b.createdAt,
+        isAutoBid: b.isAutoBid || b.maxAutoBid !== null,
         bidder: {
           id: b.bidder.id,
           fullName: b.bidder.fullName,

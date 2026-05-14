@@ -16,6 +16,7 @@ export interface BidEntry {
   id: string;
   amount: number;
   createdAt: string;
+  isAutoBid: boolean;
   bidder: {
     id: string;
     fullName: string;

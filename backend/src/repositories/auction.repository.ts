@@ -183,6 +183,8 @@ export class AuctionRepository {
             id: true,
             amount: true,
             createdAt: true,
+            isAutoBid: true,
+            maxAutoBid: true,
             bidder: { select: { id: true, fullName: true, avatarUrl: true } },
           },
         },
@@ -206,6 +208,8 @@ export class AuctionRepository {
           id: true,
           amount: true,
           createdAt: true,
+          isAutoBid: true,
+          maxAutoBid: true,
           bidder: { select: { id: true, fullName: true, avatarUrl: true } },
         },
       }),
@@ -381,6 +385,7 @@ export class AuctionRepository {
           id: true,
           amount: true,
           isAutoBid: true,
+          maxAutoBid: true,
           createdAt: true,
           bidder: { select: { id: true, fullName: true, avatarUrl: true } },
         },
@@ -395,13 +400,15 @@ export class AuctionRepository {
         },
       });
 
-      return {
+      const result = {
         id: bid.id,
         amount: Number(bid.amount),
-        isAutoBid: bid.isAutoBid,
+        isAutoBid: bid.isAutoBid || bid.maxAutoBid !== null,
         createdAt: bid.createdAt,
         bidder: bid.bidder,
       };
+      console.log(`[saveBidTransaction] Returning bid:`, JSON.stringify(result, null, 2));
+      return result;
     });
   }
 

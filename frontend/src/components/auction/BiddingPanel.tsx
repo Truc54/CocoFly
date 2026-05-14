@@ -52,13 +52,13 @@ export default function BiddingPanel({
   const suggestedPrice = currentPrice + bidIncrement;
   const [bidAmount, setBidAmount] = useState<string>("");
   const [isProxy, setIsProxy] = useState(false);
-  const [confirmBuyout, setConfirmBuyout] = useState(false);
+  const [showBuyoutModal, setShowBuyoutModal] = useState(false);
   const [showBidConfirm, setShowBidConfirm] = useState(false);
   const [pendingBid, setPendingBid] = useState<{ amount: number; maxAutoBid?: number } | null>(null);
 
   const [localError, setLocalError] = useState<string | null>(null);
 
-  useEffect(() => setConfirmBuyout(false), [currentPrice]);
+  useEffect(() => setShowBuyoutModal(false), [currentPrice]);
 
   const handleBidClick = () => {
     onClearError();
@@ -106,12 +106,12 @@ export default function BiddingPanel({
   };
 
   const handleBuyout = () => {
-    if (!confirmBuyout) {
-      setConfirmBuyout(true);
-      return;
-    }
+    setShowBuyoutModal(true);
+  };
+
+  const confirmBuyoutAction = () => {
     onBuyout();
-    setConfirmBuyout(false);
+    setShowBuyoutModal(false);
   };
 
   const handleInputChange = (value: string, setter: (v: string) => void) => {
@@ -134,8 +134,8 @@ export default function BiddingPanel({
     <div className="bg-white dark:bg-slate-800 rounded-none border-2 border-slate-200 dark:border-slate-700 p-6 shadow-[4px_4px_0px_#E2B9A1] relative">
       {/* Full-screen Bid Confirmation Modal */}
       {showBidConfirm && pendingBid && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-slate-800 w-full max-w-md border-2 border-slate-200 dark:border-slate-700 shadow-[8px_8px_0px_#E2B9A1] rounded-2xl overflow-hidden animate-slide-up">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in" onClick={cancelBid}>
+          <div className="bg-white dark:bg-slate-800 w-full max-w-md border-2 border-slate-200 dark:border-slate-700 shadow-[8px_8px_0px_#E2B9A1] rounded-2xl overflow-hidden animate-slide-up" onClick={(e) => e.stopPropagation()}>
             <div className="p-6 text-center">
               <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2 mt-2">Xác nhận đặt giá</h3>
               <p className="text-slate-600 dark:text-slate-300 mb-6 leading-relaxed">
@@ -148,6 +148,29 @@ export default function BiddingPanel({
                 </button>
                 <button onClick={confirmBid} className="flex-1 py-3 font-bold text-white bg-[#0066FF] border-2 border-[#0066FF] hover:bg-blue-600 shadow-[4px_4px_0px_#bfdbfe] hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_#bfdbfe] active:translate-y-0 active:shadow-[2px_2px_0px_#bfdbfe] transition-all cursor-pointer rounded-xl">
                   Xác nhận
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Buyout Confirmation Modal */}
+      {showBuyoutModal && buyoutPrice && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in" onClick={() => setShowBuyoutModal(false)}>
+          <div className="bg-white dark:bg-slate-800 w-full max-w-md border-2 border-slate-200 dark:border-slate-700 shadow-[8px_8px_0px_#E2B9A1] rounded-2xl overflow-hidden animate-slide-up" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 text-center">
+              <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2 mt-2">Xác nhận mua ngay</h3>
+              <p className="text-slate-600 dark:text-slate-300 mb-6 leading-relaxed">
+                Bạn có chắc chắn muốn mua sản phẩm này với giá <br/>
+                <strong className="text-2xl text-orange-600 dark:text-orange-500 mt-2 block">{formatVND(buyoutPrice)} VNĐ</strong>
+              </p>
+              <div className="flex gap-3">
+                <button onClick={() => setShowBuyoutModal(false)} className="flex-1 py-3 font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 border-2 border-slate-200 transition-all cursor-pointer rounded-xl">
+                  Hủy bỏ
+                </button>
+                <button onClick={confirmBuyoutAction} className="flex-1 py-3 font-bold text-white bg-orange-500 border-2 border-orange-500 hover:bg-orange-600 shadow-[4px_4px_0px_#fed7aa] hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_#fed7aa] active:translate-y-0 active:shadow-[2px_2px_0px_#fed7aa] transition-all cursor-pointer rounded-xl">
+                  Xác nhận mua
                 </button>
               </div>
             </div>
@@ -186,14 +209,6 @@ export default function BiddingPanel({
       {/* Bid Input */}
       {isActive && isLoggedIn && (
         <div className="mb-4">
-          {/* Error displayed ABOVE the input */}
-          {displayError && (
-            <div className="mb-2 flex items-center gap-2 text-sm text-red-700 bg-red-50 border-2 border-red-200 py-2.5 px-3 rounded-none font-bold shadow-[3px_3px_0px_#fca5a5]">
-              <span className="material-symbols-outlined text-lg">error</span>
-              {displayError}
-            </div>
-          )}
-
           <div className="relative mb-3">
             <input
               type="text"
@@ -202,7 +217,11 @@ export default function BiddingPanel({
               placeholder={isProxy ? `Giá tối đa (Tối thiểu ${formatVND(suggestedPrice)})` : `Nhập giá (Tối thiểu ${formatVND(suggestedPrice)})`}
               onKeyDown={(e) => e.key === "Enter" && !isBidDisabled && handleBidClick()}
               disabled={isBidDisabled}
-              className="w-full pl-4 pr-12 py-3 bg-white border-2 border-slate-300 rounded-none text-base font-bold text-slate-800 focus:border-slate-400 focus:ring-0 outline-none transition-all placeholder:text-slate-400 placeholder:font-normal shadow-[inset_2px_2px_0px_#f1f5f9] disabled:opacity-50 disabled:bg-slate-50"
+              className={`w-full pl-4 pr-12 py-3 bg-white border-2 rounded-none text-base font-bold focus:ring-0 outline-none transition-all placeholder:text-slate-400 placeholder:font-normal shadow-[inset_2px_2px_0px_#f1f5f9] disabled:opacity-50 disabled:bg-slate-50 text-slate-800 ${
+                displayError
+                  ? "border-red-400"
+                  : "border-slate-300"
+              }`}
             />
             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">VNĐ</span>
           </div>
@@ -239,71 +258,74 @@ export default function BiddingPanel({
       <div className="space-y-3">
         {isActive && isLoggedIn ? (
           <>
+            {/* Info Texts above button */}
+            {displayError && (
+              <div className="text-sm font-bold text-red-600 dark:text-red-500 text-left pb-1 animate-fade-in">
+                {displayError}
+              </div>
+            )}
+            
+            {!displayError && isLeading === false && hasBid && (
+              <div className="text-sm font-bold text-red-600 dark:text-red-500 text-left pb-1 animate-fade-in">
+                Bạn vừa bị vượt giá! Đặt lại ngay.
+              </div>
+            )}
+
+            {isBidDisabled && proxyMaxBid && (
+              <div className="text-sm text-slate-600 dark:text-slate-400 font-medium text-left pb-1 animate-fade-in">
+                Giới hạn tự động của bạn: <span className="font-bold text-slate-800 dark:text-slate-200">{formatVND(proxyMaxBid)} VNĐ</span>
+              </div>
+            )}
+            
+            {isBidDisabled && proxyMessage && !proxyMaxBid && (
+              <div className="text-sm text-slate-600 dark:text-slate-400 font-medium text-left pb-1 animate-fade-in">
+                {proxyMessage}
+              </div>
+            )}
+
             <button
               onClick={handleBidClick}
               disabled={isBidDisabled}
-              className="w-full py-3 bg-[#0066FF] text-white font-bold text-base rounded-full border-2 border-[#0066FF] shadow-[4px_4px_0px_#bfdbfe] hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_#bfdbfe] active:translate-y-0 active:shadow-[2px_2px_0px_#bfdbfe] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-[4px_4px_0px_#bfdbfe]"
+              className="w-full py-3 bg-[#0066FF] text-white font-bold text-base rounded-full border-2 border-[#0066FF] shadow-[4px_4px_0px_#bfdbfe] hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_#bfdbfe] active:translate-y-0 active:shadow-[2px_2px_0px_#bfdbfe] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-default disabled:hover:translate-y-0 disabled:hover:shadow-[4px_4px_0px_#bfdbfe]"
             >
               <span className="material-symbols-outlined text-[20px]">{isBidDisabled ? "lock" : "gavel"}</span>
-              {isBidDisabled 
-                ? proxyMaxBid 
-                  ? `ĐANG DẪN ĐẦU (PROXY MAX: ${formatVND(proxyMaxBid)})`
-                  : "BẠN ĐANG DẪN ĐẦU" 
-                : isProxy ? "KÍCH HOẠT PROXY BIDDING" : "ĐẶT GIÁ NGAY"}
+              {isBidDisabled ? "ĐANG DẪN ĐẦU" : isProxy ? "KÍCH HOẠT PROXY BIDDING" : "ĐẶT GIÁ NGAY"}
             </button>
 
-            {/* Proxy max bid info when leading via proxy */}
-            {isBidDisabled && proxyMaxBid && (
-              <div className="flex items-center gap-2 text-xs text-blue-700 bg-blue-50 border-2 border-blue-200 py-2.5 px-3 rounded-none font-bold shadow-[2px_2px_0px_#bfdbfe]">
-                <span className="material-symbols-outlined text-[16px]">smart_toy</span>
-                <span>Giới hạn tự động của bạn: <span className="text-blue-900">{formatVND(proxyMaxBid)} VNĐ</span></span>
-              </div>
-            )}
-
-            {/* Proxy message */}
-            {isBidDisabled && proxyMessage && !proxyMaxBid && (
-              <div className="flex items-center gap-2 text-xs text-blue-700 bg-blue-50 border-2 border-blue-200 py-2.5 px-3 rounded-none font-bold shadow-[2px_2px_0px_#bfdbfe]">
-                <span className="material-symbols-outlined text-[16px]">smart_toy</span>
-                <span>{proxyMessage}</span>
-              </div>
-            )}
-
-            {buyoutPrice && (
-              <button
-                onClick={handleBuyout}
-                className={`w-full py-3 font-bold text-base rounded-full border-2 transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                  confirmBuyout
-                    ? "bg-red-600 text-white border-red-600 shadow-[4px_4px_0px_#fca5a5] animate-pulse"
-                    : "bg-orange-500 text-white border-orange-500 shadow-[4px_4px_0px_#fed7aa] hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_#fed7aa]"
-                }`}
-              >
-                <span className="material-symbols-outlined text-[20px]">shopping_cart</span>
-                {confirmBuyout ? `XÁC NHẬN MUA ${formatVND(buyoutPrice)} VNĐ?` : `MUA NGAY — ${formatVND(buyoutPrice)} VNĐ`}
+            <div className="flex gap-3">
+              {buyoutPrice && (
+                <button
+                  onClick={handleBuyout}
+                  className="flex-1 py-3 font-bold text-sm sm:text-base rounded-full border-2 bg-orange-500 text-white border-orange-500 shadow-[3px_3px_0px_#fed7aa] hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#fed7aa] active:translate-y-0 active:shadow-[1px_1px_0px_#fed7aa] transition-all flex items-center justify-center gap-1 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[18px]">shopping_cart</span>
+                  MUA NGAY
+                </button>
+              )}
+              <button className={`${buyoutPrice ? "flex-1" : "w-full"} py-3 bg-white text-slate-700 font-bold text-sm sm:text-base rounded-full border-2 border-slate-200 shadow-[3px_3px_0px_#cbd5e1] hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#cbd5e1] active:translate-y-0 active:shadow-[1px_1px_0px_#cbd5e1] transition-all flex items-center justify-center gap-1 cursor-pointer`}>
+                <span className="material-symbols-outlined text-[18px]">favorite</span>
+                YÊU THÍCH
               </button>
-            )}
+            </div>
           </>
         ) : (
-          <button
-            disabled
-            className="w-full py-3 bg-slate-200 text-slate-500 font-bold text-base rounded-full border-2 border-slate-200 cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            {!isLoggedIn ? "ĐĂNG NHẬP ĐỂ ĐẤU GIÁ" : status === "scheduled" ? "CHƯA BẮT ĐẦU" : "ĐÃ KẾT THÚC"}
-          </button>
+          <div className="space-y-3">
+            <button
+              disabled
+              className="w-full py-3 bg-slate-200 text-slate-500 font-bold text-base rounded-full border-2 border-slate-200 cursor-default flex items-center justify-center gap-2"
+            >
+              {!isLoggedIn ? "ĐĂNG NHẬP ĐỂ ĐẤU GIÁ" : status === "scheduled" ? "CHƯA BẮT ĐẦU" : "ĐÃ KẾT THÚC"}
+            </button>
+            <div className="flex gap-3">
+              <button className="w-full py-3 bg-white text-slate-700 font-bold text-sm sm:text-base rounded-full border-2 border-slate-200 shadow-[3px_3px_0px_#cbd5e1] hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#cbd5e1] active:translate-y-0 active:shadow-[1px_1px_0px_#cbd5e1] transition-all flex items-center justify-center gap-1 cursor-pointer">
+                <span className="material-symbols-outlined text-[18px]">favorite</span>
+                YÊU THÍCH
+              </button>
+            </div>
+          </div>
         )}
-
-        <button className="w-full py-3 bg-white text-slate-700 font-bold text-base rounded-full border-2 border-slate-200 shadow-[3px_3px_0px_#cbd5e1] hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#cbd5e1] active:translate-y-0 active:shadow-[1px_1px_0px_#cbd5e1] transition-all flex items-center justify-center gap-2 cursor-pointer">
-          <span className="material-symbols-outlined text-[18px]">favorite</span>
-          Thêm vào yêu thích
-        </button>
       </div>
 
-      {/* Status: Outbid warning (only show when NOT leading, HAS bid before, and no error) */}
-      {!displayError && isLeading === false && hasBid && (
-        <div className="mt-4 flex items-center justify-center gap-2 text-sm text-red-700 bg-red-50 border-2 border-red-200 py-3 rounded-none font-bold shadow-[3px_3px_0px_#fca5a5]">
-          <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
-          Bạn vừa bị vượt giá! Đặt lại ngay.
-        </div>
-      )}
     </div>
   );
 }

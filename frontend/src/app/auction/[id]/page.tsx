@@ -364,7 +364,7 @@ function AuctionDetailContent({
                   placeholder="Nhắn tin..."
                   value={chatMessage}
                   onChange={(e) => setChatMessage(e.target.value)}
-                  className="flex-1 h-10 px-3 bg-white border-2 border-slate-300 rounded-none text-sm outline-none focus:border-slate-400 transition-all placeholder:text-slate-400 shadow-[inset_2px_2px_0px_#f1f5f9]"
+                  className="flex-1 h-10 px-3 bg-white border-2 border-slate-300 rounded-none text-sm outline-none transition-all placeholder:text-slate-400 shadow-[inset_2px_2px_0px_#f1f5f9]"
                 />
                 <button className="w-10 h-10 flex items-center justify-center bg-transparent text-primary hover:bg-slate-200/50 rounded-full transition-all cursor-pointer shrink-0">
                   <span className="material-symbols-outlined text-[20px] leading-none">send</span>
