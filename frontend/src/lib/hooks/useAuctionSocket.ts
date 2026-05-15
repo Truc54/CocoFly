@@ -23,6 +23,7 @@ interface AuctionSocketState {
   error: string | null;
   connected: boolean;
   bidSuccess: boolean;
+  viewerCount: number;
 }
 
 interface UseAuctionSocketReturn extends AuctionSocketState {
@@ -79,6 +80,7 @@ export function useAuctionSocket(
       error: null,
       connected: false,
       bidSuccess: false,
+      viewerCount: 0,
     };
   });
 
@@ -234,6 +236,12 @@ export function useAuctionSocket(
       pendingProxyMaxRef.current = null;
     };
 
+    // ── Viewer count ──────────────────────────────────────────────────────
+    const onViewerCount = (data: { auctionId: string; count: number }) => {
+      if (!mountedRef.current || data.auctionId !== auctionId) return;
+      setState((prev) => ({ ...prev, viewerCount: data.count }));
+    };
+
     // Register all listeners using named references (safer cleanup)
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
@@ -245,6 +253,7 @@ export function useAuctionSocket(
     socket.on("auction:buyout", onBuyout);
     socket.on("bid:success", onBidSuccess);
     socket.on("bid:error", onBidError);
+    socket.on("auction:viewer_count", onViewerCount);
 
     return () => {
       mountedRef.current = false;
@@ -260,6 +269,7 @@ export function useAuctionSocket(
       socket.off("auction:buyout", onBuyout);
       socket.off("bid:success", onBidSuccess);
       socket.off("bid:error", onBidError);
+      socket.off("auction:viewer_count", onViewerCount);
     };
   }, [auctionId]);
 

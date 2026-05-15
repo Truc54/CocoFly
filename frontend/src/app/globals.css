@@ -99,6 +99,17 @@
   40%, 60% { transform: translate3d(4px, 0, 0); }
 }
 
+@keyframes chat-flash-brown {
+  0%, 100% { background-color: inherit; }
+  25% { background-color: rgba(226, 185, 161, 0.4); }
+  50% { background-color: inherit; }
+  75% { background-color: rgba(226, 185, 161, 0.4); }
+}
+
+.chat-highlight-flash {
+  animation: chat-flash-brown 1.2s ease-in-out;
+}
+
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);

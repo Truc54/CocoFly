@@ -61,3 +61,18 @@ export interface RelatedAuction {
   totalBids: number;
   totalWatchers: number;
 }
+
+export interface ChatMessageData {
+  id: string;
+  senderId: string | null;
+  senderName: string;
+  senderAvatar: string | null;
+  message: string;
+  type: 'text' | 'system' | 'bid_alert';
+  createdAt: string;
+  likeCount: number;
+  isLikedByMe: boolean;
+  parentId: string | null;
+  parentSenderName: string | null;
+  parentMessage: string | null;
+}

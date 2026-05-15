@@ -2,12 +2,14 @@ import { Server as HttpServer } from 'http';
 import { Server, Socket } from 'socket.io';
 import { TokenService } from '../services/token.service';
 import { BiddingService } from '../services/bidding.service';
+import { ChatService } from '../services/chat.service';
 import { env } from './env';
 import redis from './redis';
 
 let io: Server | null = null;
 const tokenService = new TokenService();
 const biddingService = new BiddingService();
+const chatService = new ChatService();
 
 export function getIO(): Server {
   if (!io) throw new Error('Socket.IO not initialized');
@@ -48,15 +50,30 @@ export function initSocket(server: HttpServer): Server {
     console.log(`🔌 Socket connected: ${userId} (${socket.id})`);
 
     // ── Join auction room ─────────────────────────────────────────────────
-    socket.on('auction:join', ({ auctionId }: { auctionId: string }) => {
+    socket.on('auction:join', async ({ auctionId }: { auctionId: string }) => {
       if (!auctionId) return;
       socket.join(`auction:${auctionId}`);
+      
+      // Viewer tracking
+      await redis.sadd(`viewers:auction:${auctionId}`, userId);
+      const count = await redis.scard(`viewers:auction:${auctionId}`);
+      io!.to(`auction:${auctionId}`).emit('auction:viewer_count', { auctionId, count });
     });
 
     // ── Leave auction room ────────────────────────────────────────────────
-    socket.on('auction:leave', ({ auctionId }: { auctionId: string }) => {
+    socket.on('auction:leave', async ({ auctionId }: { auctionId: string }) => {
       if (!auctionId) return;
       socket.leave(`auction:${auctionId}`);
+      
+      // Viewer tracking cleanup
+      const socketsInRoom = await io!.in(`auction:${auctionId}`).fetchSockets();
+      const userStillInRoom = socketsInRoom.some(s => s.data.userId === userId && s.id !== socket.id);
+      
+      if (!userStillInRoom) {
+        await redis.srem(`viewers:auction:${auctionId}`, userId);
+        const count = await redis.scard(`viewers:auction:${auctionId}`);
+        io!.to(`auction:${auctionId}`).emit('auction:viewer_count', { auctionId, count });
+      }
     });
 
     // ── Place bid ─────────────────────────────────────────────────────────
@@ -103,6 +120,20 @@ export function initSocket(server: HttpServer): Server {
           totalBids: result.totalBids,
         });
 
+        // Chat integration: send bid_alert
+        try {
+          const room = await chatService.getOrCreateRoom(data.auctionId);
+          const bidderName = result.bid.bidder.fullName || 'Người dùng';
+          const alertMsg = await chatService.sendSystemMessage({
+            roomId: room.id,
+            message: `${bidderName} đã đặt giá ${new Intl.NumberFormat('vi-VN').format(Number(result.currentPrice))}₫`,
+            type: 'bid_alert',
+          });
+          io!.to(`auction:${data.auctionId}`).emit('chat:message', alertMsg);
+        } catch (e) {
+          console.error('Chat system message failed:', e);
+        }
+
         // Notify outbid user(s) via their personal sockets
         if (result.outbidUserId) {
           const outbidSockets = await io!.fetchSockets();
@@ -137,6 +168,17 @@ export function initSocket(server: HttpServer): Server {
             extendCount: result.extendCount,
             maxExtendCount: result.maxExtendCount,
           });
+
+          // Chat integration
+          try {
+            const room = await chatService.getOrCreateRoom(data.auctionId);
+            const alertMsg = await chatService.sendSystemMessage({
+              roomId: room.id,
+              message: `Phiên đấu giá được gia hạn thêm ${result.extendCount > 0 ? 'do có người trả giá phút chót' : ''}`,
+              type: 'system',
+            });
+            io!.to(`auction:${data.auctionId}`).emit('chat:message', alertMsg);
+          } catch (e) {}
         }
       } catch (err: any) {
         socket.emit('bid:error', {
@@ -169,11 +211,92 @@ export function initSocket(server: HttpServer): Server {
           winnerId: userId,
           finalPrice: result.finalPrice,
         });
+
+        // Chat integration
+        try {
+          const room = await chatService.getOrCreateRoom(data.auctionId);
+          const alertMsg = await chatService.sendSystemMessage({
+            roomId: room.id,
+            message: `Phiên đấu giá đã kết thúc bằng Mua Ngay với giá ${new Intl.NumberFormat('vi-VN').format(Number(result.finalPrice))}₫`,
+            type: 'system',
+          });
+          io!.to(`auction:${data.auctionId}`).emit('chat:message', alertMsg);
+        } catch (e) {}
       } catch (err: any) {
         socket.emit('bid:error', {
           message: err.message || 'Mua ngay thất bại',
           code: err.statusCode || 500,
         });
+      }
+    });
+
+    // ── Chat Events ────────────────────────────────────────────────────────
+    socket.on('chat:send', async (data: { auctionId: string; message: string; parentId?: string }) => {
+      try {
+        const room = await chatService.getOrCreateRoom(data.auctionId);
+        const msg = await chatService.sendMessage({
+          roomId: room.id,
+          senderId: userId,
+          message: data.message,
+          type: 'text',
+          parentId: data.parentId,
+        });
+        io!.to(`auction:${data.auctionId}`).emit('chat:message', msg);
+      } catch (err: any) {
+        socket.emit('chat:error', { message: err.message || 'Lỗi gửi tin nhắn' });
+      }
+    });
+
+    socket.on('chat:load_history', async (data: { auctionId: string; cursor?: string; limit?: number }) => {
+      try {
+        const room = await chatService.getOrCreateRoom(data.auctionId);
+        const history = await chatService.getMessages({
+          roomId: room.id,
+          cursor: data.cursor,
+          limit: data.limit,
+          userId,
+        });
+        socket.emit('chat:history', history);
+      } catch (err) {}
+    });
+
+    socket.on('chat:like', async (data: { auctionId: string; messageId: string }) => {
+      try {
+        const result = await chatService.toggleLike(data.messageId, userId);
+        
+        // Broadcast to everyone (they just get the count)
+        io!.to(`auction:${data.auctionId}`).emit('chat:like_updated', {
+          messageId: data.messageId,
+          likeCount: result.likeCount,
+        });
+        
+        // Tell the user who liked it about their specific state
+        socket.emit('chat:like_updated', {
+          messageId: data.messageId,
+          likeCount: result.likeCount,
+          likedByUser: result.liked,
+        });
+      } catch (err: any) {
+        socket.emit('chat:error', { message: 'Lỗi thả tim' });
+      }
+    });
+
+    socket.on('disconnecting', async () => {
+      for (const room of socket.rooms) {
+        if (room.startsWith('auction:')) {
+          const auctionId = room.split(':')[1];
+          // Delay cleanup slightly to allow socketsInRoom to reflect the disconnect correctly
+          setTimeout(async () => {
+            if (!io) return;
+            const socketsInRoom = await io.in(room).fetchSockets();
+            const userStillInRoom = socketsInRoom.some(s => s.data.userId === userId && s.id !== socket.id);
+            if (!userStillInRoom) {
+              await redis.srem(`viewers:auction:${auctionId}`, userId);
+              const count = await redis.scard(`viewers:auction:${auctionId}`);
+              io.to(room).emit('auction:viewer_count', { auctionId, count });
+            }
+          }, 500);
+        }
       }
     });
 

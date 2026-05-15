@@ -9,7 +9,7 @@ import type { AuctionDetail, RelatedAuction } from "@/lib/types/auction";
 import { useAuctionSocket } from "@/lib/hooks/useAuctionSocket";
 import AuctionDetailSkeleton from "@/components/auction/AuctionDetailSkeleton";
 import BiddingPanel from "@/components/auction/BiddingPanel";
-import BidHistoryList from "@/components/auction/BidHistoryList";
+import LiveChatPanel from "@/components/auction/LiveChatPanel";
 import AuctionEndedOverlay from "@/components/auction/AuctionEndedOverlay";
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
@@ -28,7 +28,6 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
-  const [chatMessage, setChatMessage] = useState("");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
@@ -81,7 +80,7 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
     );
   }
 
-  return <AuctionDetailContent auction={auction} related={related} activeImageIdx={activeImageIdx} setActiveImageIdx={setActiveImageIdx} chatMessage={chatMessage} setChatMessage={setChatMessage} isLoggedIn={isLoggedIn} />;
+  return <AuctionDetailContent auction={auction} related={related} activeImageIdx={activeImageIdx} setActiveImageIdx={setActiveImageIdx} isLoggedIn={isLoggedIn} />;
 }
 
 // ─── INNER COMPONENT (needs hooks after auction loads) ────────────────────────
@@ -91,16 +90,12 @@ function AuctionDetailContent({
   related,
   activeImageIdx,
   setActiveImageIdx,
-  chatMessage,
-  setChatMessage,
   isLoggedIn,
 }: {
   auction: AuctionDetail;
   related: RelatedAuction[];
   activeImageIdx: number;
   setActiveImageIdx: (i: number) => void;
-  chatMessage: string;
-  setChatMessage: (s: string) => void;
   isLoggedIn: boolean;
 }) {
   const {
@@ -120,6 +115,7 @@ function AuctionDetailContent({
     error: bidError,
     connected,
     bidSuccess,
+    viewerCount,
     placeBid,
     buyout,
     clearError,
@@ -293,10 +289,6 @@ function AuctionDetailContent({
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-2">
                 <h1 className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white leading-tight">{auction.title}</h1>
-                <span className="text-slate-500 font-medium flex items-center gap-1 shrink-0">
-                  <span className="material-symbols-outlined text-lg">visibility</span>
-                  <span className="text-base">{auction.totalWatchers}</span>
-                </span>
               </div>
             </div>
 
@@ -336,42 +328,16 @@ function AuctionDetailContent({
             />
           )}
 
-          {/* Bid History + Chat Box */}
-          <div className="bg-white dark:bg-slate-800 rounded-none border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] flex flex-col h-[550px]">
-            <div className="p-4 border-b-2 border-slate-200 dark:border-slate-700 flex items-center justify-between shrink-0 bg-slate-50 dark:bg-slate-800">
-              <h3 className="font-bold flex items-center gap-2 text-slate-800 dark:text-white uppercase tracking-wide text-sm">
-                <span className="material-symbols-outlined text-primary">forum</span>
-                Live Chat & Lịch sử
-              </h3>
-              <div className="flex items-center gap-1.5 bg-white text-green-600 text-[10px] font-bold px-2 py-1 border-2 border-green-200 shadow-[2px_2px_0px_#bbf7d0]">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                LIVE
-              </div>
-            </div>
-
-            {/* Real-time Bid History */}
-            <BidHistoryList
-              auctionId={auction.id}
-              bids={bids}
-              totalBids={totalBids}
-            />
-
-            {/* Chat Input */}
-            <div className="p-3 border-t-2 border-slate-200 dark:border-slate-700 shrink-0 bg-slate-50 dark:bg-slate-800">
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  placeholder="Nhắn tin..."
-                  value={chatMessage}
-                  onChange={(e) => setChatMessage(e.target.value)}
-                  className="flex-1 h-10 px-3 bg-white border-2 border-slate-300 rounded-none text-sm outline-none transition-all placeholder:text-slate-400 shadow-[inset_2px_2px_0px_#f1f5f9]"
-                />
-                <button className="w-10 h-10 flex items-center justify-center bg-transparent text-primary hover:bg-slate-200/50 rounded-full transition-all cursor-pointer shrink-0">
-                  <span className="material-symbols-outlined text-[20px] leading-none">send</span>
-                </button>
-              </div>
-            </div>
-          </div>
+          {/* Live Chat Panel */}
+          <LiveChatPanel
+            auctionId={auction.id}
+            chatRoomId={auction.chatRoomId}
+            bids={bids}
+            totalBids={totalBids}
+            viewerCount={viewerCount}
+            isLoggedIn={isLoggedIn}
+            isEnded={auctionStatus === "ended" || auctionStatus === "buyout"}
+          />
         </div>
       </div>
 
