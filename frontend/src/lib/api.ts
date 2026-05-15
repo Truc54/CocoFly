@@ -155,6 +155,9 @@ export const auctionApi = {
   },
   // ── Single auction
   getById: (id: string) => fetchApi(`/api/auctions/${id}`),
+  // ── Bid history for detail page
+  getBidHistory: (id: string, page = 1, limit = 20) =>
+    fetchApi(`/api/auctions/${id}/bids?page=${page}&limit=${limit}`),
   // ── Create auction
   create: (data: any) => fetchApi('/api/auctions', {
     method: 'POST',
@@ -163,6 +166,8 @@ export const auctionApi = {
   // ── Search suggestions
   getSuggestions: (q: string, status: 'active' | 'scheduled' = 'active', limit = 8) =>
     fetchApi(`/api/auctions/suggestions?q=${encodeURIComponent(q)}&status=${status}&limit=${limit}`),
+  // ── Get user's bid status for an auction (requires auth)
+  getMyBidStatus: (id: string) => fetchApi(`/api/auctions/${id}/my-status`),
 };
 
 export const categoryApi = {
@@ -174,4 +179,9 @@ export const notificationApi = {
     // TODO: Replace with real API when notification endpoints are built
     return 3;
   },
+};
+
+export const paymentApi = {
+  decline: (paymentId: string) =>
+    fetchApi(`/api/auctions/payments/${paymentId}/decline`, { method: 'POST' }),
 };

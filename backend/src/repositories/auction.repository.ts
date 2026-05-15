@@ -168,13 +168,55 @@ export class AuctionRepository {
       where: { id },
       include: {
         item: {
-          include: { media: { orderBy: { sortOrder: 'asc' } } },
+          include: {
+            media: { orderBy: { sortOrder: 'asc' } },
+            category: { select: { id: true, name: true } },
+          },
         },
         seller: {
           select: { id: true, fullName: true, avatarUrl: true, rating: true },
         },
+        bids: {
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+          select: {
+            id: true,
+            amount: true,
+            createdAt: true,
+            isAutoBid: true,
+            maxAutoBid: true,
+            bidder: { select: { id: true, fullName: true, avatarUrl: true } },
+          },
+        },
+        chatRoom: { select: { id: true } },
       },
     });
+  }
+
+  // ── Bid History (paginated) ────────────────────────────────────────────────
+
+  public async getBidHistory(auctionId: string, page: number, limit: number) {
+    const skip = (page - 1) * limit;
+
+    const [bids, total] = await Promise.all([
+      prisma.bid.findMany({
+        where: { auctionId },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          amount: true,
+          createdAt: true,
+          isAutoBid: true,
+          maxAutoBid: true,
+          bidder: { select: { id: true, fullName: true, avatarUrl: true } },
+        },
+      }),
+      prisma.bid.count({ where: { auctionId } }),
+    ]);
+
+    return { bids, total };
   }
 
   // ── Read List (Listing pages) ──────────────────────────────────────────────
@@ -295,9 +337,159 @@ export class AuctionRepository {
     return [...startsWithResults, ...containsResults];
   }
 
-  // ── Bid (placeholder for future) ──────────────────────────────────────────
+  // ── Bidding Methods ─────────────────────────────────────────────────────────
 
-  async saveBid(auctionId: string, bidData: any): Promise<void> {
-    // prisma.bid.create({ data: { ... }})
+  async getAuctionForBidding(auctionId: string) {
+    return prisma.auction.findUnique({
+      where: { id: auctionId },
+      select: {
+        id: true,
+        sellerId: true,
+        status: true,
+        currentPrice: true,
+        startingPrice: true,
+        buyoutPrice: true,
+        bidIncrement: true,
+        endTime: true,
+        autoExtend: true,
+        autoExtendMinutes: true,
+        autoExtendThreshold: true,
+        extendCount: true,
+        maxExtendCount: true,
+        totalBids: true,
+      },
+    });
+  }
+
+  async saveBidTransaction(data: {
+    auctionId: string;
+    bidderId: string;
+    amount: number;
+    maxAutoBid?: number | null;
+    isAutoBid: boolean;
+    ipAddress?: string | null;
+    newCurrentPrice: number;
+    auctionUpdates?: Record<string, any>;
+  }) {
+    return prisma.$transaction(async (tx) => {
+      const bid = await tx.bid.create({
+        data: {
+          auctionId: data.auctionId,
+          bidderId: data.bidderId,
+          amount: new Decimal(data.amount),
+          maxAutoBid: data.maxAutoBid != null ? new Decimal(data.maxAutoBid) : null,
+          isAutoBid: data.isAutoBid,
+          ipAddress: data.ipAddress ?? null,
+        },
+        select: {
+          id: true,
+          amount: true,
+          isAutoBid: true,
+          maxAutoBid: true,
+          createdAt: true,
+          bidder: { select: { id: true, fullName: true, avatarUrl: true } },
+        },
+      });
+
+      await tx.auction.update({
+        where: { id: data.auctionId },
+        data: {
+          currentPrice: new Decimal(data.newCurrentPrice),
+          totalBids: { increment: 1 },
+          ...data.auctionUpdates,
+        },
+      });
+
+      const result = {
+        id: bid.id,
+        amount: Number(bid.amount),
+        isAutoBid: bid.isAutoBid || bid.maxAutoBid !== null,
+        createdAt: bid.createdAt,
+        bidder: bid.bidder,
+      };
+      console.log(`[saveBidTransaction] Returning bid:`, JSON.stringify(result, null, 2));
+      return result;
+    });
+  }
+
+  async findHighestBid(auctionId: string) {
+    return prisma.bid.findFirst({
+      where: { auctionId, isValid: true },
+      orderBy: [{ amount: 'desc' }, { createdAt: 'asc' }],
+      select: {
+        id: true,
+        bidderId: true,
+        amount: true,
+        createdAt: true,
+      },
+    });
+  }
+
+  async findRunnerUpBid(auctionId: string, winnerId: string) {
+    return prisma.bid.findFirst({
+      where: { auctionId, isValid: true, bidderId: { not: winnerId } },
+      orderBy: [{ amount: 'desc' }, { createdAt: 'asc' }],
+      select: {
+        id: true,
+        bidderId: true,
+        amount: true,
+      },
+    });
+  }
+
+  async hasUserBid(auctionId: string, userId: string) {
+    const count = await prisma.bid.count({
+      where: { auctionId, bidderId: userId, isValid: true },
+    });
+    return count > 0;
+  }
+
+  async findActiveProxyBids(auctionId: string) {
+    return prisma.bid.findMany({
+      where: {
+        auctionId,
+        maxAutoBid: { not: null },
+        isValid: true,
+      },
+      orderBy: [{ maxAutoBid: 'desc' }, { createdAt: 'asc' }],
+      select: {
+        id: true,
+        bidderId: true,
+        amount: true,
+        maxAutoBid: true,
+        createdAt: true,
+      },
+    });
+  }
+
+  async endAuctionWithWinner(auctionId: string, winnerId: string, winningBidId: string, finalPrice: number) {
+    return prisma.auction.update({
+      where: { id: auctionId },
+      data: {
+        status: AuctionStatus.ended,
+        winnerId,
+        winningBidId,
+        finalPrice: new Decimal(finalPrice),
+        actualEndTime: new Date(),
+      },
+    });
+  }
+
+  async endAuctionFailed(auctionId: string) {
+    return prisma.$transaction(async (tx) => {
+      const auction = await tx.auction.update({
+        where: { id: auctionId },
+        data: {
+          status: AuctionStatus.failed,
+          actualEndTime: new Date(),
+        },
+        select: { itemId: true },
+      });
+
+      await tx.item.update({
+        where: { id: auction.itemId },
+        data: { status: 'active' },
+      });
+    });
   }
 }

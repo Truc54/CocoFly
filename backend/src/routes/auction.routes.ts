@@ -8,6 +8,8 @@ import { createAuctionSchema } from '../validators/auction.validator';
  * Route Mapping:
  * Only connects an HTTP verb + path to a specific Controller method.
  * Optionally injects global/route-specific Middleware (Validate, Auth).
+ *
+ * NOTE: Bidding (place bid, buyout) is handled via Socket.IO, not REST.
  */
 export const auctionRoutes = Router();
 const auctionController = new AuctionController();
@@ -32,9 +34,25 @@ auctionRoutes.get(
   auctionController.getAuction.bind(auctionController),
 );
 
-// ── Place bid on an auction (temporarily unavailable until fully implemented)
-auctionRoutes.post(
+// ── Get bid history for an auction (public)
+auctionRoutes.get(
   '/:auctionId/bids',
-  authGuard,
-  auctionController.placeBid.bind(auctionController),
+  auctionController.getBidHistory.bind(auctionController),
 );
+
+// ── Get user's bid status for an auction (authenticated)
+auctionRoutes.get(
+  '/:auctionId/my-status',
+  authGuard,
+  auctionController.getMyBidStatus.bind(auctionController),
+);
+
+// ── Payment routes ──────────────────────────────────────────────────────────
+
+// Runner-up declines purchase (no penalty)
+auctionRoutes.post(
+  '/payments/:paymentId/decline',
+  authGuard,
+  auctionController.declinePayment.bind(auctionController),
+);
+

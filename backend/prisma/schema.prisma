@@ -76,6 +76,7 @@ model User {
   auditLogs        AuditLog[] // New relation
   openedDisputes   Dispute[]        @relation("DisputeOpener") // New relation
   resolvedDisputes Dispute[]        @relation("DisputeResolver") // New relation
+  chatMessageLikes ChatMessageLike[]
 
   @@map("users")
 }
@@ -233,7 +234,6 @@ model Auction {
 
   // Pricing
   startingPrice Decimal  @map("starting_price") @db.Decimal(18, 2)
-  reservePrice  Decimal? @map("reserve_price") @db.Decimal(18, 2)
   currentPrice  Decimal  @map("current_price") @db.Decimal(18, 2)
   buyoutPrice   Decimal? @map("buyout_price") @db.Decimal(18, 2)
   bidIncrement  Decimal  @default(1000) @map("bid_increment") @db.Decimal(18, 2)
@@ -354,16 +354,33 @@ model ChatMessage {
   id        String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   roomId    String          @map("room_id") @db.Uuid
   senderId  String?         @map("sender_id") @db.Uuid
+  parentId  String?         @map("parent_id") @db.Uuid
   message   String
   type      ChatMessageType @default(text)
   isDeleted Boolean         @default(false) @map("is_deleted")
   createdAt DateTime        @default(now()) @map("created_at") @db.Timestamptz()
 
-  room   ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  sender User?    @relation(fields: [senderId], references: [id], onDelete: SetNull)
+  room    ChatRoom          @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  sender  User?             @relation(fields: [senderId], references: [id], onDelete: SetNull)
+  parent  ChatMessage?      @relation("ChatReplies", fields: [parentId], references: [id], onDelete: SetNull)
+  replies ChatMessage[]     @relation("ChatReplies")
+  likes   ChatMessageLike[]
 
   @@index([roomId, createdAt])
   @@map("chat_messages")
+}
+
+model ChatMessageLike {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  messageId String   @map("message_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  message ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@map("chat_message_likes")
 }
 
 enum ChatMessageType {

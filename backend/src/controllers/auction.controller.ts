@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuctionService } from '../services/auction.service';
+import prisma from '../config/prisma';
+import { AppError } from '../utils/AppError';
 
 /**
  * Controller Layer:
@@ -98,13 +100,89 @@ export class AuctionController {
     }
   }
 
-  // ── Place Bid (placeholder) ────────────────────────────────────────────────
+  // ── Get Bid History ────────────────────────────────────────────────────────
 
-  async placeBid(req: Request, res: Response, next: NextFunction): Promise<void> {
-    // Return 501 Not Implemented until bidding is fully implemented
-    res.status(501).json({
-      success: false,
-      message: 'Tính năng đặt giá hiện chưa được hỗ trợ.',
-    });
+  async getBidHistory(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const auctionId = req.params.auctionId as string;
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 20));
+
+      const result = await this.auctionService.getBidHistory(auctionId, page, limit);
+      res.json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  // ── Get User's Bid Status ──────────────────────────────────────────────────
+
+  async getMyBidStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const auctionId = req.params.auctionId as string;
+      const userId = req.user!.userId;
+
+      const result = await this.auctionService.getUserBidStatus(auctionId, userId);
+      res.json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  // ── Decline Payment (Runner-up) ────────────────────────────────────────────
+
+  async declinePayment(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const paymentId = req.params.paymentId as string;
+      const userId = req.user!.userId;
+
+      const payment = await prisma.payment.findUnique({
+        where: { id: paymentId },
+        select: { id: true, buyerId: true, auctionId: true, status: true },
+      });
+
+      if (!payment) throw new AppError('Thanh toán không tồn tại', 404);
+      if (payment.buyerId !== userId) throw new AppError('Bạn không có quyền thực hiện hành động này', 403);
+      if (payment.status !== 'pending') throw new AppError('Thanh toán không ở trạng thái chờ', 400);
+
+      // Mark payment as failed (runner-up decline — no strike penalty)
+      await prisma.payment.update({
+        where: { id: paymentId },
+        data: { status: 'failed' },
+      });
+
+      // Set auction to no winner, free item
+      const auction = await prisma.auction.findUnique({
+        where: { id: payment.auctionId },
+        select: { itemId: true, sellerId: true },
+      });
+
+      await prisma.auction.update({
+        where: { id: payment.auctionId },
+        data: { winnerId: null, winningBidId: null },
+      });
+
+      if (auction) {
+        await prisma.item.update({
+          where: { id: auction.itemId },
+          data: { status: 'active' },
+        });
+
+        await prisma.notification.create({
+          data: {
+            userId: auction.sellerId,
+            auctionId: payment.auctionId,
+            type: 'auction_failed',
+            title: 'Người mua đã từ chối',
+            message: 'Người mua đã từ chối mua sản phẩm. Phiên đấu giá thất bại.',
+          },
+        });
+      }
+
+      res.json({ success: true, message: 'Đã từ chối mua sản phẩm' });
+    } catch (err) {
+      next(err);
+    }
   }
 }
+

@@ -1,8 +1,24 @@
 import { Worker, Job } from 'bullmq';
 import { env } from '../config/env';
 import { AuctionStatus } from '@prisma/client';
+import { Decimal } from '@prisma/client/runtime/library';
 import prisma from '../config/prisma';
 import { scheduleAuctionActivation, scheduleAuctionEnd, scheduleHealthCheck } from '../queues/auction.queue';
+import { schedulePaymentTimeout } from '../queues/payment.queue';
+import { AuctionRepository } from '../repositories/auction.repository';
+
+const auctionRepo = new AuctionRepository();
+
+// Helper: safely emit via Socket.IO if initialized
+function tryBroadcast(auctionId: string, event: string, data: any): void {
+  try {
+    const { getIO } = require('../config/socket');
+    const io = getIO();
+    io.to(`auction:${auctionId}`).emit(event, data);
+  } catch {
+    // Socket.IO not yet initialized (during startup recovery) — skip
+  }
+}
 
 interface AuctionJobPayload {
   auctionId: string;
@@ -192,7 +208,7 @@ async function handleEndAuction(data: AuctionJobPayload): Promise<void> {
 
   const auction = await prisma.auction.findUnique({
     where: { id: auctionId },
-    select: { status: true },
+    select: { status: true, sellerId: true, itemId: true },
   });
 
   if (!auction) {
@@ -205,12 +221,93 @@ async function handleEndAuction(data: AuctionJobPayload): Promise<void> {
     return;
   }
 
-  await prisma.auction.update({
-    where: { id: auctionId },
-    data: { status: AuctionStatus.ended, actualEndTime: new Date() },
-  });
+  // Find highest valid bid
+  const highestBid = await auctionRepo.findHighestBid(auctionId);
 
-  console.log(`🏁 Auction ${auctionId} is now ENDED`);
+  if (highestBid) {
+    // ── Auction has bids → determine winner ──────────────────────────────
+    const finalPrice = Number(highestBid.amount);
+
+    await auctionRepo.endAuctionWithWinner(
+      auctionId,
+      highestBid.bidderId,
+      highestBid.id,
+      finalPrice,
+    );
+
+    // Create Payment record (pending, 48h timeout)
+    const platformFee = finalPrice * 0.05;
+    await prisma.payment.create({
+      data: {
+        auctionId,
+        buyerId: highestBid.bidderId,
+        sellerId: auction.sellerId,
+        amount: new Decimal(finalPrice),
+        platformFee: new Decimal(platformFee),
+        sellerAmount: new Decimal(finalPrice - platformFee),
+        paymentMethod: 'banking',
+        status: 'pending',
+      },
+    });
+
+    await schedulePaymentTimeout(auctionId, highestBid.bidderId);
+
+    // Notifications
+    await prisma.notification.createMany({
+      data: [
+        {
+          userId: highestBid.bidderId,
+          auctionId,
+          type: 'auction_won',
+          title: 'Chúc mừng! Bạn đã thắng đấu giá',
+          message: `Vui lòng thanh toán ${finalPrice.toLocaleString()} VNĐ trong 48 giờ.`,
+        },
+        {
+          userId: auction.sellerId,
+          auctionId,
+          type: 'auction_ending',
+          title: 'Đấu giá đã kết thúc',
+          message: `Sản phẩm đã được bán với giá ${finalPrice.toLocaleString()} VNĐ.`,
+        },
+      ],
+    });
+
+    // Broadcast via Socket.IO
+    tryBroadcast(auctionId, 'auction:ended', {
+      auctionId,
+      winnerId: highestBid.bidderId,
+      finalPrice,
+    });
+
+    console.log(`🏁 Auction ${auctionId} ENDED — winner: ${highestBid.bidderId}, price: ${finalPrice}`);
+  } else {
+    // ── No bids → auction failed ─────────────────────────────────────────
+    await auctionRepo.endAuctionFailed(auctionId);
+
+    await prisma.notification.create({
+      data: {
+        userId: auction.sellerId,
+        auctionId,
+        type: 'auction_failed',
+        title: 'Đấu giá thất bại',
+        message: 'Không có lượt đặt giá nào. Sản phẩm đã được mở khóa.',
+      },
+    });
+
+    tryBroadcast(auctionId, 'auction:ended', {
+      auctionId,
+      winnerId: null,
+      finalPrice: null,
+    });
+
+    console.log(`🏁 Auction ${auctionId} FAILED — no bids`);
+  }
+
+  // Close chat room
+  await prisma.chatRoom.updateMany({
+    where: { auctionId },
+    data: { isActive: false },
+  });
 }
 
 // ── Graceful Shutdown ─────────────────────────────────────────────────────────
