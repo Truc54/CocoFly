@@ -15,12 +15,22 @@ function ResultContent() {
   const paymentId = searchParams.get("paymentId");
 
   useEffect(() => {
-    // Simulate a brief loading state for better UX
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 800);
-    return () => clearTimeout(timer);
-  }, []);
+    if (isSuccess && paymentId) {
+      const pendingStr = sessionStorage.getItem("pendingPayment");
+      let successData = { paymentId };
+      if (pendingStr) {
+        successData = { ...JSON.parse(pendingStr), paymentId };
+        sessionStorage.removeItem("pendingPayment");
+      }
+      sessionStorage.setItem("successPayment", JSON.stringify(successData));
+      router.replace("/");
+    } else {
+      const timer = setTimeout(() => {
+        setLoading(false);
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [isSuccess, paymentId, router]);
 
   if (loading) {
     return (

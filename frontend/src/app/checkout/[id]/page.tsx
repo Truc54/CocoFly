@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { CreditCard, Landmark, ArrowRight, Loader2, CheckCircle2, AlertCircle, ShieldCheck, Trophy } from "lucide-react";
 import Image from "next/image";
 
-import { paymentApi } from "@/lib/api";
+import { paymentApi, userApi } from "@/lib/api";
 
 export default function CheckoutPage() {
   const params = useParams();
@@ -19,30 +19,90 @@ export default function CheckoutPage() {
   const [processing, setProcessing] = useState(false);
   const [bankingInfo, setBankingInfo] = useState<any>(null);
 
+  const [address, setAddress] = useState("");
+  const [phone, setPhone] = useState("");
+  const [initialAddress, setInitialAddress] = useState("");
+  const [initialPhone, setInitialPhone] = useState("");
+  const [addressError, setAddressError] = useState("");
+  const [phoneError, setPhoneError] = useState("");
+
   useEffect(() => {
-    const fetchPayment = async () => {
+    const fetchData = async () => {
       try {
-        const json = await paymentApi.getByAuctionId(auctionId);
-        if (json.success && json.data) {
-          setPayment(json.data);
+        const [paymentRes, addressRes] = await Promise.all([
+          paymentApi.getByAuctionId(auctionId),
+          userApi.getAddress().catch(() => ({ success: false, data: null }))
+        ]);
+
+        if (paymentRes.success && paymentRes.data) {
+          setPayment(paymentRes.data);
         } else {
-          setError(json.message || "Không tìm thấy thanh toán");
+          setError(paymentRes.message || "Không tìm thấy thanh toán");
+        }
+
+        if (addressRes && addressRes.success && addressRes.data) {
+          setAddress(addressRes.data.addressLine);
+          setPhone(addressRes.data.phone);
+          setInitialAddress(addressRes.data.addressLine);
+          setInitialPhone(addressRes.data.phone);
         }
       } catch (err: any) {
-        setError(err.message || "Không thể tải thông tin thanh toán");
+        setError(err.message || "Không thể tải thông tin");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchPayment();
+    fetchData();
   }, [auctionId]);
 
   const handlePayment = async () => {
     if (!payment) return;
+
+    setAddressError("");
+    setPhoneError("");
+    let isValid = true;
+
+    if (!phone.trim()) {
+      setPhoneError("Vui lòng nhập số điện thoại liên hệ.");
+      isValid = false;
+    } else if (!/^[0-9]{10,11}$/.test(phone.replace(/\s+/g, ''))) {
+      setPhoneError("Số điện thoại không hợp lệ.");
+      isValid = false;
+    }
+
+    if (!address.trim()) {
+      setAddressError("Vui lòng nhập địa chỉ giao hàng.");
+      isValid = false;
+    } else if (address.trim().length < 5) {
+      setAddressError("Địa chỉ giao hàng quá ngắn.");
+      isValid = false;
+    }
+
+    if (!isValid) return;
+
     setProcessing(true);
     try {
-      const json = await paymentApi.initiate(payment.id, selectedMethod);
+      // Chỉ lưu vào DB nếu đây là lần đầu tiên (chưa từng có data cũ)
+      if (!initialAddress && !initialPhone) {
+        try {
+          await userApi.saveAddress(address, phone);
+        } catch (saveErr: any) {
+          alert(`Lỗi lưu địa chỉ: ${saveErr.message}`);
+          setProcessing(false);
+          return; // Dừng thanh toán nếu không lưu được địa chỉ
+        }
+      }
+
+      // Lưu thông tin tạm để hiển thị popup ở trang chủ
+      const paymentData = {
+        itemName: payment.auction?.item?.title || "Sản phẩm đấu giá",
+        imageUrl: payment.auction?.item?.thumbnailUrl || payment.auction?.item?.images?.[0]?.url || "/placeholder.png",
+        amount: payment.amount,
+      };
+      sessionStorage.setItem("pendingPayment", JSON.stringify(paymentData));
+
+      const json = await paymentApi.initiate(payment.id, selectedMethod, { addressLine: address, phone });
 
       if (json.success) {
         if (json.data.paymentUrl) {
@@ -84,22 +144,12 @@ export default function CheckoutPage() {
   return (
     <div className="min-h-screen bg-muted/30 py-12">
       <div className="max-w-4xl mx-auto px-4 sm:px-6">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-            <ShieldCheck className="w-5 h-5 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Thanh toán an toàn</h1>
-            <p className="text-sm text-muted-foreground">Mọi giao dịch đều được bảo vệ bởi CocoFly Escrow</p>
-          </div>
-        </div>
-
         {bankingInfo ? (
           <div className="bg-card rounded-2xl border border-border p-8 shadow-sm text-center max-w-2xl mx-auto">
             <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-6">
               <Landmark className="w-8 h-8 text-green-500" />
             </div>
-            <h2 className="text-2xl font-bold text-foreground mb-2">Chuyển khoản thủ công</h2>
+            <h2 className="text-2xl font-bold text-foreground mb-2">Tiền mặt</h2>
             <p className="text-muted-foreground mb-8">Vui lòng chuyển khoản theo thông tin bên dưới. Hệ thống sẽ tự động xác nhận sau 5-10 phút.</p>
             
             <div className="bg-muted rounded-xl p-6 text-left space-y-4 max-w-md mx-auto">
@@ -125,15 +175,59 @@ export default function CheckoutPage() {
 
             <button 
               onClick={() => router.push('/won-auctions')}
-              className="mt-8 px-6 py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors"
+              className="mt-8 px-6 py-3 bg-[#0066FF] text-white font-bold rounded-full shadow-[4px_4px_0px_#bfdbfe] hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_#bfdbfe] active:translate-y-0 active:shadow-[2px_2px_0px_#bfdbfe] transition-all"
             >
               Tôi đã chuyển khoản
             </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Phương thức thanh toán */}
             <div className="lg:col-span-2 space-y-6">
+              {/* Thông tin giao hàng */}
+              <div className="bg-card rounded-2xl border border-border p-6 shadow-sm">
+                <h2 className="text-lg font-semibold text-foreground mb-4">Thông tin nhận hàng</h2>
+                
+                <div className="space-y-5">
+                  <div>
+                    <div className="mb-1.5">
+                      <label className="block text-sm font-medium text-foreground mb-1">Số điện thoại <span className="text-red-500">*</span></label>
+                      {phoneError && <span className="text-sm text-red-500 font-medium block">{phoneError}</span>}
+                    </div>
+                    <div className={`flex items-center bg-slate-50 border-2 rounded-xl px-1 py-1 shadow-[3px_3px_0px_#E2B9A1] transition-all ${phoneError ? 'border-red-500' : 'border-slate-200'}`}>
+                      <input 
+                        type="tel" 
+                        value={phone} 
+                        onChange={(e) => {
+                          setPhone(e.target.value);
+                          if (phoneError) setPhoneError("");
+                        }} 
+                        placeholder="Nhập số điện thoại liên hệ" 
+                        className="flex-1 px-3 py-2.5 text-sm bg-transparent outline-none placeholder:text-slate-400 min-w-0"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="mb-1.5">
+                      <label className="block text-sm font-medium text-foreground mb-1">Địa chỉ giao hàng <span className="text-red-500">*</span></label>
+                      {addressError && <span className="text-sm text-red-500 font-medium block">{addressError}</span>}
+                    </div>
+                    <div className={`flex items-center bg-slate-50 border-2 rounded-xl px-1 py-1 shadow-[3px_3px_0px_#E2B9A1] transition-all ${addressError ? 'border-red-500' : 'border-slate-200'}`}>
+                      <input 
+                        type="text" 
+                        value={address} 
+                        onChange={(e) => {
+                          setAddress(e.target.value);
+                          if (addressError) setAddressError("");
+                        }} 
+                        placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố" 
+                        className="flex-1 px-3 py-2.5 text-sm bg-transparent outline-none placeholder:text-slate-400 min-w-0"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Phương thức thanh toán */}
               <div className="bg-card rounded-2xl border border-border p-6 shadow-sm">
                 <h2 className="text-lg font-semibold text-foreground mb-4">Chọn phương thức thanh toán</h2>
                 
@@ -141,8 +235,8 @@ export default function CheckoutPage() {
                   {/* VNPay */}
                   <label className={`relative flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${selectedMethod === 'vnpay' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}>
                     <input type="radio" name="paymentMethod" value="vnpay" checked={selectedMethod === 'vnpay'} onChange={() => setSelectedMethod('vnpay')} className="sr-only" />
-                    <div className="w-12 h-12 bg-[#005BAA] rounded-lg flex items-center justify-center flex-shrink-0">
-                      <span className="text-white font-bold text-xs">VNPAY</span>
+                    <div className="w-12 h-12 bg-white border rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Image src="/payment_logo/vnpay_logo.png" alt="VNPAY" width={40} height={40} className="object-contain" />
                     </div>
                     <div className="flex-1">
                       <h3 className="font-semibold text-foreground">Ví VNPAY / Thẻ ATM / Visa</h3>
@@ -154,8 +248,8 @@ export default function CheckoutPage() {
                   {/* MoMo */}
                   <label className={`relative flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${selectedMethod === 'momo' ? 'border-[#A50064] bg-[#A50064]/5' : 'border-border hover:border-[#A50064]/50'}`}>
                     <input type="radio" name="paymentMethod" value="momo" checked={selectedMethod === 'momo'} onChange={() => setSelectedMethod('momo')} className="sr-only" />
-                    <div className="w-12 h-12 bg-[#A50064] rounded-lg flex items-center justify-center flex-shrink-0">
-                      <span className="text-white font-bold text-xs">MoMo</span>
+                    <div className="w-12 h-12 bg-white border rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      <Image src="/payment_logo/Momo_logo.svg" alt="MoMo" width={48} height={48} className="object-cover w-full h-full" />
                     </div>
                     <div className="flex-1">
                       <h3 className="font-semibold text-foreground">Ví điện tử MoMo</h3>
@@ -167,12 +261,12 @@ export default function CheckoutPage() {
                   {/* Banking */}
                   <label className={`relative flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${selectedMethod === 'banking' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}>
                     <input type="radio" name="paymentMethod" value="banking" checked={selectedMethod === 'banking'} onChange={() => setSelectedMethod('banking')} className="sr-only" />
-                    <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Landmark className="w-6 h-6 text-foreground" />
+                    <div className="w-12 h-12 bg-white border rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Image src="/payment_logo/cash_logo.png" alt="Cash" width={40} height={40} className="object-contain" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold text-foreground">Chuyển khoản thủ công</h3>
-                      <p className="text-sm text-muted-foreground">Xác nhận trong 5-10 phút</p>
+                      <h3 className="font-semibold text-foreground">Tiền mặt</h3>
+                      <p className="text-sm text-muted-foreground">Thanh toán trực tiếp khi nhận hàng</p>
                     </div>
                     {selectedMethod === 'banking' && <CheckCircle2 className="w-6 h-6 text-primary" />}
                   </label>
@@ -182,14 +276,18 @@ export default function CheckoutPage() {
 
             {/* Tóm tắt đơn hàng */}
             <div className="lg:col-span-1">
-              <div className="bg-card rounded-2xl border border-border p-6 shadow-sm sticky top-8">
+              <div className="bg-card rounded-2xl border border-border p-6 shadow-sm">
                 <h2 className="text-lg font-semibold text-foreground mb-4">Tóm tắt đơn hàng</h2>
                 
                 <div className="flex items-center gap-4 mb-6">
                   <div className="w-16 h-16 bg-muted rounded-lg overflow-hidden flex-shrink-0 relative">
-                    {/* Placeholder or real image */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/5" />
-                    <Trophy className="absolute inset-0 m-auto w-8 h-8 text-primary/50" />
+                    <Image
+                      src={payment.auction?.item?.media?.[0]?.cdnUrl || 'https://placehold.co/400x300/f1f5f9/94a3b8?text=No+Image'}
+                      alt={payment.auction?.item?.title || 'Thumbnail'}
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
                   </div>
                   <div>
                     <h3 className="font-medium text-sm text-foreground line-clamp-2">{payment.auction?.item?.title}</h3>
@@ -215,13 +313,13 @@ export default function CheckoutPage() {
                 <div className="mt-6 pt-4 border-t border-border">
                   <div className="flex justify-between items-end mb-6">
                     <span className="text-base font-semibold text-foreground">Tổng cộng</span>
-                    <span className="text-2xl font-bold text-primary">{Number(payment.amount).toLocaleString()}₫</span>
+                    <span className="text-2xl font-bold text-orange-600 dark:text-orange-500">{Number(payment.amount).toLocaleString()}₫</span>
                   </div>
 
                   <button
                     onClick={handlePayment}
                     disabled={processing}
-                    className="w-full py-3.5 px-4 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-all flex items-center justify-center gap-2 disabled:opacity-70"
+                    className="w-full py-3.5 px-4 bg-[#0066FF] text-white font-bold rounded-full shadow-[4px_4px_0px_#bfdbfe] hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_#bfdbfe] active:translate-y-0 active:shadow-[2px_2px_0px_#bfdbfe] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                   >
                     {processing ? (
                       <Loader2 className="w-5 h-5 animate-spin" />
@@ -231,9 +329,6 @@ export default function CheckoutPage() {
                       </>
                     )}
                   </button>
-                  <p className="text-center text-xs text-muted-foreground mt-4 flex items-center justify-center gap-1">
-                    <ShieldCheck className="w-3 h-3" /> Giao dịch được bảo vệ an toàn
-                  </p>
                 </div>
               </div>
             </div>

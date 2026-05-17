@@ -13,14 +13,14 @@ export class PaymentController {
   async initiatePayment(req: Request, res: Response): Promise<void> {
     try {
       const id = req.params.id as string;
-      const { method } = req.body; // 'vnpay' | 'momo' | 'banking'
+      const { method, shippingInfo } = req.body; // 'vnpay' | 'momo' | 'banking', shippingInfo: { addressLine, phone }
       const userId = (req as any).user?.userId;
       const ipAddress =
         (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
         (req.socket.remoteAddress as string) ||
         '127.0.0.1';
 
-      const result = await this.paymentService.initiatePayment(id, method, ipAddress);
+      const result = await this.paymentService.initiatePayment(id, method, ipAddress, shippingInfo);
 
       res.status(200).json({ success: true, data: result });
     } catch (error: any) {

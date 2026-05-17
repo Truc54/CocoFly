@@ -14,7 +14,7 @@ export class PaymentService {
   private paymentRepo = new PaymentRepository();
 
   // ── Initiate Payment (choose method → get redirect URL) ────────────────
-  async initiatePayment(paymentId: string, method: PaymentMethod, ipAddress: string): Promise<{
+  async initiatePayment(paymentId: string, method: PaymentMethod, ipAddress: string, shippingInfo?: { addressLine: string; phone: string }): Promise<{
     paymentUrl?: string;
     bankingInfo?: { bankName: string; accountNumber: string; accountName: string; content: string };
     message: string;
@@ -34,10 +34,17 @@ export class PaymentService {
     const itemTitle = payment.auction?.item?.title || 'Sản phẩm đấu giá';
     const orderInfo = `CocoFly - Thanh toan ${itemTitle}`;
 
+    let note = payment.note || '';
+    if (shippingInfo && shippingInfo.addressLine) {
+      const shippingText = `\n[Giao hàng] SĐT: ${shippingInfo.phone || 'N/A'} | Đ/C: ${shippingInfo.addressLine}`;
+      note += shippingText;
+    }
+
     // Update payment method
     await this.paymentRepo.updateStatus(paymentId, {
       status: 'processing',
       paymentMethod: method,
+      note: note.trim() || undefined,
     });
 
     switch (method) {

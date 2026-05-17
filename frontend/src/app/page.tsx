@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { auctionApi } from "@/lib/api";
 import { mockHotAuctions, mockUpcomingAuctions, mockCategoryAuctions } from "@/lib/mockData";
 import Sidebar from "@/components/layout/Sidebar";
@@ -26,6 +27,17 @@ export default function HomePage() {
   const [upcomingAuctions, setUpcomingAuctions] = useState<AuctionItem[]>([]);
   const [loadingHot, setLoadingHot] = useState(true);
   const [loadingUpcoming, setLoadingUpcoming] = useState(true);
+  const [paymentSuccessData, setPaymentSuccessData] = useState<any>(null);
+
+  useEffect(() => {
+    const dataStr = sessionStorage.getItem("successPayment");
+    if (dataStr) {
+      try {
+        setPaymentSuccessData(JSON.parse(dataStr));
+        sessionStorage.removeItem("successPayment");
+      } catch (e) {}
+    }
+  }, []);
 
   // Fetch HOT auctions (sorted by most bids)
   useEffect(() => {
@@ -115,6 +127,43 @@ export default function HomePage() {
           />
         </div>
       </div>
+
+      {/* Payment Success Popup */}
+      {paymentSuccessData && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in" onClick={() => setPaymentSuccessData(null)}>
+          <div className="bg-white dark:bg-slate-800 w-full max-w-md border-2 border-slate-200 dark:border-slate-700 shadow-[8px_8px_0px_#E2B9A1] rounded-2xl overflow-hidden animate-slide-up" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 text-center">
+              <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4 animate-in zoom-in duration-500">
+                <span className="material-symbols-outlined text-[40px] text-green-500">check_circle</span>
+              </div>
+              <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Thanh toán thành công!</h3>
+              <p className="text-slate-600 dark:text-slate-300 mb-6 text-sm">
+                Đơn hàng của bạn đã được thanh toán và đang chờ giao.
+              </p>
+              
+              <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 mb-6 flex gap-4 items-center border border-slate-100 dark:border-slate-600">
+                <div className="w-16 h-16 relative rounded-lg overflow-hidden shrink-0 bg-white border border-slate-200 dark:border-slate-600 flex items-center justify-center">
+                  <img src={paymentSuccessData.imageUrl} alt={paymentSuccessData.itemName} className="object-contain w-full h-full" />
+                </div>
+                <div className="text-left flex-1 min-w-0">
+                  <p className="font-bold text-slate-800 dark:text-slate-200 truncate">{paymentSuccessData.itemName}</p>
+                  <p className="text-sm text-slate-500 mb-1">Mã GD: <span className="font-mono text-slate-700 dark:text-slate-300">{paymentSuccessData.paymentId?.slice(0, 8).toUpperCase() || 'N/A'}</span></p>
+                  <p className="font-bold text-orange-600">{Number(paymentSuccessData.amount || 0).toLocaleString('vi-VN')} VNĐ</p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button onClick={() => setPaymentSuccessData(null)} className="flex-1 py-3 font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 border-2 border-slate-200 transition-all cursor-pointer rounded-xl">
+                  Đóng
+                </button>
+                <Link href="/won-auctions" className="flex-1 py-3 font-bold text-white bg-[#0066FF] border-2 border-[#0066FF] hover:bg-blue-600 shadow-[4px_4px_0px_#bfdbfe] hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_#bfdbfe] active:translate-y-0 active:shadow-[2px_2px_0px_#bfdbfe] transition-all cursor-pointer rounded-xl block">
+                  Đơn mua của tôi
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

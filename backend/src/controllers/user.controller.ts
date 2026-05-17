@@ -23,4 +23,31 @@ export class UserController {
       next(err);
     }
   }
+
+  async getAddress(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      if (!req.user) {
+        throw new AppError('Unauthorized', 401);
+      }
+
+      const address = await this.userService.getAddress(req.user.userId);
+      res.status(200).json({ success: true, data: address });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async saveAddress(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      if (!req.user) {
+        throw new AppError('Unauthorized', 401);
+      }
+
+      const { addressLine, phone } = req.body;
+      const address = await this.userService.saveAddress(req.user.userId, addressLine, phone);
+      res.status(200).json({ success: true, data: address });
+    } catch (err) {
+      next(err);
+    }
+  }
 }

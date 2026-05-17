@@ -12,3 +12,17 @@ userRoutes.post(
   authGuard,
   userController.upgradeToSeller.bind(userController),
 );
+
+// GET /api/users/me/address
+userRoutes.get(
+  '/me/address',
+  authGuard,
+  userController.getAddress.bind(userController),
+);
+
+// POST /api/users/me/address
+userRoutes.post(
+  '/me/address',
+  authGuard,
+  userController.saveAddress.bind(userController),
+);

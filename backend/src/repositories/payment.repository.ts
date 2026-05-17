@@ -14,7 +14,7 @@ export class PaymentRepository {
         auction: {
           select: {
             id: true, finalPrice: true, status: true,
-            item: { select: { id: true, title: true } },
+            item: { select: { id: true, title: true, media: { select: { cdnUrl: true } } } },
           },
         },
         buyer: { select: { id: true, fullName: true, email: true } },
@@ -30,7 +30,7 @@ export class PaymentRepository {
         auction: {
           select: {
             id: true, finalPrice: true, status: true,
-            item: { select: { id: true, title: true } },
+            item: { select: { id: true, title: true, media: { select: { cdnUrl: true } } } },
           },
         },
         buyer: { select: { id: true, fullName: true } },

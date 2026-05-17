@@ -48,4 +48,41 @@ export class UserService {
       },
     };
   }
+
+  async getAddress(userId: string) {
+    const address = await this.userRepository.getFirstAddress(userId);
+    if (!address) {
+      return null;
+    }
+    return {
+      addressLine: address.addressLine,
+      phone: address.phone,
+      fullName: address.fullName,
+    };
+  }
+
+  async saveAddress(userId: string, addressLine: string, phone: string) {
+    if (!addressLine || !phone) {
+      throw new AppError('Địa chỉ và số điện thoại là bắt buộc', 400);
+    }
+
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new AppError('Người dùng không tồn tại', 404);
+    }
+
+    const fullName = user.fullName || 'User';
+
+    const updatedAddress = await this.userRepository.upsertAddress(userId, {
+      addressLine,
+      phone,
+      fullName,
+    });
+
+    return {
+      addressLine: updatedAddress.addressLine,
+      phone: updatedAddress.phone,
+      fullName: updatedAddress.fullName,
+    };
+  }
 }

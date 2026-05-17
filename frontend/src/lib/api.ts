@@ -124,6 +124,11 @@ export const userApi = {
       body: JSON.stringify({ phoneNumber }),
     });
   },
+  getAddress: () => fetchApi('/api/users/me/address'),
+  saveAddress: (addressLine: string, phone: string) => fetchApi('/api/users/me/address', {
+    method: 'POST',
+    body: JSON.stringify({ addressLine, phone }),
+  }),
 };
 
 export const mediaApi = {
@@ -183,9 +188,9 @@ export const notificationApi = {
 
 export const paymentApi = {
   getByAuctionId: (auctionId: string) => fetchApi(`/api/payments/auction/${auctionId}`),
-  initiate: (paymentId: string, method: string) => fetchApi(`/api/payments/${paymentId}/initiate`, {
+  initiate: (paymentId: string, method: string, shippingInfo?: { addressLine: string; phone: string }) => fetchApi(`/api/payments/${paymentId}/initiate`, {
     method: 'POST',
-    body: JSON.stringify({ method }),
+    body: JSON.stringify({ method, shippingInfo }),
   }),
   decline: (paymentId: string) =>
     fetchApi(`/api/auctions/payments/${paymentId}/decline`, { method: 'POST' }),
