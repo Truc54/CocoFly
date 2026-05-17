@@ -102,6 +102,7 @@ interface CustomDateTimePickerProps {
 export function CustomDateTimePicker({ value, onChange, placeholder, hasError }: CustomDateTimePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const minuteInputRef = useRef<HTMLInputElement>(null);
 
   // Internal state for calendar view
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -110,6 +111,14 @@ export function CustomDateTimePicker({ value, onChange, placeholder, hasError }:
   const selectedDate = value ? new Date(value) : null;
   const [selectedHour, setSelectedHour] = useState(selectedDate ? selectedDate.getHours() : 12);
   const [selectedMinute, setSelectedMinute] = useState(selectedDate ? selectedDate.getMinutes() : 0);
+
+  const [hourInput, setHourInput] = useState(selectedHour.toString().padStart(2, "0"));
+  const [minuteInput, setMinuteInput] = useState(selectedMinute.toString().padStart(2, "0"));
+
+  useEffect(() => {
+    setHourInput(selectedHour.toString().padStart(2, "0"));
+    setMinuteInput(selectedMinute.toString().padStart(2, "0"));
+  }, [selectedHour, selectedMinute]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -236,26 +245,51 @@ export function CustomDateTimePicker({ value, onChange, placeholder, hasError }:
               <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase">
                 <ClockIcon className="w-3.5 h-3.5" /> Thời gian
               </div>
-              <div className="flex items-center gap-2">
-                <select
-                  value={selectedHour}
-                  onChange={(e) => updateTime(parseInt(e.target.value), selectedMinute)}
-                  className="bg-white border-2 border-slate-200 text-xs font-bold p-1 outline-none focus:border-primary cursor-pointer shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-                >
-                  {Array.from({ length: 24 }).map((_, i) => (
-                    <option key={i} value={i}>{i.toString().padStart(2, "0")}</option>
-                  ))}
-                </select>
+              <div className="flex items-center gap-1">
+                <input
+                  type="text"
+                  maxLength={2}
+                  value={hourInput}
+                  onChange={(e) => {
+                    setHourInput(e.target.value.replace(/\D/g, ""));
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      minuteInputRef.current?.focus();
+                    }
+                  }}
+                  onBlur={() => {
+                    let h = hourInput === "" ? 0 : parseInt(hourInput, 10);
+                    if (h > 23) h = 23;
+                    updateTime(h, selectedMinute);
+                    setHourInput(h.toString().padStart(2, "0"));
+                  }}
+                  className="w-12 text-center bg-white border-2 border-slate-200 text-xs font-bold py-1.5 outline-none focus:border-primary shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white transition-colors"
+                />
                 <span className="font-bold text-slate-400">:</span>
-                <select
-                  value={selectedMinute}
-                  onChange={(e) => updateTime(selectedHour, parseInt(e.target.value))}
-                  className="bg-white border-2 border-slate-200 text-xs font-bold p-1 outline-none focus:border-primary cursor-pointer shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-                >
-                  {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map((m) => (
-                    <option key={m} value={m}>{m.toString().padStart(2, "0")}</option>
-                  ))}
-                </select>
+                <input
+                  ref={minuteInputRef}
+                  type="text"
+                  maxLength={2}
+                  value={minuteInput}
+                  onChange={(e) => {
+                    setMinuteInput(e.target.value.replace(/\D/g, ""));
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      e.currentTarget.blur();
+                    }
+                  }}
+                  onBlur={() => {
+                    let m = minuteInput === "" ? 0 : parseInt(minuteInput, 10);
+                    if (m > 59) m = 59;
+                    updateTime(selectedHour, m);
+                    setMinuteInput(m.toString().padStart(2, "0"));
+                  }}
+                  className="w-12 text-center bg-white border-2 border-slate-200 text-xs font-bold py-1.5 outline-none focus:border-primary shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white transition-colors"
+                />
               </div>
             </div>
           </div>
