@@ -9,6 +9,7 @@ import { auctionRoutes } from './routes/auction.routes';
 import { categoryRoutes } from './routes/category.routes';
 import { userRoutes } from './routes/user.routes';
 import { mediaRoutes } from './routes/media.routes';
+import { paymentRoutes } from './routes/payment.routes';
 import { errorHandler } from './middlewares/errorHandler';
 
 const app = express();
@@ -38,6 +39,7 @@ app.use('/api/auctions', auctionRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/media', mediaRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // Global Error Handler (must be last)
 app.use(errorHandler);

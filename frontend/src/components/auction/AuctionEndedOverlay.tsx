@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { paymentApi } from "@/lib/api";
 import { authStorage } from "@/lib/auth-storage";
 
@@ -18,6 +19,9 @@ export default function AuctionEndedOverlay({ winnerId, finalPrice, isBuyout }: 
   const [declining, setDeclining] = useState(false);
   const user = authStorage.getUser() as { id?: string } | null;
   const isWinner = user?.id && winnerId && user.id === winnerId;
+  const params = useParams();
+  const router = useRouter();
+  const auctionId = params?.id as string;
 
   return (
     <div className="bg-white dark:bg-slate-800 rounded-none border-2 border-slate-800 dark:border-slate-600 p-6 shadow-[6px_6px_0px_#1e293b]">
@@ -53,7 +57,10 @@ export default function AuctionEndedOverlay({ winnerId, finalPrice, isBuyout }: 
             </p>
           </div>
 
-          <button className="w-full py-3 bg-[#0066FF] text-white font-bold text-base rounded-full border-2 border-[#0066FF] shadow-[4px_4px_0px_#bfdbfe] hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_#bfdbfe] transition-all flex items-center justify-center gap-2 cursor-pointer">
+          <button 
+            onClick={() => router.push(`/checkout/${auctionId}`)}
+            className="w-full py-3 bg-[#0066FF] text-white font-bold text-base rounded-full border-2 border-[#0066FF] shadow-[4px_4px_0px_#bfdbfe] hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_#bfdbfe] transition-all flex items-center justify-center gap-2 cursor-pointer"
+          >
             <span className="material-symbols-outlined text-[20px]">payment</span>
             Thanh toán ngay
           </button>

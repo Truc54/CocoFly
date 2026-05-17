@@ -10,6 +10,21 @@ interface PaymentTimeoutPayload {
   buyerId: string;
 }
 
+interface PaymentReminderPayload {
+  auctionId: string;
+  buyerId: string;
+  hoursLeft: number;
+}
+
+interface ShippingTimeoutPayload {
+  paymentId: string;
+  sellerId: string;
+}
+
+interface AutoConfirmPayload {
+  paymentId: string;
+}
+
 const REDIS_CONNECTION = {
   host: new URL(env.REDIS_URL).hostname || 'localhost',
   port: parseInt(new URL(env.REDIS_URL).port || '6379', 10),
@@ -27,6 +42,15 @@ export async function startPaymentWorker(): Promise<void> {
       switch (job.name) {
         case 'payment-timeout':
           await handlePaymentTimeout(job.data as PaymentTimeoutPayload);
+          break;
+        case 'payment-reminder':
+          await handlePaymentReminder(job.data as PaymentReminderPayload);
+          break;
+        case 'shipping-timeout':
+          await handleShippingTimeout(job.data as ShippingTimeoutPayload);
+          break;
+        case 'auto-confirm-delivery':
+          await handleAutoConfirmDelivery(job.data as AutoConfirmPayload);
           break;
         default:
           console.warn(`⚠️ Unknown payment job type: ${job.name}`);
@@ -104,8 +128,7 @@ async function handlePaymentTimeout(data: PaymentTimeoutPayload): Promise<void> 
 
   if (runnerUp) {
     // Transfer to runner-up
-    const platformFee = Number(payment.amount) * 0.05;
-    const amount = Number(payment.amount);
+
 
     // Create new payment for runner-up
     await prisma.payment.create({
@@ -187,4 +210,129 @@ export async function stopPaymentWorker(): Promise<void> {
     paymentWorker = null;
     console.log('🛑 Payment worker stopped');
   }
+}
+
+// ── Payment Reminder Handler ─────────────────────────────────────────────
+async function handlePaymentReminder(data: PaymentReminderPayload): Promise<void> {
+  const { auctionId, buyerId, hoursLeft } = data;
+
+  // Check if payment is still pending (buyer might have already paid)
+  const payment = await prisma.payment.findFirst({
+    where: { auctionId, buyerId, status: { in: ['pending', 'processing'] } },
+  });
+
+  if (!payment) {
+    console.log(`💳 Payment already resolved for auction ${auctionId}, skipping reminder`);
+    return;
+  }
+
+  await prisma.notification.create({
+    data: {
+      userId: buyerId,
+      auctionId,
+      type: 'payment_due',
+      title: `⏰ Còn ${hoursLeft} giờ để thanh toán!`,
+      message: `Bạn cần thanh toán ${Number(payment.amount).toLocaleString()}₫ trong ${hoursLeft} giờ tới, nếu không quyền mua sẽ bị hủy.`,
+    },
+  });
+
+  console.log(`💳 Sent ${hoursLeft}h payment reminder for auction ${auctionId}`);
+}
+
+// ── Shipping Timeout Handler (5 days) ────────────────────────────────────
+async function handleShippingTimeout(data: ShippingTimeoutPayload): Promise<void> {
+  const { paymentId, sellerId } = data;
+
+  const payment = await prisma.payment.findUnique({
+    where: { id: paymentId },
+    select: { id: true, status: true, shippingStatus: true, buyerId: true, auctionId: true, amount: true },
+  });
+
+  if (!payment || payment.status !== 'paid' || payment.shippingStatus !== 'pending') {
+    console.log(`📦 Shipping already handled for payment ${paymentId}, skipping`);
+    return;
+  }
+
+  // Auto-refund buyer
+  await prisma.payment.update({
+    where: { id: paymentId },
+    data: {
+      status: 'refunded',
+      refundedAt: new Date(),
+      note: 'Tự động hoàn tiền: Seller không gửi hàng trong 5 ngày',
+    },
+  });
+
+  // Notify buyer
+  await prisma.notification.create({
+    data: {
+      userId: payment.buyerId,
+      auctionId: payment.auctionId,
+      type: 'payment_confirmed',
+      title: 'Hoàn tiền tự động',
+      message: 'Người bán không gửi hàng đúng hạn. Bạn đã được hoàn tiền.',
+    },
+  });
+
+  // Notify seller
+  await prisma.notification.create({
+    data: {
+      userId: sellerId,
+      auctionId: payment.auctionId,
+      type: 'system',
+      title: 'Cảnh báo: Không gửi hàng đúng hạn',
+      message: 'Bạn đã không gửi hàng trong 5 ngày. Tiền đã được hoàn cho người mua.',
+    },
+  });
+
+  console.log(`📦 Auto-refunded payment ${paymentId} — seller ${sellerId} did not ship`);
+}
+
+// ── Auto Confirm Delivery Handler (7 days after shipped) ─────────────────
+async function handleAutoConfirmDelivery(data: AutoConfirmPayload): Promise<void> {
+  const { paymentId } = data;
+
+  const payment = await prisma.payment.findUnique({
+    where: { id: paymentId },
+    select: { id: true, status: true, shippingStatus: true, buyerId: true, sellerId: true, auctionId: true, sellerAmount: true },
+  });
+
+  if (!payment || payment.status !== 'paid' || payment.shippingStatus !== 'shipped') {
+    console.log(`📦 Delivery already confirmed for payment ${paymentId}, skipping`);
+    return;
+  }
+
+  // Auto-confirm: mark as delivered + release escrow
+  await prisma.payment.update({
+    where: { id: paymentId },
+    data: {
+      shippingStatus: 'delivered',
+      deliveredAt: new Date(),
+      status: 'escrow_released',
+    },
+  });
+
+  // Notify buyer
+  await prisma.notification.create({
+    data: {
+      userId: payment.buyerId,
+      auctionId: payment.auctionId,
+      type: 'system',
+      title: 'Tự động xác nhận nhận hàng',
+      message: 'Đã quá 7 ngày kể từ khi gửi hàng. Giao dịch được tự động hoàn tất.',
+    },
+  });
+
+  // Notify seller: escrow released
+  await prisma.notification.create({
+    data: {
+      userId: payment.sellerId,
+      auctionId: payment.auctionId,
+      type: 'payment_confirmed',
+      title: 'Tiền đã được giải phóng!',
+      message: `${Number(payment.sellerAmount).toLocaleString()}₫ đã được chuyển vào tài khoản của bạn.`,
+    },
+  });
+
+  console.log(`📦 Auto-confirmed delivery for payment ${paymentId}, escrow released`);
 }

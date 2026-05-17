@@ -182,6 +182,11 @@ export const notificationApi = {
 };
 
 export const paymentApi = {
+  getByAuctionId: (auctionId: string) => fetchApi(`/api/payments/auction/${auctionId}`),
+  initiate: (paymentId: string, method: string) => fetchApi(`/api/payments/${paymentId}/initiate`, {
+    method: 'POST',
+    body: JSON.stringify({ method }),
+  }),
   decline: (paymentId: string) =>
     fetchApi(`/api/auctions/payments/${paymentId}/decline`, { method: 'POST' }),
 };

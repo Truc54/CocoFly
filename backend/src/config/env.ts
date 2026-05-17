@@ -29,6 +29,21 @@ const envSchema = z.object({
   CLOUDINARY_CLOUD_NAME: z.string().min(1),
   CLOUDINARY_API_KEY: z.string().min(1),
   CLOUDINARY_API_SECRET: z.string().min(1),
+
+  // VNPay Sandbox
+  VNPAY_TMN_CODE: z.string().min(1),
+  VNPAY_HASH_SECRET: z.string().min(1),
+  VNPAY_URL: z.string().url().default('https://sandbox.vnpayment.vn/paymentv2/vpcpay.html'),
+  VNPAY_API_URL: z.string().url().default('https://sandbox.vnpayment.vn/merchant_webapi/api/transaction'),
+  VNPAY_RETURN_URL: z.string().url().default('http://localhost:3000/payments/vnpay-return'),
+
+  // MoMo Sandbox
+  MOMO_PARTNER_CODE: z.string().default('MOMO'),
+  MOMO_ACCESS_KEY: z.string().default('F8BBA842ECF85'),
+  MOMO_SECRET_KEY: z.string().default('K951B6PE1waDMi640xX08PD3vg6EkVlz'),
+  MOMO_API_URL: z.string().url().default('https://test-payment.momo.vn/v2/gateway/api/create'),
+  MOMO_RETURN_URL: z.string().url().default('http://localhost:3000/payments/momo-return'),
+  MOMO_NOTIFY_URL: z.string().url().default('http://localhost:8000/api/payments/momo/ipn'),
 });
 
 const parsed = envSchema.safeParse(process.env);
