@@ -78,7 +78,7 @@ async function handlePaymentTimeout(data: PaymentTimeoutPayload): Promise<void> 
 
   // Find the pending payment for this auction+buyer
   const payment = await prisma.payment.findFirst({
-    where: { auctionId, buyerId, status: 'pending' },
+    where: { auctionId, buyerId, status: { in: ['pending', 'processing'] } },
     select: { id: true, status: true, amount: true, sellerId: true },
   });
 

@@ -14,13 +14,14 @@ export class PaymentService {
   private paymentRepo = new PaymentRepository();
 
   // ── Initiate Payment (choose method → get redirect URL) ────────────────
-  async initiatePayment(paymentId: string, method: PaymentMethod, ipAddress: string, shippingInfo?: { addressLine: string; phone: string }): Promise<{
+  async initiatePayment(paymentId: string, userId: string, method: PaymentMethod, ipAddress: string, shippingInfo?: { addressLine: string; phone: string }): Promise<{
     paymentUrl?: string;
     bankingInfo?: { bankName: string; accountNumber: string; accountName: string; content: string };
     message: string;
   }> {
     const payment = await this.paymentRepo.findById(paymentId);
     if (!payment) throw new Error('Không tìm thấy yêu cầu thanh toán');
+    if (payment.buyerId !== userId) throw new Error('Không có quyền truy cập thanh toán này');
     if (payment.status !== 'pending' && payment.status !== 'processing') {
       throw new Error('Thanh toán đã được xử lý hoặc hết hạn');
     }

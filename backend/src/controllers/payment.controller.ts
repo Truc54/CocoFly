@@ -20,7 +20,7 @@ export class PaymentController {
         (req.socket.remoteAddress as string) ||
         '127.0.0.1';
 
-      const result = await this.paymentService.initiatePayment(id, method, ipAddress, shippingInfo);
+      const result = await this.paymentService.initiatePayment(id, userId, method, ipAddress, shippingInfo);
 
       res.status(200).json({ success: true, data: result });
     } catch (error: any) {

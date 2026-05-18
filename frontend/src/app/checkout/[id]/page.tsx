@@ -97,7 +97,7 @@ export default function CheckoutPage() {
       // Lưu thông tin tạm để hiển thị popup ở trang chủ
       const paymentData = {
         itemName: payment.auction?.item?.title || "Sản phẩm đấu giá",
-        imageUrl: payment.auction?.item?.thumbnailUrl || payment.auction?.item?.images?.[0]?.url || "/placeholder.png",
+        imageUrl: payment.auction?.item?.media?.[0]?.cdnUrl || "/placeholder.png",
         amount: payment.amount,
       };
       sessionStorage.setItem("pendingPayment", JSON.stringify(paymentData));
@@ -149,7 +149,7 @@ export default function CheckoutPage() {
             <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-6">
               <Landmark className="w-8 h-8 text-green-500" />
             </div>
-            <h2 className="text-2xl font-bold text-foreground mb-2">Tiền mặt</h2>
+            <h2 className="text-2xl font-bold text-foreground mb-2">Chuyển khoản ngân hàng</h2>
             <p className="text-muted-foreground mb-8">Vui lòng chuyển khoản theo thông tin bên dưới. Hệ thống sẽ tự động xác nhận sau 5-10 phút.</p>
             
             <div className="bg-muted rounded-xl p-6 text-left space-y-4 max-w-md mx-auto">
@@ -265,8 +265,8 @@ export default function CheckoutPage() {
                       <Image src="/payment_logo/cash_logo.png" alt="Cash" width={40} height={40} className="object-contain" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold text-foreground">Tiền mặt</h3>
-                      <p className="text-sm text-muted-foreground">Thanh toán trực tiếp khi nhận hàng</p>
+                      <h3 className="font-semibold text-foreground">Chuyển khoản ngân hàng</h3>
+                      <p className="text-sm text-muted-foreground">Thanh toán bằng hình thức chuyển khoản</p>
                     </div>
                     {selectedMethod === 'banking' && <CheckCircle2 className="w-6 h-6 text-primary" />}
                   </label>
