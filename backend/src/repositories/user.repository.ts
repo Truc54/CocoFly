@@ -83,4 +83,36 @@ export class UserRepository {
       data: { role: 'seller', phone },
     });
   }
+
+  async getFirstAddress(userId: string) {
+    return prisma.address.findFirst({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async upsertAddress(userId: string, data: { addressLine: string; phone: string; fullName: string }) {
+    const existing = await this.getFirstAddress(userId);
+    if (existing) {
+      return prisma.address.update({
+        where: { id: existing.id },
+        data: {
+          addressLine: data.addressLine,
+          phone: data.phone,
+          fullName: data.fullName,
+        },
+      });
+    } else {
+      return prisma.address.create({
+        data: {
+          userId,
+          addressLine: data.addressLine,
+          phone: data.phone,
+          fullName: data.fullName,
+          district: 'N/A', // Placeholder as per requirement
+          city: 'N/A', // Placeholder as per requirement
+        },
+      });
+    }
+  }
 }

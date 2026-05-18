@@ -71,6 +71,7 @@ interface FormData {
   autoExtend: boolean;
   autoExtendMinutes: number;
   autoExtendThreshold: number;
+  startImmediately: boolean;
 }
 
 const initialFormData: FormData = {
@@ -89,6 +90,7 @@ const initialFormData: FormData = {
   autoExtend: true,
   autoExtendMinutes: 5,
   autoExtendThreshold: 5,
+  startImmediately: false,
 };
 
 function formatVND(value: number | ""): string {
@@ -163,13 +165,17 @@ export default function CreateAuctionPage() {
       if (form.buyoutPrice !== "" && form.startingPrice !== "" && form.buyoutPrice <= form.startingPrice) {
         errs.buyoutPrice = "Giá mua ngay phải lớn hơn giá khởi điểm";
       }
-      if (!form.scheduledStart) errs.scheduledStart = "Vui lòng chọn thời gian bắt đầu";
-      else if (new Date(form.scheduledStart) < new Date()) errs.scheduledStart = "Thời gian bắt đầu phải ở tương lai";
+      if (!form.startImmediately) {
+        if (!form.scheduledStart) errs.scheduledStart = "Vui lòng chọn thời gian bắt đầu";
+        else if (new Date(form.scheduledStart) < new Date()) errs.scheduledStart = "Thời gian bắt đầu phải ở tương lai";
+      }
+
+      const effectiveStart = form.startImmediately ? new Date() : new Date(form.scheduledStart || new Date());
       if (!form.endTime) {
         errs.endTime = "Vui lòng chọn thời gian kết thúc";
-      } else if (form.scheduledStart && new Date(form.endTime) <= new Date(form.scheduledStart)) {
+      } else if (new Date(form.endTime) <= effectiveStart) {
         errs.endTime = "Thời gian kết thúc phải sau thời gian bắt đầu";
-      } else if (form.scheduledStart && new Date(form.endTime).getTime() - new Date(form.scheduledStart).getTime() < 3600000) {
+      } else if (new Date(form.endTime).getTime() - effectiveStart.getTime() < 3600000) {
         errs.endTime = "Phiên đấu giá phải kéo dài ít nhất 1 giờ";
       }
     }
@@ -294,7 +300,7 @@ export default function CreateAuctionPage() {
         startingPrice: Number(form.startingPrice),
         bidIncrement: Number(form.bidIncrement),
         buyoutPrice: form.buyoutPrice !== "" ? Number(form.buyoutPrice) : undefined,
-        scheduledStart: new Date(form.scheduledStart).toISOString(),
+        scheduledStart: form.startImmediately ? new Date().toISOString() : new Date(form.scheduledStart).toISOString(),
         endTime: new Date(form.endTime).toISOString(),
         autoExtend: form.autoExtend,
         autoExtendMinutes: form.autoExtendMinutes,
@@ -600,20 +606,38 @@ export default function CreateAuctionPage() {
 
             {/* Time Card */}
             <div className="bg-white dark:bg-slate-900/60 border-2 border-slate-200 dark:border-slate-800 p-6 md:p-8 shadow-[4px_4px_0px_#e2e8f0] dark:shadow-[4px_4px_0px_#1e293b]">
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
-                <Clock className="w-5 h-5 text-primary" /> Thời gian
-              </h2>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-primary" /> Thời gian
+                </h2>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Bắt đầu ngay lập tức</span>
+                  <button
+                    onClick={() => updateForm({ startImmediately: !form.startImmediately, scheduledStart: "" })}
+                    className={`relative w-12 h-6 rounded-full transition-colors ${form.startImmediately ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-700"}`}
+                  >
+                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform shadow-sm ${form.startImmediately ? "translate-x-6" : ""}`} />
+                  </button>
+                </div>
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className={labelClass}>Bắt đầu *</label>
-                  <CustomDateTimePicker
-                    value={form.scheduledStart}
-                    onChange={(val) => updateForm({ scheduledStart: val })}
-                    placeholder="Chọn thời gian bắt đầu"
-                    hasError={!!errors.scheduledStart}
-                  />
-                  {errors.scheduledStart && <p className={errorClass}>{errors.scheduledStart}</p>}
+                  <div className="relative">
+                    <div className={form.startImmediately ? "opacity-40 grayscale" : ""}>
+                      <CustomDateTimePicker
+                        value={form.scheduledStart}
+                        onChange={(val) => updateForm({ scheduledStart: val })}
+                        placeholder="Chọn thời gian bắt đầu"
+                        hasError={!!errors.scheduledStart && !form.startImmediately}
+                      />
+                    </div>
+                    {form.startImmediately && (
+                      <div className="absolute inset-0 z-10 cursor-default" title="Đã chọn bắt đầu ngay lập tức" />
+                    )}
+                  </div>
+                  {errors.scheduledStart && !form.startImmediately && <p className={errorClass}>{errors.scheduledStart}</p>}
                 </div>
                 <div>
                   <label className={labelClass}>Kết thúc *</label>
@@ -729,7 +753,11 @@ export default function CreateAuctionPage() {
                   <div>
                     <p className="text-xs text-slate-400 uppercase tracking-wide font-semibold">Bắt đầu</p>
                     <p className="text-sm font-medium text-slate-900 dark:text-white">
-                      {form.scheduledStart ? new Date(form.scheduledStart).toLocaleString("vi-VN") : "—"}
+                      {form.startImmediately ? (
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold">Ngay lập tức</span>
+                      ) : form.scheduledStart ? (
+                        new Date(form.scheduledStart).toLocaleString("vi-VN")
+                      ) : "—"}
                     </p>
                   </div>
                   <div>

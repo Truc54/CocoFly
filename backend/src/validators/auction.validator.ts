@@ -61,10 +61,11 @@ export const createAuctionSchema = z.object({
   autoExtendThreshold: z.number().int().min(1).max(30).default(5),
 }).superRefine((data, ctx) => {
   const now = new Date();
+  const bufferTime = new Date(now.getTime() - 2 * 60 * 1000); // 2 minutes buffer for network latency/immediate start
   const scheduledStart = new Date(data.scheduledStart);
   const endTime = new Date(data.endTime);
 
-  if (scheduledStart < now) {
+  if (scheduledStart < bufferTime) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: 'Thời gian bắt đầu phải ở tương lai',
@@ -79,7 +80,7 @@ export const createAuctionSchema = z.object({
       path: ['endTime'],
     });
   } else {
-    const minDuration = 60 * 60 * 1000; // 1 hour in ms
+    const minDuration = 58 * 60 * 1000; // 58 minutes in ms (allow 2 min deviation)
     if (endTime.getTime() - scheduledStart.getTime() < minDuration) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

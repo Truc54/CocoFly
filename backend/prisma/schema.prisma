@@ -412,14 +412,16 @@ model Payment {
   shippedAt      DateTime?      @map("shipped_at") @db.Timestamptz()
   deliveredAt    DateTime?      @map("delivered_at") @db.Timestamptz()
 
-  note      String?
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  note            String?
+  paymentDeadline DateTime?     @map("payment_deadline") @db.Timestamptz()
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz()
 
   auction  Auction   @relation(fields: [auctionId], references: [id], onDelete: Restrict)
   buyer    User      @relation("PaymentBuyer", fields: [buyerId], references: [id], onDelete: Restrict)
   seller   User      @relation("PaymentSeller", fields: [sellerId], references: [id], onDelete: Restrict)
   disputes Dispute[] // Relation to disputes
 
+  @@index([auctionId, status])
   @@map("payments")
 }
 
@@ -427,11 +429,11 @@ enum PaymentMethod {
   vnpay
   momo
   banking
-  cod
 }
 
 enum PaymentStatus {
   pending
+  processing
   paid
   refunded
   failed
