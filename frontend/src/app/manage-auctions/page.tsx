@@ -157,12 +157,74 @@ function DeleteDialog({
   );
 }
 
+// ─── Confirm Shipping Dialog ──────────────────────────────────────────────────
+function ConfirmShippingDialog({
+  isOpen,
+  isLoading,
+  onConfirm,
+  onCancel,
+}: {
+  isOpen: boolean;
+  isLoading: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onCancel}>
+      <div
+        className="bg-white rounded-2xl border-2 border-slate-200 shadow-[4px_4px_0px_#e2e8f0] p-6 max-w-md mx-4 w-full"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+            <Truck className="w-5 h-5 text-[#0066FF]" />
+          </div>
+          <h3 className="text-lg font-bold text-slate-800">Xác nhận giao hàng</h3>
+        </div>
+        <p className="text-sm text-slate-600 mb-6">
+          Bạn có chắc chắn muốn xác nhận đã giao món hàng này cho người thắng cuộc? Hành động này sẽ cập nhật trạng thái đơn hàng.
+        </p>
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={onCancel}
+            disabled={isLoading}
+            className="px-4 py-2 text-sm font-medium rounded-lg border-2 border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors"
+          >
+            Hủy
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={isLoading}
+            className="px-4 py-2 text-sm font-bold rounded-lg bg-[#0066FF] text-white hover:bg-blue-600 border-2 border-[#0066FF] shadow-[2px_2px_0px_#bfdbfe] transition-colors inline-flex items-center gap-2"
+          >
+            {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+            Xác nhận
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ═════════════════════════════════════════════════════════════════════════════
 export default function ManageAuctionsPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<AuctionTab>("ongoing");
+  const [isInitialized, setIsInitialized] = useState(false);
   const [page, setPage] = useState(1);
   const LIMIT = 10;
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = sessionStorage.getItem("manageAuctionsTab") as AuctionTab;
+      if (saved && ["ongoing", "upcoming", "ended"].includes(saved)) {
+        setActiveTab(saved);
+      }
+      setIsInitialized(true);
+    }
+  }, []);
 
   // Data state
   const [auctions, setAuctions] = useState<SellerAuction[]>([]);
@@ -173,6 +235,7 @@ export default function ManageAuctionsPage() {
   // Action states
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [shippingTarget, setShippingTarget] = useState<string | null>(null);
   const [shippingLoadingId, setShippingLoadingId] = useState<string | null>(null);
 
   // ── Fetch seller auctions ──────────────────────────────────────────────
@@ -192,12 +255,17 @@ export default function ManageAuctionsPage() {
   }, []);
 
   useEffect(() => {
-    fetchAuctions(activeTab, page);
-  }, [activeTab, page, fetchAuctions]);
+    if (isInitialized) {
+      fetchAuctions(activeTab, page);
+    }
+  }, [activeTab, page, fetchAuctions, isInitialized]);
 
   // ── Tab change handler ─────────────────────────────────────────────────
   const handleTabChange = (tab: AuctionTab) => {
     setActiveTab(tab);
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("manageAuctionsTab", tab);
+    }
     setPage(1);
   };
 
@@ -217,17 +285,21 @@ export default function ManageAuctionsPage() {
   };
 
   // ── Confirm shipping handler ───────────────────────────────────────────
-  const handleConfirmShipping = async (paymentId: string) => {
+  const handleConfirmShipping = async () => {
+    if (!shippingTarget) return;
     try {
-      setShippingLoadingId(paymentId);
-      await paymentApi.confirmShipping(paymentId);
+      setShippingLoadingId(shippingTarget);
+      await paymentApi.confirmShipping(shippingTarget);
       fetchAuctions(activeTab, page);
+      setShippingTarget(null);
     } catch (err: any) {
       alert(err.message || "Không thể xác nhận giao hàng");
     } finally {
       setShippingLoadingId(null);
     }
   };
+
+  if (!isInitialized) return null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -401,7 +473,7 @@ export default function ManageAuctionsPage() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleConfirmShipping(auction.payment!.id);
+                              setShippingTarget(auction.payment!.id);
                             }}
                             disabled={shippingLoadingId === auction.payment.id}
                             className="inline-flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-lg border-2 border-[#E25C24] bg-[#E25C24] text-white shadow-[2px_2px_0px_#E2B9A1] hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_#E2B9A1] transition-all whitespace-nowrap disabled:opacity-50"
@@ -494,6 +566,14 @@ export default function ManageAuctionsPage() {
         isLoading={deleteLoading}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
+      />
+
+      {/* Shipping Confirmation Dialog */}
+      <ConfirmShippingDialog
+        isOpen={!!shippingTarget}
+        isLoading={shippingLoadingId === shippingTarget}
+        onConfirm={handleConfirmShipping}
+        onCancel={() => setShippingTarget(null)}
       />
     </div>
   );

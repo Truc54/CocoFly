@@ -12,7 +12,7 @@ interface AuctionSocketState {
   endTime: string;
   isExtended: boolean;
   extendCount: number;
-  auctionStatus: "active" | "ended" | "buyout";
+  auctionStatus: "active" | "ended" | "buyout" | "scheduled";
   winnerId: string | null;
   winnerName: string | null;
   finalPrice: number | null;
@@ -69,7 +69,10 @@ export function useAuctionSocket(
 
     // Map DB status to socket status
     const isEnded = initialData.status === "ended" || initialData.status === "failed";
-    const statusMap: AuctionSocketState["auctionStatus"] = isEnded ? "ended" : "active";
+    let statusMap: AuctionSocketState["auctionStatus"] = isEnded ? "ended" : "active";
+    if (initialData.status === "scheduled") {
+      statusMap = "scheduled";
+    }
 
     return {
       currentPrice: initialData.currentPrice,

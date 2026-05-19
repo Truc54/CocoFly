@@ -314,7 +314,7 @@ export default function BiddingPanel({
               disabled
               className="w-full py-3 bg-slate-200 text-slate-500 font-bold text-base rounded-full border-2 border-slate-200 cursor-default flex items-center justify-center gap-2"
             >
-              {!isLoggedIn ? "ĐĂNG NHẬP ĐỂ ĐẤU GIÁ" : status === "scheduled" ? "CHƯA BẮT ĐẦU" : "ĐÃ KẾT THÚC"}
+              {status === "scheduled" ? "CHƯA BẮT ĐẦU" : !isLoggedIn ? "ĐĂNG NHẬP ĐỂ ĐẤU GIÁ" : "ĐÃ KẾT THÚC"}
             </button>
             <div className="flex gap-3">
               <button className="w-full py-3 bg-white text-slate-700 font-bold text-sm sm:text-base rounded-full border-2 border-slate-200 shadow-[3px_3px_0px_#cbd5e1] hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#cbd5e1] active:translate-y-0 active:shadow-[1px_1px_0px_#cbd5e1] transition-all flex items-center justify-center gap-1 cursor-pointer">
