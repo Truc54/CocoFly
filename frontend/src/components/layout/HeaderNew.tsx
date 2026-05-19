@@ -11,6 +11,7 @@ import { useDebounce } from "@/lib/hooks/useDebounce";
 import { useSearchHistory } from "@/lib/hooks/useSearchHistory";
 import AccountDropdown from "@/components/account/AccountDropdown";
 import SearchSuggestionDropdown from "@/components/layout/SearchSuggestionDropdown";
+import NotificationDropdown from "@/components/layout/NotificationDropdown";
 
 interface CategoryLink {
   id: number;
@@ -44,7 +45,6 @@ export default function HeaderNew() {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [categories, setCategories] = useState<CategoryLink[]>([]);
-  const [unreadCount] = useState(3); // mock
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // ── Search Suggestions State ──
@@ -324,17 +324,7 @@ export default function HeaderNew() {
 
             {/* Notification bell */}
             {mounted && isLoggedIn && (
-              <button
-                className="relative flex items-center justify-center w-9 h-9 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                aria-label="Thông báo"
-              >
-                <Bell className="w-[18px] h-[18px] text-slate-600 dark:text-slate-300" />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold px-1 ring-2 ring-white dark:ring-background-dark">
-                    {unreadCount > 99 ? "99+" : unreadCount}
-                  </span>
-                )}
-              </button>
+              <NotificationDropdown />
             )}
 
             {/* Tạo đấu giá — chỉ hiện khi seller */}

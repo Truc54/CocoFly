@@ -99,13 +99,15 @@ export class BiddingService {
       if (new Date() >= auction.endTime) throw new AppError('Phiên đấu giá đã kết thúc', 400);
       if (bidderId === auction.sellerId) throw new AppError('Bạn không thể đặt giá cho đấu giá của chính mình', 403);
 
-      // 4. Verify bidder account
       const bidder = await prisma.user.findUnique({
         where: { id: bidderId },
         select: { accountStatus: true, createdAt: true },
       });
-      if (!bidder || bidder.accountStatus !== 'active') {
-        throw new AppError('Tài khoản không hợp lệ hoặc đã bị khóa', 403);
+      if (!bidder) {
+        throw new AppError('Tài khoản không tồn tại', 404);
+      }
+      if (bidder.accountStatus === 'banned' || bidder.accountStatus === 'suspended') {
+        throw new AppError('Tài khoản của bạn đã bị khóa', 403);
       }
 
       // FR-07: High-value bid requires account age >= 7 days
@@ -255,6 +257,18 @@ export class BiddingService {
       if (auction.status !== 'active') throw new AppError('Phiên đấu giá không hoạt động', 400);
       if (!auction.buyoutPrice) throw new AppError('Phiên đấu giá không hỗ trợ mua ngay', 400);
       if (buyerId === auction.sellerId) throw new AppError('Bạn không thể mua sản phẩm của chính mình', 403);
+
+      // Verify buyer account
+      const buyer = await prisma.user.findUnique({
+        where: { id: buyerId },
+        select: { accountStatus: true },
+      });
+      if (!buyer) {
+        throw new AppError('Tài khoản không tồn tại', 404);
+      }
+      if (buyer.accountStatus === 'banned' || buyer.accountStatus === 'suspended') {
+        throw new AppError('Tài khoản của bạn đã bị khóa', 403);
+      }
 
       const buyoutPrice = Number(auction.buyoutPrice);
 

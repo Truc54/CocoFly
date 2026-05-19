@@ -180,10 +180,19 @@ export const categoryApi = {
 };
 
 export const notificationApi = {
-  getUnreadCount: async (): Promise<number> => {
-    // TODO: Replace with real API when notification endpoints are built
-    return 3;
+  getNotifications: (cursor?: string, limit: number = 20, unreadOnly: boolean = false) => {
+    const qs = new URLSearchParams();
+    if (cursor) qs.set('cursor', cursor);
+    qs.set('limit', limit.toString());
+    if (unreadOnly) qs.set('unreadOnly', 'true');
+    return fetchApi(`/api/notifications?${qs.toString()}`);
   },
+  getUnreadCount: async (): Promise<number> => {
+    const res = await fetchApi('/api/notifications/unread-count');
+    return res?.count || 0;
+  },
+  markAsRead: (id: string) => fetchApi(`/api/notifications/${id}/read`, { method: 'PATCH' }),
+  markAllAsRead: () => fetchApi('/api/notifications/read-all', { method: 'PATCH' }),
 };
 
 export const paymentApi = {
