@@ -120,7 +120,7 @@ async function handlePaymentTimeout(data: PaymentTimeoutPayload): Promise<void> 
     userId: buyerId,
     auctionId,
     type: 'payment_due',
-    title: 'Thanh toán thất bại',
+    title: 'Thanh toán thất bại!',
     message: 'Bạn đã không thanh toán trong thời gian quy định.',
   });
 
@@ -192,7 +192,7 @@ async function handlePaymentTimeout(data: PaymentTimeoutPayload): Promise<void> 
         userId: auction.sellerId,
         auctionId,
         type: 'auction_failed',
-        title: 'Đấu giá thất bại',
+        title: 'Đấu giá thất bại!',
         message: 'Không có người mua thanh toán. Sản phẩm đã được mở khóa.',
       });
     }
@@ -263,7 +263,7 @@ async function handleShippingTimeout(data: ShippingTimeoutPayload): Promise<void
     userId: payment.buyerId,
     auctionId: payment.auctionId,
     type: 'payment_confirmed',
-    title: 'Hoàn tiền tự động',
+    title: 'Hoàn tiền tự động!',
     message: 'Người bán không gửi hàng đúng hạn. Bạn đã được hoàn tiền.',
   });
 
@@ -272,7 +272,7 @@ async function handleShippingTimeout(data: ShippingTimeoutPayload): Promise<void
     userId: sellerId,
     auctionId: payment.auctionId,
     type: 'system',
-    title: 'Cảnh báo: Không gửi hàng đúng hạn',
+    title: 'Cảnh báo: Không gửi hàng đúng hạn!',
     message: 'Bạn đã không gửi hàng trong 5 ngày. Tiền đã được hoàn cho người mua.',
   });
 
@@ -308,7 +308,7 @@ async function handleAutoConfirmDelivery(data: AutoConfirmPayload): Promise<void
     userId: payment.buyerId,
     auctionId: payment.auctionId,
     type: 'system',
-    title: 'Tự động xác nhận nhận hàng',
+    title: 'Tự động xác nhận nhận hàng!',
     message: 'Đã quá 7 ngày kể từ khi gửi hàng. Giao dịch được tự động hoàn tất.',
   });
 

@@ -267,7 +267,7 @@ async function handleEndAuction(data: AuctionJobPayload): Promise<void> {
         userId: auction.sellerId,
         auctionId,
         type: 'auction_ending',
-        title: 'Đấu giá đã kết thúc',
+        title: 'Đấu giá đã kết thúc!',
         message: `Sản phẩm đã được bán với giá ${finalPrice.toLocaleString()} VNĐ.`,
       },
     ]);
@@ -288,7 +288,7 @@ async function handleEndAuction(data: AuctionJobPayload): Promise<void> {
       userId: auction.sellerId,
       auctionId,
       type: 'auction_failed',
-      title: 'Đấu giá thất bại',
+      title: 'Đấu giá thất bại!',
       message: 'Không có lượt đặt giá nào. Sản phẩm đã được mở khóa.',
     });
 
