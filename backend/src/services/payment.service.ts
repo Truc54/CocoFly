@@ -132,31 +132,38 @@ export class PaymentService {
   }
 
   // ── MoMo IPN Handler ───────────────────────────────────────────────────
-  async handleMoMoIPN(data: any): Promise<{ success: boolean; message: string }> {
+  async handleMoMoIPN(data: any): Promise<{ success: boolean; paymentId: string; message: string }> {
     const result = verifyMoMoIPN(data);
+    const originalPaymentId = result.orderId ? result.orderId.split('_')[0] : '';
 
     if (!result.isValid) {
-      return { success: false, message: 'Chữ ký không hợp lệ' };
+      return { success: false, paymentId: originalPaymentId, message: 'Chữ ký không hợp lệ' };
     }
 
     const paymentId = result.orderId.split('_')[0];
     const payment = await this.paymentRepo.findById(paymentId);
     if (!payment) {
-      return { success: false, message: 'Không tìm thấy thanh toán' };
+      return { success: false, paymentId, message: 'Không tìm thấy thanh toán' };
     }
 
     if (payment.status === 'paid' || payment.status === 'escrow_released') {
-      return { success: true, message: 'Đã thanh toán' };
+      return { success: true, paymentId, message: 'Đã thanh toán' };
     }
 
-    if (result.resultCode === 0) {
-      await this.markAsPaid(payment.id, result.transactionId);
-      return { success: true, message: 'Thanh toán thành công' };
+    if (result.resultCode == 0 || result.resultCode == 9000) {
+      try {
+        await this.markAsPaid(payment.id, result.transactionId);
+        return { success: true, paymentId, message: 'Thanh toán thành công' };
+      } catch (err: any) {
+        console.error('MoMo markAsPaid Error:', err);
+        return { success: false, paymentId, message: err.message };
+      }
     }
 
     await this.paymentRepo.updateStatus(payment.id, { status: 'pending' });
-    const errorMsg = MOMO_RESULT_CODES[result.resultCode] || result.message;
-    return { success: false, message: errorMsg };
+    const code = Number(result.resultCode);
+    const errorMsg = MOMO_RESULT_CODES[code] || result.message || 'Lỗi giao dịch';
+    return { success: false, paymentId, message: errorMsg };
   }
 
   // ── Admin: Confirm Banking Payment ─────────────────────────────────────
