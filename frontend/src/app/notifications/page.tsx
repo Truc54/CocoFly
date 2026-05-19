@@ -218,12 +218,12 @@ export default function NotificationsPage() {
               <div
                 key={n.id}
                 onClick={() => handleNotificationClick(n)}
-                className={`w-full text-left px-6 py-4 h-[96px] hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors flex gap-4 relative cursor-pointer items-center ${
+                className={`w-full text-left pl-6 pr-10 py-4 h-[96px] hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors flex gap-4 relative cursor-pointer items-center ${
                   !n.isRead ? "bg-primary/5" : ""
                 }`}
               >
                 {!n.isRead && (
-                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary" />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary" />
                 )}
                 
                 {/* Thumbnail */}

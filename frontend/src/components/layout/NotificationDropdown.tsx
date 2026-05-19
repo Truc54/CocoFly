@@ -254,12 +254,12 @@ export default function NotificationDropdown() {
                   <button
                     key={n.id}
                     onClick={() => handleNotificationClick(n)}
-                    className={`w-full text-left px-4 py-3 h-[72px] hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors flex gap-3 relative items-center ${
+                    className={`w-full text-left pl-4 pr-8 py-3 h-[72px] hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors flex gap-3 relative items-center ${
                       !n.isRead ? "bg-primary/5" : ""
                     }`}
                   >
                     {!n.isRead && (
-                      <span className="absolute left-1 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-primary" />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary" />
                     )}
                     
                     {/* Thumbnail */}

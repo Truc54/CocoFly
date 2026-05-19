@@ -60,6 +60,8 @@ export default function LiveChatPanel({
     }
   };
 
+  const chatMessages = messages.filter(msg => msg.type !== "bid_alert");
+
   return (
     <div className="bg-white dark:bg-slate-800 rounded-none border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] flex flex-col h-[550px]">
       {/* Header */}
@@ -109,12 +111,12 @@ export default function LiveChatPanel({
             onScroll={handleScroll}
             className="flex-1 overflow-y-auto p-4 gap-4 hide-scrollbar flex flex-col-reverse bg-slate-50/50 dark:bg-slate-800"
           >
-            {messages.map((msg) => (
+            {chatMessages.map((msg) => (
               <div key={msg.id} id={`chat-msg-${msg.id}`} className="animate-fade-in flex flex-col gap-1">
-                {msg.type === "system" || msg.type === "bid_alert" ? (
+                {msg.type === "system" ? (
                   <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-400 p-2 text-xs text-blue-700 dark:text-blue-300 italic flex items-center gap-2">
                     <span className="material-symbols-outlined text-[16px]">
-                      {msg.type === "bid_alert" ? "gavel" : "info"}
+                      info
                     </span>
                     {msg.message}
                   </div>
@@ -212,7 +214,7 @@ export default function LiveChatPanel({
               </button>
             )}
             
-            {messages.length === 0 && !isLoadingHistory && (
+            {chatMessages.length === 0 && !isLoadingHistory && (
               <div className="text-center text-sm text-slate-500 my-auto pb-10">
                 Chưa có tin nhắn nào. Hãy là người đầu tiên!
               </div>
