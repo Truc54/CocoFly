@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, Suspense, useMemo } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -12,6 +12,8 @@ import {
   Package,
   Truck,
   MessageSquare,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 import { userApi } from "@/lib/api";
@@ -40,6 +42,34 @@ const TABS: { key: OrderTab; label: string; icon: React.ReactNode }[] = [
   { key: "received", label: "Đã nhận", icon: <CheckCircle2 className="w-4 h-4" /> },
 ];
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function useCountdown(endTimes: string[]) {
+  const [timeLefts, setTimeLefts] = useState<string[]>([]);
+  const endTimesKey = useMemo(() => JSON.stringify(endTimes), [endTimes]);
+
+  useEffect(() => {
+    const times: string[] = JSON.parse(endTimesKey);
+    if (times.length === 0) { setTimeLefts([]); return; }
+
+    function calc() {
+      return times.map((endTime: string) => {
+        const diff = new Date(endTime).getTime() - Date.now();
+        if (diff <= 0) return "Kết thúc";
+        const d = Math.floor(diff / 86400000);
+        const h = String(Math.floor((diff % 86400000) / 3600000)).padStart(2, "0");
+        const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2, "0");
+        const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, "0");
+        return d > 0 ? `${d}d ${h}:${m}:${s}` : `${h}:${m}:${s}`;
+      });
+    }
+    setTimeLefts(calc());
+    const timer = setInterval(() => setTimeLefts(calc()), 1000);
+    return () => clearInterval(timer);
+  }, [endTimesKey]);
+
+  return timeLefts;
+}
+
 // ═════════════════════════════════════════════════════════════════════════════
 function WonAuctionsContent() {
   const router = useRouter();
@@ -50,27 +80,39 @@ function WonAuctionsContent() {
     : "bidding";
 
   const [activeTab, setActiveTab] = useState<OrderTab>(initialTab);
+  const [page, setPage] = useState(1);
+  const [meta, setMeta] = useState<{ totalPages: number; total: number } | null>(null);
+  const [counts, setCounts] = useState<Record<string, number>>({});
 
   const handleTabChange = (tab: OrderTab) => {
     setActiveTab(tab);
+    setPage(1);
     router.replace(`?tab=${tab}`, { scroll: false });
   };
 
   useEffect(() => {
     if (initialTab !== activeTab) {
       setActiveTab(initialTab);
+      setPage(1);
     }
   }, [initialTab]);
+
   const [receivedOrders, setReceivedOrders] = useState<string[]>([]);
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const endTimes = useMemo(() => (activeTab === "bidding" ? orders.map(o => o.date) : []), [orders, activeTab]);
+  const timeLefts = useCountdown(endTimes);
+
   React.useEffect(() => {
     let isMounted = true;
-    userApi.getParticipatedAuctions()
+    setIsLoading(true);
+    userApi.getParticipatedAuctions(activeTab, page, 10)
       .then((res) => {
         if (isMounted && res?.data) {
           setOrders(res.data);
+          setMeta(res.meta);
+          setCounts(res.counts || {});
         }
       })
       .catch((err) => console.error("Error fetching auctions:", err))
@@ -81,15 +123,14 @@ function WonAuctionsContent() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [activeTab, page]);
   
   const handleReceive = (id: string) => {
     setReceivedOrders(prev => [...prev, id]);
     // TODO: Call API to update status
   };
   
-  const filtered = orders.filter(o => o.status === activeTab);
-  const tabCounts = TABS.map(t => ({ ...t, count: orders.filter(o => o.status === t.key).length }));
+  const tabCounts = TABS.map(t => ({ ...t, count: counts[t.key] || 0 }));
 
   return (
     <div className="min-h-screen bg-background">
@@ -127,9 +168,9 @@ function WonAuctionsContent() {
           <div className="flex justify-center py-20">
             <div className="w-8 h-8 border-4 border-[#E25C24] border-t-transparent rounded-full animate-spin"></div>
           </div>
-        ) : filtered.length > 0 ? (
+        ) : orders.length > 0 ? (
           <div className="space-y-3">
-            {filtered.map(order => {
+            {orders.map((order, idx) => {
               return (
                 <div 
                   key={order.id} 
@@ -213,7 +254,12 @@ function WonAuctionsContent() {
                         )}
                       </div>
                       
-                      {order.status === "delivering" ? (
+                      {order.status === "bidding" ? (
+                        <span className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                          <Clock className="w-3.5 h-3.5" />
+                          Còn lại: {timeLefts[idx] || "Đang tải..."}
+                        </span>
+                      ) : order.status === "delivering" ? (
                         <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-600">
                           <Truck className="w-3.5 h-3.5" />
                           Thời gian đơn hàng tới: {order.deliveryCountdown}
@@ -246,6 +292,41 @@ function WonAuctionsContent() {
               className="inline-flex items-center gap-2 mt-4 px-5 py-2.5 rounded-lg bg-[#E25C24] text-white text-sm font-medium hover:bg-[#E25C24]/90 transition-colors"
             >
               Khám phá đấu giá
+            </button>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {!isLoading && meta && meta.totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-8 pb-8">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="p-2 rounded-lg border-2 border-slate-200 text-slate-500 hover:border-[#E25C24] hover:text-[#E25C24] disabled:opacity-50 disabled:hover:border-slate-200 disabled:hover:text-slate-500 transition-colors"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            
+            {Array.from({ length: meta.totalPages }, (_, i) => i + 1).map(p => (
+              <button
+                key={p}
+                onClick={() => setPage(p)}
+                className={`w-10 h-10 rounded-lg border-2 font-bold transition-all ${
+                  page === p 
+                    ? "bg-[#E25C24] border-[#E25C24] text-white shadow-[2px_2px_0px_#E2B9A1]" 
+                    : "border-slate-200 text-slate-600 hover:border-[#E25C24] hover:text-[#E25C24]"
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+            
+            <button
+              onClick={() => setPage(p => Math.min(meta.totalPages, p + 1))}
+              disabled={page === meta.totalPages}
+              className="p-2 rounded-lg border-2 border-slate-200 text-slate-500 hover:border-[#E25C24] hover:text-[#E25C24] disabled:opacity-50 disabled:hover:border-slate-200 disabled:hover:text-slate-500 transition-colors"
+            >
+              <ChevronRight className="w-5 h-5" />
             </button>
           </div>
         )}

@@ -129,7 +129,13 @@ export const userApi = {
     method: 'POST',
     body: JSON.stringify({ addressLine, phone }),
   }),
-  getParticipatedAuctions: () => fetchApi('/api/users/me/participated-auctions'),
+  getParticipatedAuctions: (tab?: string, page: number = 1, limit: number = 10) => {
+    const qs = new URLSearchParams();
+    if (tab) qs.set('tab', tab);
+    qs.set('page', page.toString());
+    qs.set('limit', limit.toString());
+    return fetchApi(`/api/users/me/participated-auctions?${qs.toString()}`);
+  },
 };
 
 export const mediaApi = {

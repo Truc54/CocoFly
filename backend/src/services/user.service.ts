@@ -86,8 +86,14 @@ export class UserService {
     };
   }
 
-  async getParticipatedAuctions(userId: string) {
-    const rawAuctions = await this.userRepository.getParticipatedAuctions(userId);
+  async getParticipatedAuctions(userId: string, tab?: string, page: number = 1, limit: number = 10) {
+    const skip = (page - 1) * limit;
+    const take = limit;
+
+    const [rawAuctions, counts] = await Promise.all([
+      this.userRepository.getParticipatedAuctions(userId, tab, skip, take),
+      this.userRepository.getParticipatedAuctionCounts(userId)
+    ]);
 
     const formattedAuctions = rawAuctions.map(auction => {
       const myMaxBid = auction.bids.length > 0 ? auction.bids[0].amount : null;
@@ -129,7 +135,17 @@ export class UserService {
         isPaid: latestPayment?.status === 'paid' || latestPayment?.status === 'escrow_released',
       };
     });
+    const currentTabTotal = tab ? counts[tab as keyof typeof counts] || 0 : Object.values(counts).reduce((a, b) => a + b, 0);
 
-    return formattedAuctions;
+    return {
+      data: formattedAuctions,
+      meta: {
+        page,
+        limit,
+        total: currentTabTotal,
+        totalPages: Math.ceil(currentTabTotal / limit)
+      },
+      counts
+    };
   }
 }

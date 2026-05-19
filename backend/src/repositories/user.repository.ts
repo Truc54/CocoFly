@@ -1,4 +1,5 @@
 import prisma from '../config/prisma';
+import { Prisma } from '@prisma/client';
 
 export class UserRepository {
   async findByEmail(email: string) {
@@ -115,14 +116,63 @@ export class UserRepository {
       });
     }
   }
-  async getParticipatedAuctions(userId: string) {
+  private getParticipatedAuctionWhereInput(userId: string, tab?: string): Prisma.AuctionWhereInput {
+    const baseWhere: Prisma.AuctionWhereInput = {
+      OR: [
+        { winnerId: userId },
+        { bids: { some: { bidderId: userId } } }
+      ]
+    };
+
+    if (!tab) return baseWhere;
+
+    switch (tab) {
+      case 'bidding':
+        return {
+          ...baseWhere,
+          status: { in: ['active', 'scheduled'] }
+        };
+      case 'won':
+        return {
+          ...baseWhere,
+          winnerId: userId,
+          status: { notIn: ['active', 'scheduled'] },
+          payments: {
+            every: {
+              shippingStatus: { notIn: ['shipped', 'delivered', 'returned'] },
+              status: { not: 'escrow_released' }
+            }
+          }
+        };
+      case 'delivering':
+        return {
+          ...baseWhere,
+          winnerId: userId,
+          payments: { some: { shippingStatus: 'shipped' } }
+        };
+      case 'received':
+        return {
+          ...baseWhere,
+          winnerId: userId,
+          payments: {
+            some: {
+              OR: [
+                { shippingStatus: { in: ['delivered', 'returned'] } },
+                { status: 'escrow_released' }
+              ]
+            }
+          }
+        };
+      default:
+        return baseWhere;
+    }
+  }
+
+  async getParticipatedAuctions(userId: string, tab?: string, skip?: number, take?: number) {
     return prisma.auction.findMany({
-      where: {
-        OR: [
-          { winnerId: userId },
-          { bids: { some: { bidderId: userId } } }
-        ]
-      },
+      where: this.getParticipatedAuctionWhereInput(userId, tab),
+      skip,
+      take,
       include: {
         item: {
           include: { media: true }
@@ -142,5 +192,15 @@ export class UserRepository {
       },
       orderBy: { createdAt: 'desc' }
     });
+  }
+
+  async getParticipatedAuctionCounts(userId: string) {
+    const [bidding, won, delivering, received] = await Promise.all([
+      prisma.auction.count({ where: this.getParticipatedAuctionWhereInput(userId, 'bidding') }),
+      prisma.auction.count({ where: this.getParticipatedAuctionWhereInput(userId, 'won') }),
+      prisma.auction.count({ where: this.getParticipatedAuctionWhereInput(userId, 'delivering') }),
+      prisma.auction.count({ where: this.getParticipatedAuctionWhereInput(userId, 'received') })
+    ]);
+    return { bidding, won, delivering, received };
   }
 }

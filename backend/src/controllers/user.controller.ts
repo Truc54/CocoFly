@@ -56,9 +56,13 @@ export class UserController {
       if (!req.user) {
         throw new AppError('Unauthorized', 401);
       }
+      
+      const tab = req.query.tab as string | undefined;
+      const page = req.query.page ? parseInt(req.query.page as string, 10) : 1;
+      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 10;
 
-      const auctions = await this.userService.getParticipatedAuctions(req.user.userId);
-      res.status(200).json({ success: true, data: auctions });
+      const result = await this.userService.getParticipatedAuctions(req.user.userId, tab, page, limit);
+      res.status(200).json({ success: true, ...result });
     } catch (err) {
       next(err);
     }
