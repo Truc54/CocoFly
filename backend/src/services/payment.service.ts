@@ -50,8 +50,9 @@ export class PaymentService {
 
     switch (method) {
       case 'vnpay': {
+        const uniqueOrderId = `${paymentId}_${Date.now()}`;
         const url = createVNPayUrl({
-          orderId: paymentId,
+          orderId: uniqueOrderId,
           amount,
           orderInfo,
           ipAddress,
@@ -60,8 +61,9 @@ export class PaymentService {
       }
 
       case 'momo': {
+        const uniqueOrderId = `${paymentId}_${Date.now()}`;
         const result = await createMoMoPayment({
-          orderId: paymentId,
+          orderId: uniqueOrderId,
           amount,
           orderInfo,
         });
@@ -104,28 +106,29 @@ export class PaymentService {
     const result = verifyVNPayReturn(query);
 
     if (!result.isValid) {
-      return { success: false, paymentId: result.orderId, message: 'Chữ ký không hợp lệ' };
+      return { success: false, paymentId: result.orderId.split('_')[0], message: 'Chữ ký không hợp lệ' };
     }
 
-    const payment = await this.paymentRepo.findById(result.orderId);
+    const paymentId = result.orderId.split('_')[0];
+    const payment = await this.paymentRepo.findById(paymentId);
     if (!payment) {
-      return { success: false, paymentId: result.orderId, message: 'Không tìm thấy thanh toán' };
+      return { success: false, paymentId, message: 'Không tìm thấy thanh toán' };
     }
 
     // Already paid (idempotency)
     if (payment.status === 'paid' || payment.status === 'escrow_released') {
-      return { success: true, paymentId: result.orderId, message: 'Đã thanh toán' };
+      return { success: true, paymentId, message: 'Đã thanh toán' };
     }
 
     if (result.responseCode === '00') {
       await this.markAsPaid(payment.id, result.transactionId);
-      return { success: true, paymentId: result.orderId, message: 'Thanh toán thành công' };
+      return { success: true, paymentId, message: 'Thanh toán thành công' };
     }
 
     // Payment failed — revert to pending so buyer can retry
     await this.paymentRepo.updateStatus(payment.id, { status: 'pending' });
     const errorMsg = VNPAY_RESPONSE_CODES[result.responseCode] || 'Giao dịch thất bại';
-    return { success: false, paymentId: result.orderId, message: errorMsg };
+    return { success: false, paymentId, message: errorMsg };
   }
 
   // ── MoMo IPN Handler ───────────────────────────────────────────────────
@@ -136,7 +139,8 @@ export class PaymentService {
       return { success: false, message: 'Chữ ký không hợp lệ' };
     }
 
-    const payment = await this.paymentRepo.findById(result.orderId);
+    const paymentId = result.orderId.split('_')[0];
+    const payment = await this.paymentRepo.findById(paymentId);
     if (!payment) {
       return { success: false, message: 'Không tìm thấy thanh toán' };
     }

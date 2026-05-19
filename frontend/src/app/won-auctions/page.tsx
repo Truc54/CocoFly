@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Trophy,
   Gavel,
@@ -41,9 +41,26 @@ const TABS: { key: OrderTab; label: string; icon: React.ReactNode }[] = [
 ];
 
 // ═════════════════════════════════════════════════════════════════════════════
-export default function WonAuctionsPage() {
+function WonAuctionsContent() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<OrderTab>("bidding");
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab") as OrderTab | null;
+  const initialTab = tabParam && ["bidding", "won", "delivering", "received"].includes(tabParam) 
+    ? tabParam 
+    : "bidding";
+
+  const [activeTab, setActiveTab] = useState<OrderTab>(initialTab);
+
+  const handleTabChange = (tab: OrderTab) => {
+    setActiveTab(tab);
+    router.replace(`?tab=${tab}`, { scroll: false });
+  };
+
+  useEffect(() => {
+    if (initialTab !== activeTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
   const [receivedOrders, setReceivedOrders] = useState<string[]>([]);
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -86,7 +103,7 @@ export default function WonAuctionsPage() {
           {tabCounts.map(tab => (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => handleTabChange(tab.key)}
               className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-all
                 ${activeTab === tab.key
                   ? "text-[#E25C24] border-[#E25C24]"
@@ -234,5 +251,17 @@ export default function WonAuctionsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function WonAuctionsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background flex justify-center py-20">
+        <div className="w-8 h-8 border-4 border-[#E25C24] border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    }>
+      <WonAuctionsContent />
+    </Suspense>
   );
 }
