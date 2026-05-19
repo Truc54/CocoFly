@@ -647,4 +647,83 @@ export class AuctionRepository {
       return { auctionId, itemId: auction.itemId, removedMediaKeys };
     });
   }
+
+  // ── Watchlist (Favorites) ─────────────────────────────────────────────────
+
+  async toggleWatch(auctionId: string, userId: string): Promise<boolean> {
+    const existing = await prisma.auctionWatcher.findUnique({
+      where: { auctionId_userId: { auctionId, userId } },
+    });
+
+    if (existing) {
+      await prisma.$transaction([
+        prisma.auctionWatcher.delete({
+          where: { auctionId_userId: { auctionId, userId } },
+        }),
+        prisma.auction.update({
+          where: { id: auctionId },
+          data: { totalWatchers: { decrement: 1 } },
+        }),
+      ]);
+      return false; // unwatched
+    }
+
+    await prisma.$transaction([
+      prisma.auctionWatcher.create({
+        data: { auctionId, userId },
+      }),
+      prisma.auction.update({
+        where: { id: auctionId },
+        data: { totalWatchers: { increment: 1 } },
+      }),
+    ]);
+    return true; // watched
+  }
+
+  async isWatching(auctionId: string, userId: string): Promise<boolean> {
+    const record = await prisma.auctionWatcher.findUnique({
+      where: { auctionId_userId: { auctionId, userId } },
+    });
+    return !!record;
+  }
+
+  async getWatchlist(userId: string, page: number, limit: number) {
+    const where = { userId };
+    const skip = (page - 1) * limit;
+
+    const [watchers, total] = await Promise.all([
+      prisma.auctionWatcher.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+        include: {
+          auction: {
+            include: {
+              item: {
+                include: {
+                  media: { where: { sortOrder: 0 }, take: 1 },
+                  category: { select: { id: true, name: true } },
+                },
+              },
+              seller: {
+                select: { id: true, fullName: true, avatarUrl: true, rating: true },
+              },
+            },
+          },
+        },
+      }),
+      prisma.auctionWatcher.count({ where }),
+    ]);
+
+    return { watchers, total };
+  }
+
+  async getWatchedAuctionIds(userId: string, auctionIds: string[]): Promise<string[]> {
+    const records = await prisma.auctionWatcher.findMany({
+      where: { userId, auctionId: { in: auctionIds } },
+      select: { auctionId: true },
+    });
+    return records.map((r) => r.auctionId);
+  }
 }

@@ -225,5 +225,48 @@ export class AuctionController {
       next(err);
     }
   }
+
+  // ── Watchlist (Favorites) ──────────────────────────────────────────────────
+
+  async toggleWatch(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.userId;
+      const auctionId = req.params.auctionId as string;
+
+      const result = await this.auctionService.toggleWatchAuction(auctionId, userId);
+      res.json({
+        success: true,
+        message: result.watching ? 'Đã thêm vào yêu thích' : 'Đã bỏ yêu thích',
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async getWatchlist(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.userId;
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 10));
+
+      const result = await this.auctionService.getWatchlist(userId, page, limit);
+      res.json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async getWatchStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.userId;
+      const auctionId = req.params.auctionId as string;
+
+      const watching = await this.auctionService.isWatching(auctionId, userId);
+      res.json({ success: true, data: { watching } });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 

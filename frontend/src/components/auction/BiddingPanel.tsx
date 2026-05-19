@@ -26,9 +26,12 @@ interface BiddingPanelProps {
   isExtended: boolean;
   extendCount: number;
   isLoggedIn: boolean;
+  isWatching: boolean;
+  watchLoading: boolean;
   onPlaceBid: (amount: number, maxAutoBid?: number) => void;
   onBuyout: () => void;
   onClearError: () => void;
+  onToggleWatch: () => void;
 }
 
 export default function BiddingPanel({
@@ -45,9 +48,12 @@ export default function BiddingPanel({
   isExtended,
   extendCount,
   isLoggedIn,
+  isWatching,
+  watchLoading,
   onPlaceBid,
   onBuyout,
   onClearError,
+  onToggleWatch,
 }: BiddingPanelProps) {
   const suggestedPrice = currentPrice + bidIncrement;
   const [bidAmount, setBidAmount] = useState<string>("");
@@ -302,9 +308,22 @@ export default function BiddingPanel({
                   MUA NGAY
                 </button>
               )}
-              <button className={`${buyoutPrice ? "flex-1" : "w-full"} py-3 bg-white text-slate-700 font-bold text-sm sm:text-base rounded-full border-2 border-slate-200 shadow-[3px_3px_0px_#cbd5e1] hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#cbd5e1] active:translate-y-0 active:shadow-[1px_1px_0px_#cbd5e1] transition-all flex items-center justify-center gap-1 cursor-pointer`}>
-                <span className="material-symbols-outlined text-[18px]">favorite</span>
-                YÊU THÍCH
+              <button 
+                onClick={(e) => { e.stopPropagation(); onToggleWatch(); }}
+                disabled={watchLoading}
+                className={`${buyoutPrice ? "flex-1" : "w-full"} py-3 font-bold text-sm sm:text-base rounded-full border-2 shadow-[3px_3px_0px_#cbd5e1] hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#cbd5e1] active:translate-y-0 active:shadow-[1px_1px_0px_#cbd5e1] transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                  isWatching
+                    ? "bg-red-100 text-red-600 border-red-300"
+                    : "bg-white text-slate-700 border-slate-200"
+                } ${watchLoading ? "opacity-60" : ""}`}
+              >
+                <span 
+                  className="material-symbols-outlined text-[18px] transition-all"
+                  style={isWatching ? { fontVariationSettings: "'FILL' 1" } : { fontVariationSettings: "'FILL' 0" }}
+                >
+                  favorite
+                </span>
+                {isWatching ? "ĐÃ THÍCH" : "YÊU THÍCH"}
               </button>
             </div>
           </>
@@ -317,9 +336,22 @@ export default function BiddingPanel({
               {status === "scheduled" ? "CHƯA BẮT ĐẦU" : !isLoggedIn ? "ĐĂNG NHẬP ĐỂ ĐẤU GIÁ" : "ĐÃ KẾT THÚC"}
             </button>
             <div className="flex gap-3">
-              <button className="w-full py-3 bg-white text-slate-700 font-bold text-sm sm:text-base rounded-full border-2 border-slate-200 shadow-[3px_3px_0px_#cbd5e1] hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#cbd5e1] active:translate-y-0 active:shadow-[1px_1px_0px_#cbd5e1] transition-all flex items-center justify-center gap-1 cursor-pointer">
-                <span className="material-symbols-outlined text-[18px]">favorite</span>
-                YÊU THÍCH
+              <button 
+                onClick={(e) => { e.stopPropagation(); onToggleWatch(); }}
+                disabled={watchLoading}
+                className={`w-full py-3 font-bold text-sm sm:text-base rounded-full border-2 shadow-[3px_3px_0px_#cbd5e1] hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#cbd5e1] active:translate-y-0 active:shadow-[1px_1px_0px_#cbd5e1] transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                  isWatching
+                    ? "bg-red-100 text-red-600 border-red-300"
+                    : "bg-white text-slate-700 border-slate-200"
+                } ${watchLoading ? "opacity-60" : ""}`}
+              >
+                <span 
+                  className="material-symbols-outlined text-[18px] transition-all"
+                  style={isWatching ? { fontVariationSettings: "'FILL' 1" } : { fontVariationSettings: "'FILL' 0" }}
+                >
+                  favorite
+                </span>
+                {isWatching ? "ĐÃ THÍCH" : "YÊU THÍCH"}
               </button>
             </div>
           </div>

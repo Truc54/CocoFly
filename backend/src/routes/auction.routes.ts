@@ -20,6 +20,7 @@ auctionRoutes.get('/live', auctionController.getLiveAuctions.bind(auctionControl
 auctionRoutes.get('/upcoming', auctionController.getUpcomingAuctions.bind(auctionController));
 auctionRoutes.get('/suggestions', auctionController.getSuggestions.bind(auctionController));
 auctionRoutes.get('/my-listings', authGuard, auctionController.getMyListings.bind(auctionController));
+auctionRoutes.get('/watchlist', authGuard, auctionController.getWatchlist.bind(auctionController));
 
 // ── Create auction (Seller only — authGuard verifies JWT, service verifies role)
 auctionRoutes.post(
@@ -60,6 +61,20 @@ auctionRoutes.get(
   '/:auctionId/my-status',
   authGuard,
   auctionController.getMyBidStatus.bind(auctionController),
+);
+
+// ── Watchlist (Favorites) ───────────────────────────────────────────────────
+
+auctionRoutes.post(
+  '/:auctionId/watch',
+  authGuard,
+  auctionController.toggleWatch.bind(auctionController),
+);
+
+auctionRoutes.get(
+  '/:auctionId/watch-status',
+  authGuard,
+  auctionController.getWatchStatus.bind(auctionController),
 );
 
 // ── Payment routes ──────────────────────────────────────────────────────────

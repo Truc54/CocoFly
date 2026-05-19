@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, useCallback, use } from "react";
 import { auctionApi } from "@/lib/api";
 import { authStorage } from "@/lib/auth-storage";
 import type { AuctionDetail, RelatedAuction } from "@/lib/types/auction";
@@ -30,6 +30,10 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
+  // ── Watch state ──
+  const [isWatching, setIsWatching] = useState(false);
+  const [watchLoading, setWatchLoading] = useState(false);
+
   useEffect(() => {
     setIsLoggedIn(!!authStorage.getToken());
   }, []);
@@ -44,6 +48,14 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
         if (cancelled) return;
         const data = res.data as AuctionDetail;
         setAuction(data);
+
+        // Fetch watch status if logged in
+        if (authStorage.getToken()) {
+          try {
+            const watchRes = await auctionApi.getWatchStatus(id);
+            if (!cancelled) setIsWatching(watchRes.data?.watching ?? false);
+          } catch { /* non-critical */ }
+        }
 
         if (data.category?.id) {
           try {
@@ -65,6 +77,25 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
     return () => { cancelled = true; };
   }, [id]);
 
+  const handleToggleWatch = useCallback(async () => {
+    if (!isLoggedIn) {
+      alert("Vui lòng đăng nhập để sử dụng tính năng này");
+      return;
+    }
+    if (watchLoading) return;
+    setWatchLoading(true);
+    const prev = isWatching;
+    setIsWatching(!prev); // optimistic
+    try {
+      await auctionApi.toggleWatch(id);
+    } catch (err: any) {
+      setIsWatching(prev); // rollback
+      alert(err.message || "Không thể thực hiện thao tác này");
+    } finally {
+      setWatchLoading(false);
+    }
+  }, [id, isWatching, watchLoading, isLoggedIn]);
+
   if (loading) return <AuctionDetailSkeleton />;
 
   if (error || !auction) {
@@ -80,7 +111,7 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
     );
   }
 
-  return <AuctionDetailContent auction={auction} related={related} activeImageIdx={activeImageIdx} setActiveImageIdx={setActiveImageIdx} isLoggedIn={isLoggedIn} />;
+  return <AuctionDetailContent auction={auction} related={related} activeImageIdx={activeImageIdx} setActiveImageIdx={setActiveImageIdx} isLoggedIn={isLoggedIn} isWatching={isWatching} watchLoading={watchLoading} onToggleWatch={handleToggleWatch} />;
 }
 
 // ─── INNER COMPONENT (needs hooks after auction loads) ────────────────────────
@@ -91,12 +122,18 @@ function AuctionDetailContent({
   activeImageIdx,
   setActiveImageIdx,
   isLoggedIn,
+  isWatching,
+  watchLoading,
+  onToggleWatch,
 }: {
   auction: AuctionDetail;
   related: RelatedAuction[];
   activeImageIdx: number;
   setActiveImageIdx: (i: number) => void;
   isLoggedIn: boolean;
+  isWatching: boolean;
+  watchLoading: boolean;
+  onToggleWatch: () => void;
 }) {
   const {
     currentPrice,
@@ -301,13 +338,21 @@ function AuctionDetailContent({
               </div>
             </div>
 
-            {/* Connection status */}
-            {isLoggedIn && (
-              <div className={`flex items-center gap-1.5 text-[10px] font-bold ${connected ? "text-green-600" : "text-slate-400"}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${connected ? "bg-green-500 animate-pulse" : "bg-slate-300"}`}></span>
-                {connected ? "REALTIME" : "OFFLINE"}
+            {/* Connection status + Watchers count */}
+            <div className="flex items-center gap-3">
+              {isLoggedIn && (
+                <div className={`flex items-center gap-1.5 text-[10px] font-bold ${connected ? "text-green-600" : "text-slate-400"}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${connected ? "bg-green-500 animate-pulse" : "bg-slate-300"}`}></span>
+                  {connected ? "REALTIME" : "OFFLINE"}
+                </div>
+              )}
+              <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
+                  <path d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+                </svg>
+                {auction.totalWatchers} người thích
               </div>
-            )}
+            </div>
           </div>
 
           {/* Bidding Panel or Ended Overlay */}
@@ -335,9 +380,12 @@ function AuctionDetailContent({
               isExtended={isExtended}
               extendCount={extendCount}
               isLoggedIn={isLoggedIn}
+              isWatching={isWatching}
+              watchLoading={watchLoading}
               onPlaceBid={placeBid}
               onBuyout={buyout}
               onClearError={clearError}
+              onToggleWatch={onToggleWatch}
             />
           )}
 

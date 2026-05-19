@@ -419,4 +419,66 @@ export class AuctionService {
 
     return result;
   }
+
+  // ── Watchlist (Favorites) ───────────────────────────────────────────────────
+
+  async toggleWatchAuction(auctionId: string, userId: string) {
+    const auction = await prisma.auction.findUnique({
+      where: { id: auctionId },
+      select: { id: true, sellerId: true },
+    });
+
+    if (!auction) throw new AppError('Phiên đấu giá không tồn tại', 404);
+    if (auction.sellerId === userId) throw new AppError('Không thể yêu thích đấu giá của chính mình', 400);
+
+    const watching = await this.auctionRepository.toggleWatch(auctionId, userId);
+    return { watching };
+  }
+
+  async getWatchlist(userId: string, page: number, limit: number): Promise<PaginatedResult> {
+    const { watchers, total } = await this.auctionRepository.getWatchlist(userId, page, limit);
+
+    return {
+      auctions: watchers.map((w: any) => {
+        const auction = w.auction;
+        const thumbnail = auction.item?.media?.[0];
+
+        return {
+          id: auction.id,
+          status: auction.status,
+          title: auction.item?.title,
+          thumbnailUrl: thumbnail?.cdnUrl ?? null,
+          category: auction.item?.category ?? null,
+          condition: auction.item?.condition,
+          location: auction.item?.location,
+          currentPrice: Number(auction.currentPrice),
+          startingPrice: Number(auction.startingPrice),
+          bidIncrement: Number(auction.bidIncrement),
+          scheduledStart: auction.scheduledStart,
+          endTime: auction.endTime,
+          totalBids: auction.totalBids,
+          totalWatchers: auction.totalWatchers,
+          watchedAt: w.createdAt,
+          seller: auction.seller
+            ? {
+                id: auction.seller.id,
+                fullName: auction.seller.fullName,
+                avatarUrl: auction.seller.avatarUrl,
+                rating: Number(auction.seller.rating),
+              }
+            : null,
+        };
+      }),
+      pagination: {
+        page,
+        limit,
+        totalItems: total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async isWatching(auctionId: string, userId: string) {
+    return this.auctionRepository.isWatching(auctionId, userId);
+  }
 }

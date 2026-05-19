@@ -193,6 +193,11 @@ export const auctionApi = {
     body: JSON.stringify(data),
   }),
   remove: (id: string) => fetchApi(`/api/auctions/${id}`, { method: 'DELETE' }),
+  // ── Watchlist (Favorites)
+  toggleWatch: (auctionId: string) => fetchApi(`/api/auctions/${auctionId}/watch`, { method: 'POST' }),
+  getWatchlist: (page: number = 1, limit: number = 10) =>
+    fetchApi(`/api/auctions/watchlist?page=${page}&limit=${limit}`),
+  getWatchStatus: (auctionId: string) => fetchApi(`/api/auctions/${auctionId}/watch-status`),
 };
 
 export const categoryApi = {
