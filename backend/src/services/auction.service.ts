@@ -259,12 +259,16 @@ export class AuctionService {
       bidIncrement: Number(auction.bidIncrement),
       scheduledStart: auction.scheduledStart,
       endTime: auction.endTime,
+      actualEndTime: auction.actualEndTime ?? null,
       autoExtend: auction.autoExtend,
       autoExtendMinutes: auction.autoExtendMinutes,
       autoExtendThreshold: auction.autoExtendThreshold,
       totalBids: auction.totalBids,
       totalWatchers: auction.totalWatchers,
       chatRoomId: auction.chatRoom?.id ?? null,
+      winnerId: auction.winnerId ?? null,
+      winnerName: auction.winner?.fullName ?? null,
+      finalPrice: auction.finalPrice ? Number(auction.finalPrice) : null,
       seller: auction.seller
         ? {
             id: auction.seller.id,

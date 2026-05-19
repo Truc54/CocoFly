@@ -215,14 +215,23 @@ export function initSocket(server: HttpServer): Server {
           ipAddress,
         });
 
+        // Broadcast the bid so clients update their history list
+        io!.to(`auction:${data.auctionId}`).emit('auction:bid_placed', {
+          bid: result.bid,
+          currentPrice: result.finalPrice,
+          totalBids: result.totalBids,
+        });
+
         io!.to(`auction:${data.auctionId}`).emit('auction:buyout', {
           auctionId: data.auctionId,
           buyerId: userId,
+          buyerName: result.buyerName,
           price: result.finalPrice,
         });
         io!.to(`auction:${data.auctionId}`).emit('auction:ended', {
           auctionId: data.auctionId,
           winnerId: userId,
+          winnerName: result.buyerName,
           finalPrice: result.finalPrice,
         });
 

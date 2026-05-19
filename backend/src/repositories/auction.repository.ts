@@ -176,6 +176,9 @@ export class AuctionRepository {
         seller: {
           select: { id: true, fullName: true, avatarUrl: true, rating: true },
         },
+        winner: {
+          select: { id: true, fullName: true, avatarUrl: true },
+        },
         bids: {
           orderBy: { createdAt: 'desc' },
           take: 10,

@@ -106,6 +106,7 @@ function AuctionDetailContent({
     extendCount,
     auctionStatus,
     winnerId,
+    winnerName: socketWinnerName,
     finalPrice,
     bids,
     isLeading,
@@ -126,6 +127,9 @@ function AuctionDetailContent({
     endTime: auction.endTime,
     recentBids: auction.recentBids,
     status: auction.status,
+    winnerId: auction.winnerId,
+    winnerName: auction.winnerName,
+    finalPrice: auction.finalPrice,
   });
 
   // Auto-dismiss success toast
@@ -141,6 +145,11 @@ function AuctionDetailContent({
     : ["https://placehold.co/800x600/f1f5f9/94a3b8?text=No+Image"];
 
   const isEnded = auctionStatus === "ended" || auctionStatus === "buyout";
+
+  // Use socket winnerName first, then API winnerName, then try to find from bids
+  const winnerName = socketWinnerName || auction.winnerName ||
+                     bids.find(b => b.bidder.id === winnerId)?.bidder.fullName ||
+                     null;
 
   return (
     <div className="max-w-[1400px] mx-auto px-4 lg:px-6 py-6">
@@ -305,8 +314,12 @@ function AuctionDetailContent({
           {isEnded ? (
             <AuctionEndedOverlay
               winnerId={winnerId}
+              winnerName={winnerName}
               finalPrice={finalPrice}
               isBuyout={auctionStatus === "buyout"}
+              startTime={auction.scheduledStart}
+              endTime={auction.actualEndTime || endTime || auction.endTime}
+              totalBids={totalBids}
             />
           ) : (
             <BiddingPanel

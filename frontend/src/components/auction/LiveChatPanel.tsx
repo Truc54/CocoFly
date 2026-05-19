@@ -88,15 +88,17 @@ export default function LiveChatPanel({
         </div>
         
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 text-slate-500 text-xs font-bold">
-            <span className="material-symbols-outlined text-base">visibility</span>
-            {viewerCount}
-          </div>
           {!isEnded && (
-            <div className="flex items-center gap-1.5 bg-green-50 text-green-600 text-[10px] font-bold px-2.5 py-1 border border-green-200 rounded-full">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-              LIVE
-            </div>
+            <>
+              <div className="flex items-center gap-1 text-slate-500 text-xs font-bold">
+                <span className="material-symbols-outlined text-base">visibility</span>
+                {viewerCount}
+              </div>
+              <div className="flex items-center gap-1.5 bg-green-50 text-green-600 text-[10px] font-bold px-2.5 py-1 border border-green-200 rounded-full">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                LIVE
+              </div>
+            </>
           )}
         </div>
       </div>
