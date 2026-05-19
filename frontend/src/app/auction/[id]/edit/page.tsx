@@ -159,11 +159,11 @@ export default function EditAuctionPage() {
             location: auction.location || "",
             media: (auction.media || []).map((m: any) => ({
               cdnUrl: m.cdnUrl,
-              storageKey: m.id.toString(), // Mocked storageKey since we don't have it
-              mimeType: "image/jpeg",
-              fileSize: 0,
-              width: 0,
-              height: 0,
+              storageKey: m.storageKey,
+              mimeType: m.mimeType || "image/jpeg",
+              fileSize: m.fileSize || 0,
+              width: m.width || 0,
+              height: m.height || 0,
               sortOrder: m.sortOrder,
               preview: m.cdnUrl,
             })),

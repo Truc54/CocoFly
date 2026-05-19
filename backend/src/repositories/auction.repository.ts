@@ -565,6 +565,7 @@ export class AuctionRepository {
     bidIncrement?: number;
     scheduledStart?: string;
     endTime?: string;
+    media?: any[];
   }) {
     return prisma.$transaction(async (tx) => {
       const auction = await tx.auction.findUnique({
@@ -606,7 +607,44 @@ export class AuctionRepository {
         await tx.auction.update({ where: { id: auctionId }, data: auctionUpdate });
       }
 
-      return { auctionId, itemId: auction.itemId };
+      let removedMediaKeys: string[] = [];
+
+      // Update Media
+      if (data.media) {
+        // Fetch existing media to determine what was removed
+        const existingMedia = await tx.itemMedia.findMany({
+          where: { itemId: auction.itemId },
+          select: { storageKey: true },
+        });
+
+        const newMediaKeys = data.media.map((m: any) => m.storageKey);
+        removedMediaKeys = existingMedia
+          .map(m => m.storageKey)
+          .filter(key => !newMediaKeys.includes(key));
+
+        // Delete all old media for this item
+        await tx.itemMedia.deleteMany({ where: { itemId: auction.itemId } });
+
+        // Insert new media
+        await tx.itemMedia.createMany({
+          data: data.media.map((m: any, index: number) => ({
+            itemId: auction.itemId,
+            uploaderId: sellerId,
+            type: 'image' as const,
+            purpose: m.sortOrder === 0 ? 'thumbnail' as const : 'gallery' as const,
+            storageKey: m.storageKey,
+            cdnUrl: m.cdnUrl,
+            mimeType: m.mimeType || 'image/jpeg',
+            fileSize: m.fileSize ? BigInt(m.fileSize) : null,
+            width: m.width || 0,
+            height: m.height || 0,
+            sortOrder: m.sortOrder !== undefined ? m.sortOrder : index,
+            processStatus: 'ready' as const,
+          })),
+        });
+      }
+
+      return { auctionId, itemId: auction.itemId, removedMediaKeys };
     });
   }
 }
