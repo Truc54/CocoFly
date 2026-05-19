@@ -13,7 +13,7 @@ export class NotificationController {
       if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
       const cursor = req.query.cursor as string | undefined;
-      const limit = Math.min(Number(req.query.limit) || 20, 50);
+      const limit = Math.max(1, Math.min(Number(req.query.limit) || 20, 50));
       const unreadOnly = req.query.unreadOnly === 'true';
 
       const result = await service.getNotifications(userId, { cursor, limit, unreadOnly });

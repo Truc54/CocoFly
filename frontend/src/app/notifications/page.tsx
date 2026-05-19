@@ -123,7 +123,12 @@ export default function NotificationsPage() {
   }, []);
 
   const handleMarkAsRead = async (id: string) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+    if (activeTab === "unread") {
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    } else {
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+    }
+    setUnreadCount(prev => Math.max(0, prev - 1));
     try {
       await notificationApi.markAsRead(id);
     } catch (e) {
@@ -132,7 +137,12 @@ export default function NotificationsPage() {
   };
 
   const handleMarkAllAsRead = async () => {
-    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    if (activeTab === "unread") {
+      setNotifications([]);
+    } else {
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    }
+    setUnreadCount(0);
     try {
       await notificationApi.markAllAsRead();
     } catch (e) {

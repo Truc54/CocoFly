@@ -33,7 +33,7 @@ export class NotificationService {
 
   /**
    * Send notifications to multiple users at once.
-   * Uses createMany for DB efficiency, then pushes individually via Socket.IO.
+   * Uses Promise.all to create one-by-one, then pushes individually via Socket.IO.
    */
   async sendMany(payloads: SendNotificationPayload[]) {
     if (payloads.length === 0) return;
@@ -71,6 +71,7 @@ export class NotificationService {
 
   async deleteNotification(id: string, userId: string) {
     await repo.deleteById(id, userId);
+    this.pushUnreadCount(userId);
   }
 
   async cleanupExpired(): Promise<number> {

@@ -64,7 +64,7 @@ export class NotificationRepository {
   async findByUserId(userId: string, options: { cursor?: string; limit?: number; unreadOnly?: boolean } = {}) {
     const { cursor, limit = 20, unreadOnly = false } = options;
 
-    const where: Record<string, unknown> = { userId };
+    const where: Record<string, unknown> = { userId, expiresAt: { gt: new Date() } };
     if (unreadOnly) where.isRead = false;
 
     const notifications = await prisma.notification.findMany({

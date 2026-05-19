@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Bell, Check, Loader2, Info } from "lucide-react";
+import { Bell, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { notificationApi } from "@/lib/api";
@@ -143,7 +143,11 @@ export default function NotificationDropdown() {
   }, []);
 
   const handleMarkAsRead = async (id: string) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+    if (activeTab === "unread") {
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    } else {
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+    }
     setUnreadCount(prev => Math.max(0, prev - 1));
     try {
       await notificationApi.markAsRead(id);
@@ -153,7 +157,11 @@ export default function NotificationDropdown() {
   };
 
   const handleMarkAllAsRead = async () => {
-    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    if (activeTab === "unread") {
+      setNotifications([]);
+    } else {
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    }
     setUnreadCount(0);
     try {
       await notificationApi.markAllAsRead();
