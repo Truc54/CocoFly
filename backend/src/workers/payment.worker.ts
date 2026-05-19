@@ -4,6 +4,9 @@ import prisma from '../config/prisma';
 import { AuctionRepository } from '../repositories/auction.repository';
 import { schedulePaymentTimeout } from '../queues/payment.queue';
 import { Decimal } from '@prisma/client/runtime/library';
+import { NotificationService } from '../services/notification.service';
+
+const notificationService = new NotificationService();
 
 interface PaymentTimeoutPayload {
   auctionId: string;
@@ -113,14 +116,12 @@ async function handlePaymentTimeout(data: PaymentTimeoutPayload): Promise<void> 
   }
 
   // Notify buyer about failed payment
-  await prisma.notification.create({
-    data: {
-      userId: buyerId,
-      auctionId,
-      type: 'payment_due',
-      title: 'Thanh toán thất bại',
-      message: 'Bạn đã không thanh toán trong thời gian quy định.',
-    },
+  await notificationService.send({
+    userId: buyerId,
+    auctionId,
+    type: 'payment_due',
+    title: 'Thanh toán thất bại!',
+    message: 'Bạn đã không thanh toán trong thời gian quy định.',
   });
 
   // Find runner-up
@@ -155,14 +156,12 @@ async function handlePaymentTimeout(data: PaymentTimeoutPayload): Promise<void> 
     });
 
     // Notify runner-up
-    await prisma.notification.create({
-      data: {
-        userId: runnerUp.bidderId,
-        auctionId,
-        type: 'auction_won',
-        title: 'Cơ hội mua sản phẩm!',
-        message: 'Người thắng trước đã không thanh toán. Bạn có cơ hội mua sản phẩm này.',
-      },
+    await notificationService.send({
+      userId: runnerUp.bidderId,
+      auctionId,
+      type: 'auction_won',
+      title: 'Cơ hội mua sản phẩm!',
+      message: 'Người thắng trước đã không thanh toán. Bạn có cơ hội mua sản phẩm này.',
     });
 
     // Schedule new timeout for runner-up
@@ -189,14 +188,12 @@ async function handlePaymentTimeout(data: PaymentTimeoutPayload): Promise<void> 
       });
 
       // Notify seller
-      await prisma.notification.create({
-        data: {
-          userId: auction.sellerId,
-          auctionId,
-          type: 'auction_failed',
-          title: 'Đấu giá thất bại',
-          message: 'Không có người mua thanh toán. Sản phẩm đã được mở khóa.',
-        },
+      await notificationService.send({
+        userId: auction.sellerId,
+        auctionId,
+        type: 'auction_failed',
+        title: 'Đấu giá thất bại!',
+        message: 'Không có người mua thanh toán. Sản phẩm đã được mở khóa.',
       });
     }
 
@@ -226,14 +223,12 @@ async function handlePaymentReminder(data: PaymentReminderPayload): Promise<void
     return;
   }
 
-  await prisma.notification.create({
-    data: {
-      userId: buyerId,
-      auctionId,
-      type: 'payment_due',
-      title: `⏰ Còn ${hoursLeft} giờ để thanh toán!`,
-      message: `Bạn cần thanh toán ${Number(payment.amount).toLocaleString()}₫ trong ${hoursLeft} giờ tới, nếu không quyền mua sẽ bị hủy.`,
-    },
+  await notificationService.send({
+    userId: buyerId,
+    auctionId,
+    type: 'payment_due',
+    title: `⏰ Còn ${hoursLeft} giờ để thanh toán!`,
+    message: `Bạn cần thanh toán ${Number(payment.amount).toLocaleString()}₫ trong ${hoursLeft} giờ tới, nếu không quyền mua sẽ bị hủy.`,
   });
 
   console.log(`💳 Sent ${hoursLeft}h payment reminder for auction ${auctionId}`);
@@ -264,25 +259,21 @@ async function handleShippingTimeout(data: ShippingTimeoutPayload): Promise<void
   });
 
   // Notify buyer
-  await prisma.notification.create({
-    data: {
-      userId: payment.buyerId,
-      auctionId: payment.auctionId,
-      type: 'payment_confirmed',
-      title: 'Hoàn tiền tự động',
-      message: 'Người bán không gửi hàng đúng hạn. Bạn đã được hoàn tiền.',
-    },
+  await notificationService.send({
+    userId: payment.buyerId,
+    auctionId: payment.auctionId,
+    type: 'payment_confirmed',
+    title: 'Hoàn tiền tự động!',
+    message: 'Người bán không gửi hàng đúng hạn. Bạn đã được hoàn tiền.',
   });
 
   // Notify seller
-  await prisma.notification.create({
-    data: {
-      userId: sellerId,
-      auctionId: payment.auctionId,
-      type: 'system',
-      title: 'Cảnh báo: Không gửi hàng đúng hạn',
-      message: 'Bạn đã không gửi hàng trong 5 ngày. Tiền đã được hoàn cho người mua.',
-    },
+  await notificationService.send({
+    userId: sellerId,
+    auctionId: payment.auctionId,
+    type: 'system',
+    title: 'Cảnh báo: Không gửi hàng đúng hạn!',
+    message: 'Bạn đã không gửi hàng trong 5 ngày. Tiền đã được hoàn cho người mua.',
   });
 
   console.log(`📦 Auto-refunded payment ${paymentId} — seller ${sellerId} did not ship`);
@@ -313,25 +304,21 @@ async function handleAutoConfirmDelivery(data: AutoConfirmPayload): Promise<void
   });
 
   // Notify buyer
-  await prisma.notification.create({
-    data: {
-      userId: payment.buyerId,
-      auctionId: payment.auctionId,
-      type: 'system',
-      title: 'Tự động xác nhận nhận hàng',
-      message: 'Đã quá 7 ngày kể từ khi gửi hàng. Giao dịch được tự động hoàn tất.',
-    },
+  await notificationService.send({
+    userId: payment.buyerId,
+    auctionId: payment.auctionId,
+    type: 'system',
+    title: 'Tự động xác nhận nhận hàng!',
+    message: 'Đã quá 7 ngày kể từ khi gửi hàng. Giao dịch được tự động hoàn tất.',
   });
 
   // Notify seller: escrow released
-  await prisma.notification.create({
-    data: {
-      userId: payment.sellerId,
-      auctionId: payment.auctionId,
-      type: 'payment_confirmed',
-      title: 'Tiền đã được giải phóng!',
-      message: `${Number(payment.sellerAmount).toLocaleString()}₫ đã được chuyển vào tài khoản của bạn.`,
-    },
+  await notificationService.send({
+    userId: payment.sellerId,
+    auctionId: payment.auctionId,
+    type: 'payment_confirmed',
+    title: 'Tiền đã được giải phóng!',
+    message: `${Number(payment.sellerAmount).toLocaleString()}₫ đã được chuyển vào tài khoản của bạn.`,
   });
 
   console.log(`📦 Auto-confirmed delivery for payment ${paymentId}, escrow released`);

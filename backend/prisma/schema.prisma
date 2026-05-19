@@ -507,6 +507,14 @@ enum NotificationType {
   auction_failed
   payment_due
   payment_confirmed
+  new_bid
+  shipping_update
+  shipping_reminder
+  dispute_opened
+  dispute_resolved
+  review_received
+  welcome
+  account_warning
   system
 }
 

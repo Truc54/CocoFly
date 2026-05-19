@@ -8,8 +8,11 @@ import redis from './redis';
 
 let io: Server | null = null;
 const tokenService = new TokenService();
+import { NotificationService } from '../services/notification.service';
+
 const biddingService = new BiddingService();
 const chatService = new ChatService();
+const notificationService = new NotificationService();
 
 export function getIO(): Server {
   if (!io) throw new Error('Socket.IO not initialized');
@@ -49,6 +52,9 @@ export function initSocket(server: HttpServer): Server {
     const userId = socket.data.userId as string;
     console.log(`🔌 Socket connected: ${userId} (${socket.id})`);
 
+    // Auto-join personal room for notifications
+    socket.join(`user:${userId}`);
+
     // ── Join auction room ─────────────────────────────────────────────────
     socket.on('auction:join', async ({ auctionId }: { auctionId: string }) => {
       if (!auctionId) return;
@@ -66,14 +72,24 @@ export function initSocket(server: HttpServer): Server {
       socket.leave(`auction:${auctionId}`);
       
       // Viewer tracking cleanup
-      const socketsInRoom = await io!.in(`auction:${auctionId}`).fetchSockets();
-      const userStillInRoom = socketsInRoom.some(s => s.data.userId === userId && s.id !== socket.id);
-      
-      if (!userStillInRoom) {
-        await redis.srem(`viewers:auction:${auctionId}`, userId);
-        const count = await redis.scard(`viewers:auction:${auctionId}`);
-        io!.to(`auction:${auctionId}`).emit('auction:viewer_count', { auctionId, count });
-      }
+      // Use a slight delay to allow any immediately following "join" events to process first
+      setTimeout(async () => {
+        try {
+          if (!io) return;
+          const socketsInRoom = await io.in(`auction:${auctionId}`).fetchSockets();
+          // Here the socket has already left, so if we find any socket with this userId, 
+          // it means the user has another tab open OR they re-joined instantly.
+          const userStillInRoom = socketsInRoom.some(s => s.data.userId === userId);
+          
+          if (!userStillInRoom) {
+            await redis.srem(`viewers:auction:${auctionId}`, userId);
+            const count = await redis.scard(`viewers:auction:${auctionId}`);
+            io.to(`auction:${auctionId}`).emit('auction:viewer_count', { auctionId, count });
+          }
+        } catch (e) {
+          console.error('Error in auction:leave timeout', e);
+        }
+      }, 300);
     });
 
     // ── Place bid ─────────────────────────────────────────────────────────
@@ -120,22 +136,20 @@ export function initSocket(server: HttpServer): Server {
           totalBids: result.totalBids,
         });
 
-        // Chat integration: send bid_alert
-        try {
-          const room = await chatService.getOrCreateRoom(data.auctionId);
-          const bidderName = result.bid.bidder.fullName || 'Người dùng';
-          const alertMsg = await chatService.sendSystemMessage({
-            roomId: room.id,
-            message: `${bidderName} đã đặt giá ${new Intl.NumberFormat('vi-VN').format(Number(result.currentPrice))}₫`,
-            type: 'bid_alert',
-          });
-          io!.to(`auction:${data.auctionId}`).emit('chat:message', alertMsg);
-        } catch (e) {
-          console.error('Chat system message failed:', e);
-        }
+        // (Chat integration: bid_alert emission removed to save resources since frontend no longer renders them)
 
-        // Notify outbid user(s) via their personal sockets
+        // Notify outbid user(s) via NotificationService
         if (result.outbidUserId) {
+          notificationService.send({
+            userId: result.outbidUserId,
+            auctionId: data.auctionId,
+            type: 'outbid',
+            title: 'Bạn đã bị vượt giá!',
+            message: `Sản phẩm vừa được trả giá cao hơn: ${new Intl.NumberFormat('vi-VN').format(Number(result.currentPrice))}₫`,
+            metadata: { currentPrice: result.currentPrice }
+          }).catch(err => console.error('Failed to send outbid notification', err));
+
+          // Backward compatibility: frontend still subscribes to auction:outbid
           const outbidSockets = await io!.fetchSockets();
           for (const s of outbidSockets) {
             if (s.data.userId === result.outbidUserId) {
@@ -165,8 +179,8 @@ export function initSocket(server: HttpServer): Server {
           io!.to(`auction:${data.auctionId}`).emit('auction:extended', {
             auctionId: data.auctionId,
             newEndTime: result.newEndTime,
-            extendCount: result.extendCount,
-            maxExtendCount: result.maxExtendCount,
+            extendCount: result.extendCount ?? 0,
+            maxExtendCount: result.maxExtendCount ?? 0,
           });
 
           // Chat integration
@@ -174,7 +188,7 @@ export function initSocket(server: HttpServer): Server {
             const room = await chatService.getOrCreateRoom(data.auctionId);
             const alertMsg = await chatService.sendSystemMessage({
               roomId: room.id,
-              message: `Phiên đấu giá được gia hạn thêm ${result.extendCount > 0 ? 'do có người trả giá phút chót' : ''}`,
+              message: `Phiên đấu giá được gia hạn thêm ${(result.extendCount || 0) > 0 ? 'do có người trả giá phút chót' : ''}`,
               type: 'system',
             });
             io!.to(`auction:${data.auctionId}`).emit('chat:message', alertMsg);
@@ -287,13 +301,17 @@ export function initSocket(server: HttpServer): Server {
           const auctionId = room.split(':')[1];
           // Delay cleanup slightly to allow socketsInRoom to reflect the disconnect correctly
           setTimeout(async () => {
-            if (!io) return;
-            const socketsInRoom = await io.in(room).fetchSockets();
-            const userStillInRoom = socketsInRoom.some(s => s.data.userId === userId && s.id !== socket.id);
-            if (!userStillInRoom) {
-              await redis.srem(`viewers:auction:${auctionId}`, userId);
-              const count = await redis.scard(`viewers:auction:${auctionId}`);
-              io.to(room).emit('auction:viewer_count', { auctionId, count });
+            try {
+              if (!io) return;
+              const socketsInRoom = await io.in(room).fetchSockets();
+              const userStillInRoom = socketsInRoom.some(s => s.data.userId === userId && s.id !== socket.id);
+              if (!userStillInRoom) {
+                await redis.srem(`viewers:auction:${auctionId}`, userId);
+                const count = await redis.scard(`viewers:auction:${auctionId}`);
+                io.to(room).emit('auction:viewer_count', { auctionId, count });
+              }
+            } catch (e) {
+              console.error('Error in disconnect timeout', e);
             }
           }, 500);
         }

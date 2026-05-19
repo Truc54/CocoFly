@@ -6,8 +6,10 @@ import prisma from '../config/prisma';
 import { scheduleAuctionActivation, scheduleAuctionEnd, scheduleHealthCheck } from '../queues/auction.queue';
 import { schedulePaymentTimeout } from '../queues/payment.queue';
 import { AuctionRepository } from '../repositories/auction.repository';
+import { NotificationService } from '../services/notification.service';
 
 const auctionRepo = new AuctionRepository();
+const notificationService = new NotificationService();
 
 // Helper: safely emit via Socket.IO if initialized
 function tryBroadcast(auctionId: string, event: string, data: any): void {
@@ -253,24 +255,22 @@ async function handleEndAuction(data: AuctionJobPayload): Promise<void> {
     await schedulePaymentTimeout(auctionId, highestBid.bidderId);
 
     // Notifications
-    await prisma.notification.createMany({
-      data: [
-        {
-          userId: highestBid.bidderId,
-          auctionId,
-          type: 'auction_won',
-          title: 'Chúc mừng! Bạn đã thắng đấu giá',
-          message: `Vui lòng thanh toán ${finalPrice.toLocaleString()} VNĐ trong 48 giờ.`,
-        },
-        {
-          userId: auction.sellerId,
-          auctionId,
-          type: 'auction_ending',
-          title: 'Đấu giá đã kết thúc',
-          message: `Sản phẩm đã được bán với giá ${finalPrice.toLocaleString()} VNĐ.`,
-        },
-      ],
-    });
+    await notificationService.sendMany([
+      {
+        userId: highestBid.bidderId,
+        auctionId,
+        type: 'auction_won',
+        title: 'Chúc mừng! Bạn đã thắng đấu giá',
+        message: `Vui lòng thanh toán ${finalPrice.toLocaleString()} VNĐ trong 48 giờ.`,
+      },
+      {
+        userId: auction.sellerId,
+        auctionId,
+        type: 'auction_ending',
+        title: 'Đấu giá đã kết thúc!',
+        message: `Sản phẩm đã được bán với giá ${finalPrice.toLocaleString()} VNĐ.`,
+      },
+    ]);
 
     // Broadcast via Socket.IO
     tryBroadcast(auctionId, 'auction:ended', {
@@ -284,14 +284,12 @@ async function handleEndAuction(data: AuctionJobPayload): Promise<void> {
     // ── No bids → auction failed ─────────────────────────────────────────
     await auctionRepo.endAuctionFailed(auctionId);
 
-    await prisma.notification.create({
-      data: {
-        userId: auction.sellerId,
-        auctionId,
-        type: 'auction_failed',
-        title: 'Đấu giá thất bại',
-        message: 'Không có lượt đặt giá nào. Sản phẩm đã được mở khóa.',
-      },
+    await notificationService.send({
+      userId: auction.sellerId,
+      auctionId,
+      type: 'auction_failed',
+      title: 'Đấu giá thất bại!',
+      message: 'Không có lượt đặt giá nào. Sản phẩm đã được mở khóa.',
     });
 
     tryBroadcast(auctionId, 'auction:ended', {
