@@ -4,6 +4,7 @@ import { createMoMoPayment, verifyMoMoIPN, MOMO_RESULT_CODES } from '../gateways
 import { cancelPaymentTimeout, scheduleShippingTimeout } from '../queues/payment.queue';
 import prisma from '../config/prisma';
 import { PaymentMethod } from '@prisma/client';
+import { AppError } from '../utils/AppError';
 import { NotificationService } from './notification.service';
 
 /**
@@ -217,6 +218,35 @@ export class PaymentService {
     return role === 'buyer'
       ? this.paymentRepo.findPaymentsByBuyer(userId)
       : this.paymentRepo.findPaymentsBySeller(userId);
+  }
+
+  // ── Seller: Confirm Shipping ──────────────────────────────────────────────
+  async confirmShipping(paymentId: string, sellerId: string): Promise<void> {
+    const payment = await this.paymentRepo.findForShipping(paymentId);
+
+    if (!payment) throw new AppError('Không tìm thấy thanh toán', 404);
+    if (payment.sellerId !== sellerId) throw new AppError('Bạn không có quyền xác nhận giao hàng này', 403);
+    if (payment.status !== 'paid') throw new AppError('Thanh toán chưa được xác nhận', 400);
+    if (payment.shippingStatus !== 'pending') throw new AppError('Đã xác nhận giao hàng trước đó', 400);
+
+    await prisma.payment.update({
+      where: { id: paymentId },
+      data: {
+        shippingStatus: 'shipped',
+        shippedAt: new Date(),
+      },
+    });
+
+    const notificationService = new NotificationService();
+    const itemTitle = payment.auction?.item?.title || 'Sản phẩm';
+
+    await notificationService.send({
+      userId: payment.buyerId,
+      auctionId: payment.auctionId,
+      type: 'shipping_update',
+      title: 'Người bán đã gửi hàng!',
+      message: `Sản phẩm "${itemTitle}" đã được gửi đi. Vui lòng xác nhận khi nhận được hàng.`,
+    });
   }
 
   // ── Private: Mark as paid + cancel timeout + schedule shipping ─────────

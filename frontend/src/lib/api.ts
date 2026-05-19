@@ -180,6 +180,19 @@ export const auctionApi = {
     fetchApi(`/api/auctions/suggestions?q=${encodeURIComponent(q)}&status=${status}&limit=${limit}`),
   // ── Get user's bid status for an auction (requires auth)
   getMyBidStatus: (id: string) => fetchApi(`/api/auctions/${id}/my-status`),
+  // ── Seller: manage own auctions
+  getMyListings: (tab?: string, page: number = 1, limit: number = 10) => {
+    const qs = new URLSearchParams();
+    if (tab) qs.set('tab', tab);
+    qs.set('page', page.toString());
+    qs.set('limit', limit.toString());
+    return fetchApi(`/api/auctions/my-listings?${qs.toString()}`);
+  },
+  update: (id: string, data: any) => fetchApi(`/api/auctions/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+  remove: (id: string) => fetchApi(`/api/auctions/${id}`, { method: 'DELETE' }),
 };
 
 export const categoryApi = {
@@ -210,4 +223,6 @@ export const paymentApi = {
   }),
   decline: (paymentId: string) =>
     fetchApi(`/api/auctions/payments/${paymentId}/decline`, { method: 'POST' }),
+  confirmShipping: (paymentId: string) =>
+    fetchApi(`/api/payments/${paymentId}/confirm-shipping`, { method: 'PATCH' }),
 };

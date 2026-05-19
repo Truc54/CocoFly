@@ -88,4 +88,19 @@ export class PaymentRepository {
     });
     return count > 0;
   }
+
+  async findForShipping(paymentId: string) {
+    return prisma.payment.findUnique({
+      where: { id: paymentId },
+      select: {
+        id: true,
+        sellerId: true,
+        buyerId: true,
+        auctionId: true,
+        status: true,
+        shippingStatus: true,
+        auction: { select: { item: { select: { title: true } } } },
+      },
+    });
+  }
 }

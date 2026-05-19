@@ -19,6 +19,7 @@ const auctionController = new AuctionController();
 auctionRoutes.get('/live', auctionController.getLiveAuctions.bind(auctionController));
 auctionRoutes.get('/upcoming', auctionController.getUpcomingAuctions.bind(auctionController));
 auctionRoutes.get('/suggestions', auctionController.getSuggestions.bind(auctionController));
+auctionRoutes.get('/my-listings', authGuard, auctionController.getMyListings.bind(auctionController));
 
 // ── Create auction (Seller only — authGuard verifies JWT, service verifies role)
 auctionRoutes.post(
@@ -32,6 +33,20 @@ auctionRoutes.post(
 auctionRoutes.get(
   '/:auctionId',
   auctionController.getAuction.bind(auctionController),
+);
+
+// ── Update auction (Seller only — scheduled auctions)
+auctionRoutes.put(
+  '/:auctionId',
+  authGuard,
+  auctionController.updateAuction.bind(auctionController),
+);
+
+// ── Delete auction (Seller only — scheduled auctions)
+auctionRoutes.delete(
+  '/:auctionId',
+  authGuard,
+  auctionController.deleteAuction.bind(auctionController),
 );
 
 // ── Get bid history for an auction (public)

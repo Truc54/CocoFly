@@ -290,4 +290,101 @@ export class AuctionService {
       })),
     };
   }
+
+  // ── Seller Auction Management ──────────────────────────────────────────────
+
+  async getSellerAuctions(sellerId: string, tab: string = 'ongoing', page: number = 1, limit: number = 10): Promise<PaginatedResult> {
+    const statusMap: Record<string, AuctionStatus[]> = {
+      ongoing: [AuctionStatus.active],
+      upcoming: [AuctionStatus.scheduled],
+      ended: [AuctionStatus.ended, AuctionStatus.failed],
+    };
+
+    const statuses = statusMap[tab] || statusMap.ongoing;
+    const { auctions, total } = await this.auctionRepository.findSellerAuctions(sellerId, statuses, page, limit);
+
+    return {
+      auctions: auctions.map((auction: any) => {
+        const thumbnail = auction.item?.media?.[0];
+        const payment = auction.payments?.[0] ?? null;
+
+        return {
+          id: auction.id,
+          status: auction.status,
+          title: auction.item?.title,
+          thumbnailUrl: thumbnail?.cdnUrl ?? null,
+          category: auction.item?.category ?? null,
+          currentPrice: Number(auction.currentPrice),
+          startingPrice: Number(auction.startingPrice),
+          finalPrice: auction.finalPrice ? Number(auction.finalPrice) : null,
+          bidIncrement: Number(auction.bidIncrement),
+          scheduledStart: auction.scheduledStart,
+          endTime: auction.endTime,
+          actualEndTime: auction.actualEndTime ?? null,
+          totalBids: auction.totalBids,
+          totalWatchers: auction.totalWatchers,
+          viewCount: auction.viewCount,
+          winner: auction.winner
+            ? { id: auction.winner.id, fullName: auction.winner.fullName, avatarUrl: auction.winner.avatarUrl }
+            : null,
+          payment: payment
+            ? { id: payment.id, status: payment.status, shippingStatus: payment.shippingStatus }
+            : null,
+        };
+      }),
+      pagination: {
+        page,
+        limit,
+        totalItems: total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async deleteAuction(auctionId: string, sellerId: string): Promise<void> {
+    const result = await this.auctionRepository.deleteScheduledAuction(auctionId, sellerId);
+
+    // Cancel scheduled BullMQ activation job
+    try {
+      const { auctionQueue } = require('../queues/auction.queue');
+      const job = await auctionQueue.getJob(`activate-${auctionId}`);
+      if (job) await job.remove();
+    } catch (err) {
+      console.error(`[AuctionService] Failed to cancel scheduled job for ${auctionId}:`, err);
+    }
+
+    // Cleanup Cloudinary images (non-blocking)
+    try {
+      const mediaRecords = await prisma.itemMedia.findMany({
+        where: { itemId: result.itemId },
+        select: { storageKey: true },
+      });
+      if (mediaRecords.length > 0) {
+        const deletePromises = mediaRecords.map((m) =>
+          cloudinary.uploader.destroy(m.storageKey).catch(() => null),
+        );
+        Promise.all(deletePromises).catch(() => null);
+      }
+    } catch {
+      // Media already deleted by transaction, skip
+    }
+  }
+
+  async updateAuction(auctionId: string, sellerId: string, data: any): Promise<{ auctionId: string; itemId: string }> {
+    const result = await this.auctionRepository.updateScheduledAuction(auctionId, sellerId, data);
+
+    // Reschedule BullMQ job if scheduledStart changed
+    if (data.scheduledStart) {
+      try {
+        const { auctionQueue } = require('../queues/auction.queue');
+        const oldJob = await auctionQueue.getJob(`activate-${auctionId}`);
+        if (oldJob) await oldJob.remove();
+        await scheduleAuctionActivation(auctionId, new Date(data.scheduledStart));
+      } catch (err) {
+        console.error(`[AuctionService] Failed to reschedule job for ${auctionId}:`, err);
+      }
+    }
+
+    return result;
+  }
 }

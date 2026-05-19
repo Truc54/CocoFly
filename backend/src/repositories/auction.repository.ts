@@ -495,4 +495,118 @@ export class AuctionRepository {
       });
     });
   }
+
+  // ── Seller Auction Management ──────────────────────────────────────────────
+
+  async findSellerAuctions(sellerId: string, statuses: AuctionStatus[], page: number, limit: number) {
+    const where: Prisma.AuctionWhereInput = {
+      sellerId,
+      status: { in: statuses },
+    };
+
+    const [auctions, total] = await Promise.all([
+      prisma.auction.findMany({
+        where,
+        include: {
+          item: {
+            include: {
+              media: { where: { sortOrder: 0 }, take: 1 },
+              category: { select: { id: true, name: true } },
+            },
+          },
+          winner: { select: { id: true, fullName: true, avatarUrl: true } },
+          payments: {
+            where: { status: { in: ['pending', 'processing', 'paid', 'escrow_released'] } },
+            select: { id: true, status: true, shippingStatus: true },
+            take: 1,
+            orderBy: { createdAt: 'desc' },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.auction.count({ where }),
+    ]);
+
+    return { auctions, total };
+  }
+
+  async deleteScheduledAuction(auctionId: string, sellerId: string) {
+    return prisma.$transaction(async (tx) => {
+      const auction = await tx.auction.findUnique({
+        where: { id: auctionId },
+        select: { id: true, sellerId: true, status: true, itemId: true },
+      });
+
+      if (!auction) throw new Error('Phiên đấu giá không tồn tại');
+      if (auction.sellerId !== sellerId) throw new Error('Bạn không có quyền xóa phiên đấu giá này');
+      if (auction.status !== AuctionStatus.scheduled) throw new Error('Chỉ có thể xóa phiên đấu giá chưa bắt đầu');
+
+      // Delete chatRoom, auction, media, item (cascade order)
+      await tx.chatRoom.deleteMany({ where: { auctionId } });
+      await tx.auction.delete({ where: { id: auctionId } });
+      await tx.itemMedia.deleteMany({ where: { itemId: auction.itemId } });
+      await tx.item.delete({ where: { id: auction.itemId } });
+
+      return { itemId: auction.itemId };
+    });
+  }
+
+  async updateScheduledAuction(auctionId: string, sellerId: string, data: {
+    title?: string;
+    description?: string;
+    condition?: string;
+    brand?: string;
+    location?: string;
+    categoryId?: number;
+    startingPrice?: number;
+    buyoutPrice?: number | null;
+    bidIncrement?: number;
+    scheduledStart?: string;
+    endTime?: string;
+  }) {
+    return prisma.$transaction(async (tx) => {
+      const auction = await tx.auction.findUnique({
+        where: { id: auctionId },
+        select: { id: true, sellerId: true, status: true, itemId: true },
+      });
+
+      if (!auction) throw new Error('Phiên đấu giá không tồn tại');
+      if (auction.sellerId !== sellerId) throw new Error('Bạn không có quyền chỉnh sửa phiên đấu giá này');
+      if (auction.status !== AuctionStatus.scheduled) throw new Error('Chỉ có thể chỉnh sửa phiên đấu giá chưa bắt đầu');
+
+      // Update Item fields
+      const itemUpdate: Record<string, any> = {};
+      if (data.title !== undefined) itemUpdate.title = data.title;
+      if (data.description !== undefined) itemUpdate.description = data.description;
+      if (data.condition !== undefined) itemUpdate.condition = data.condition;
+      if (data.brand !== undefined) itemUpdate.brand = data.brand;
+      if (data.location !== undefined) itemUpdate.location = data.location;
+      if (data.categoryId !== undefined) itemUpdate.categoryId = data.categoryId;
+
+      if (Object.keys(itemUpdate).length > 0) {
+        await tx.item.update({ where: { id: auction.itemId }, data: itemUpdate });
+      }
+
+      // Update Auction fields
+      const auctionUpdate: Record<string, any> = {};
+      if (data.startingPrice !== undefined) {
+        auctionUpdate.startingPrice = new Decimal(data.startingPrice);
+        auctionUpdate.currentPrice = new Decimal(data.startingPrice);
+      }
+      if (data.buyoutPrice !== undefined) {
+        auctionUpdate.buyoutPrice = data.buyoutPrice !== null ? new Decimal(data.buyoutPrice) : null;
+      }
+      if (data.bidIncrement !== undefined) auctionUpdate.bidIncrement = new Decimal(data.bidIncrement);
+      if (data.scheduledStart !== undefined) auctionUpdate.scheduledStart = new Date(data.scheduledStart);
+      if (data.endTime !== undefined) auctionUpdate.endTime = new Date(data.endTime);
+
+      if (Object.keys(auctionUpdate).length > 0) {
+        await tx.auction.update({ where: { id: auctionId }, data: auctionUpdate });
+      }
+
+      return { auctionId, itemId: auction.itemId };
+    });
+  }
 }

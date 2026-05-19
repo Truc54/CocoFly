@@ -185,5 +185,45 @@ export class AuctionController {
       next(err);
     }
   }
+
+  // ── Seller Auction Management ──────────────────────────────────────────────
+
+  async getMyListings(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const sellerId = req.user!.userId;
+      const tab = (req.query.tab as string) || 'ongoing';
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 10));
+
+      const result = await this.auctionService.getSellerAuctions(sellerId, tab, page, limit);
+      res.json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async updateAuction(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const sellerId = req.user!.userId;
+      const auctionId = req.params.auctionId as string;
+
+      const result = await this.auctionService.updateAuction(auctionId, sellerId, req.body);
+      res.json({ success: true, message: 'Cập nhật thành công', data: result });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async deleteAuction(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const sellerId = req.user!.userId;
+      const auctionId = req.params.auctionId as string;
+
+      await this.auctionService.deleteAuction(auctionId, sellerId);
+      res.json({ success: true, message: 'Đã xóa phiên đấu giá' });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 

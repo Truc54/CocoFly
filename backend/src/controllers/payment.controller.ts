@@ -165,4 +165,18 @@ export class PaymentController {
       res.status(500).json({ success: false, message: error.message });
     }
   }
+
+  // PATCH /api/payments/:id/confirm-shipping — Seller confirms shipment
+  async confirmShipping(req: Request, res: Response): Promise<void> {
+    try {
+      const paymentId = req.params.id as string;
+      const sellerId = (req as any).user?.userId;
+
+      await this.paymentService.confirmShipping(paymentId, sellerId);
+      res.status(200).json({ success: true, message: 'Đã xác nhận giao hàng' });
+    } catch (error: any) {
+      const statusCode = error.statusCode || 400;
+      res.status(statusCode).json({ success: false, message: error.message });
+    }
+  }
 }
