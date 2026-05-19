@@ -115,4 +115,32 @@ export class UserRepository {
       });
     }
   }
+  async getParticipatedAuctions(userId: string) {
+    return prisma.auction.findMany({
+      where: {
+        OR: [
+          { winnerId: userId },
+          { bids: { some: { bidderId: userId } } }
+        ]
+      },
+      include: {
+        item: {
+          include: { media: true }
+        },
+        seller: {
+          select: { fullName: true }
+        },
+        bids: {
+          where: { bidderId: userId },
+          orderBy: { amount: 'desc' },
+          take: 1
+        },
+        payments: {
+          orderBy: { createdAt: 'desc' },
+          take: 1
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
 }

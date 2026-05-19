@@ -14,11 +14,13 @@ import {
   MessageSquare,
 } from "lucide-react";
 
+import { userApi } from "@/lib/api";
+
 // ─── Types & Config ──────────────────────────────────────────────────────────
 type OrderTab = "bidding" | "won" | "delivering" | "received";
 
 interface OrderItem {
-  id: number;
+  id: string;
   name: string;
   image: string;
   currentPrice: string;
@@ -38,28 +40,39 @@ const TABS: { key: OrderTab; label: string; icon: React.ReactNode }[] = [
   { key: "received", label: "Đã nhận", icon: <CheckCircle2 className="w-4 h-4" /> },
 ];
 
-// ─── Mock Data ───────────────────────────────────────────────────────────────
-const MOCK_ORDERS: OrderItem[] = [
-  { id: 1, name: "iPhone 15 Pro Max 256GB", image: "https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=300&h=300&fit=crop", currentPrice: "28.500.000đ", seller: "Tech Store", date: "2024-03-25", status: "bidding", timeLeft: "2h 15m", myBid: "28.500.000đ" },
-  { id: 2, name: "Samsung Galaxy S24 Ultra", image: "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?w=300&h=300&fit=crop", currentPrice: "22.000.000đ", seller: "Mobile World", date: "2024-03-24", status: "bidding", timeLeft: "5h 30m", myBid: "20.000.000đ" },
-  { id: 3, name: "MacBook Air M3 2024", image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=300&h=300&fit=crop", currentPrice: "25.000.000đ", seller: "Apple Store VN", date: "2024-03-23", status: "won", isPaid: false },
-  { id: 4, name: "AirPods Pro 2nd Gen", image: "https://images.unsplash.com/photo-1588423771073-b8903fba77ac?w=300&h=300&fit=crop", currentPrice: "4.200.000đ", seller: "Audio Zone", date: "2024-03-22", status: "won", isPaid: true },
-  { id: 5, name: "Sony WH-1000XM5", image: "https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?w=300&h=300&fit=crop", currentPrice: "6.500.000đ", seller: "Sound Pro", date: "2024-03-20", status: "delivering", deliveryCountdown: "2 ngày 5 giờ" },
-  { id: 6, name: "Bàn phím cơ Keychron K8", image: "https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=300&h=300&fit=crop", currentPrice: "2.100.000đ", seller: "KeyboardVN", date: "2024-03-18", status: "received" },
-];
-
 // ═════════════════════════════════════════════════════════════════════════════
 export default function WonAuctionsPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<OrderTab>("bidding");
-  const [receivedOrders, setReceivedOrders] = useState<number[]>([]);
+  const [receivedOrders, setReceivedOrders] = useState<string[]>([]);
+  const [orders, setOrders] = useState<OrderItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    userApi.getParticipatedAuctions()
+      .then((res) => {
+        if (isMounted && res?.data) {
+          setOrders(res.data);
+        }
+      })
+      .catch((err) => console.error("Error fetching auctions:", err))
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+      
+    return () => {
+      isMounted = false;
+    };
+  }, []);
   
-  const handleReceive = (id: number) => {
+  const handleReceive = (id: string) => {
     setReceivedOrders(prev => [...prev, id]);
+    // TODO: Call API to update status
   };
   
-  const filtered = MOCK_ORDERS.filter(o => o.status === activeTab);
-  const tabCounts = TABS.map(t => ({ ...t, count: MOCK_ORDERS.filter(o => o.status === t.key).length }));
+  const filtered = orders.filter(o => o.status === activeTab);
+  const tabCounts = TABS.map(t => ({ ...t, count: orders.filter(o => o.status === t.key).length }));
 
   return (
     <div className="min-h-screen bg-background">
@@ -93,7 +106,11 @@ export default function WonAuctionsPage() {
         </div>
 
         {/* Orders List */}
-        {filtered.length > 0 ? (
+        {isLoading ? (
+          <div className="flex justify-center py-20">
+            <div className="w-8 h-8 border-4 border-[#E25C24] border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        ) : filtered.length > 0 ? (
           <div className="space-y-3">
             {filtered.map(order => {
               return (

@@ -26,3 +26,10 @@ userRoutes.post(
   authGuard,
   userController.saveAddress.bind(userController),
 );
+
+// GET /api/users/me/participated-auctions
+userRoutes.get(
+  '/me/participated-auctions',
+  authGuard,
+  userController.getParticipatedAuctions.bind(userController),
+);

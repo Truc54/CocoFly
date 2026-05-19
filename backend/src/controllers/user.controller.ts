@@ -50,4 +50,17 @@ export class UserController {
       next(err);
     }
   }
+
+  async getParticipatedAuctions(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      if (!req.user) {
+        throw new AppError('Unauthorized', 401);
+      }
+
+      const auctions = await this.userService.getParticipatedAuctions(req.user.userId);
+      res.status(200).json({ success: true, data: auctions });
+    } catch (err) {
+      next(err);
+    }
+  }
 }

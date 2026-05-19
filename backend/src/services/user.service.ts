@@ -85,4 +85,51 @@ export class UserService {
       fullName: updatedAddress.fullName,
     };
   }
+
+  async getParticipatedAuctions(userId: string) {
+    const rawAuctions = await this.userRepository.getParticipatedAuctions(userId);
+
+    const formattedAuctions = rawAuctions.map(auction => {
+      const myMaxBid = auction.bids.length > 0 ? auction.bids[0].amount : null;
+      const latestPayment = auction.payments.length > 0 ? auction.payments[0] : null;
+
+      let status: 'bidding' | 'won' | 'delivering' | 'received' = 'bidding';
+
+      // Determine status
+      if (auction.status === 'active' || auction.status === 'scheduled') {
+        status = 'bidding';
+      } else if (auction.winnerId === userId) {
+        if (latestPayment?.shippingStatus === 'delivered' || latestPayment?.shippingStatus === 'returned' || latestPayment?.status === 'escrow_released') {
+          status = 'received';
+        } else if (latestPayment?.shippingStatus === 'shipped') {
+          status = 'delivering';
+        } else {
+          status = 'won'; // encompasses unpaid, paid but pending shipping
+        }
+      }
+
+      // Format currency
+      const formatCurrency = (amount: any) => {
+        if (!amount) return '0đ';
+        return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(amount));
+      };
+
+      const thumbnail = auction.item.media.find(m => m.purpose === 'thumbnail') || auction.item.media[0];
+
+      return {
+        id: auction.id,
+        name: auction.item.title,
+        image: thumbnail?.cdnUrl || 'https://placehold.co/300x300',
+        currentPrice: formatCurrency(auction.currentPrice),
+        finalPrice: formatCurrency(auction.finalPrice),
+        seller: auction.seller.fullName || 'Unknown Seller',
+        date: auction.endTime.toISOString(),
+        status,
+        myBid: myMaxBid ? formatCurrency(myMaxBid) : undefined,
+        isPaid: latestPayment?.status === 'paid' || latestPayment?.status === 'escrow_released',
+      };
+    });
+
+    return formattedAuctions;
+  }
 }

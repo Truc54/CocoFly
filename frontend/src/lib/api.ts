@@ -129,6 +129,7 @@ export const userApi = {
     method: 'POST',
     body: JSON.stringify({ addressLine, phone }),
   }),
+  getParticipatedAuctions: () => fetchApi('/api/users/me/participated-auctions'),
 };
 
 export const mediaApi = {
