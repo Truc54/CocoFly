@@ -168,14 +168,15 @@ export class AuctionController {
           data: { status: 'active' },
         });
 
-        await prisma.notification.create({
-          data: {
-            userId: auction.sellerId,
-            auctionId: payment.auctionId,
-            type: 'auction_failed',
-            title: 'Người mua đã từ chối',
-            message: 'Người mua đã từ chối mua sản phẩm. Phiên đấu giá thất bại.',
-          },
+        const { NotificationService } = require('../services/notification.service');
+        const notificationService = new NotificationService();
+
+        await notificationService.send({
+          userId: auction.sellerId,
+          auctionId: payment.auctionId,
+          type: 'auction_failed',
+          title: 'Người mua đã từ chối',
+          message: 'Người mua đã từ chối mua sản phẩm. Phiên đấu giá thất bại.',
         });
       }
 

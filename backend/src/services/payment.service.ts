@@ -4,6 +4,7 @@ import { createMoMoPayment, verifyMoMoIPN, MOMO_RESULT_CODES } from '../gateways
 import { cancelPaymentTimeout, scheduleShippingTimeout } from '../queues/payment.queue';
 import prisma from '../config/prisma';
 import { PaymentMethod } from '@prisma/client';
+import { NotificationService } from './notification.service';
 
 /**
  * Service Layer:
@@ -192,15 +193,14 @@ export class PaymentService {
       note: `Hoàn tiền ${amount.toLocaleString()}₫ | Lý do: ${reason} | Admin: ${adminId}`,
     });
 
+    const notificationService = new NotificationService();
     // Notify buyer
-    await prisma.notification.create({
-      data: {
-        userId: payment.buyerId,
-        auctionId: payment.auctionId,
-        type: 'payment_confirmed',
-        title: 'Hoàn tiền thành công',
-        message: `Bạn đã được hoàn ${amount.toLocaleString()}₫. Lý do: ${reason}`,
-      },
+    await notificationService.send({
+      userId: payment.buyerId,
+      auctionId: payment.auctionId,
+      type: 'payment_confirmed',
+      title: 'Hoàn tiền thành công',
+      message: `Bạn đã được hoàn ${amount.toLocaleString()}₫. Lý do: ${reason}`,
     });
   }
 
@@ -239,26 +239,24 @@ export class PaymentService {
     // Schedule shipping timeout (seller has 5 days to ship)
     await scheduleShippingTimeout(paymentId, payment.sellerId);
 
+    const notificationService = new NotificationService();
+
     // Notify buyer: payment confirmed
-    await prisma.notification.create({
-      data: {
-        userId: payment.buyerId,
-        auctionId: payment.auctionId,
-        type: 'payment_confirmed',
-        title: 'Thanh toán thành công!',
-        message: `Thanh toán ${Number(payment.amount).toLocaleString()}₫ cho "${payment.auction.item.title}" đã được xác nhận.`,
-      },
+    await notificationService.send({
+      userId: payment.buyerId,
+      auctionId: payment.auctionId,
+      type: 'payment_confirmed',
+      title: 'Thanh toán thành công!',
+      message: `Thanh toán ${Number(payment.amount).toLocaleString()}₫ cho "${payment.auction.item.title}" đã được xác nhận.`,
     });
 
     // Notify seller: buyer has paid, ship within 5 days
-    await prisma.notification.create({
-      data: {
-        userId: payment.sellerId,
-        auctionId: payment.auctionId,
-        type: 'payment_confirmed',
-        title: 'Người mua đã thanh toán!',
-        message: `Vui lòng gửi hàng trong vòng 5 ngày.`,
-      },
+    await notificationService.send({
+      userId: payment.sellerId,
+      auctionId: payment.auctionId,
+      type: 'payment_confirmed',
+      title: 'Người mua đã thanh toán!',
+      message: `Vui lòng gửi hàng trong vòng 5 ngày.`,
     });
   }
 }
