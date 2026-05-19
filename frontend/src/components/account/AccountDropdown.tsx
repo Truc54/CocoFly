@@ -6,13 +6,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Star,
-  Trophy,
-  Tag,
   Heart,
   ArrowUpCircle,
   Settings,
   LogOut,
-  ChevronRight,
   Gavel,
   LayoutDashboard,
 } from "lucide-react";
@@ -297,39 +294,24 @@ export default function AccountDropdown() {
             <MenuSectionLabel>Hoạt động</MenuSectionLabel>
             <MenuItem
               href="/won-auctions"
-              icon={<Trophy className="w-4 h-4" />}
-              label="Sản phẩm đã thắng"
-              badge={MOCK_COUNTS.orders}
+              icon={<Gavel className="w-4 h-4" />}
+              label="Sản phẩm đã đấu giá"
+              badge={MOCK_COUNTS.activeAuctions}
               onClick={closeMenu}
             />
-            {!isBuyer && (
-              <>
-                <MenuItem
-                  href="/my-listings"
-                  icon={<Tag className="w-4 h-4" />}
-                  label="Sản phẩm đang bán"
-                  onClick={closeMenu}
-                />
-                <MenuItem
-                  href="/manage-auctions"
-                  icon={<LayoutDashboard className="w-4 h-4" />}
-                  label="Quản lý đấu giá"
-                  onClick={closeMenu}
-                />
-              </>
+            {role === "seller" && (
+              <MenuItem
+                href="/manage-auctions"
+                icon={<LayoutDashboard className="w-4 h-4" />}
+                label="Quản lý đấu giá"
+                onClick={closeMenu}
+              />
             )}
             <MenuItem
               href="/watchlist"
               icon={<Heart className="w-4 h-4" />}
-              label="Watchlist"
+              label="Đấu giá yêu thích"
               badge={MOCK_COUNTS.watchlist}
-              onClick={closeMenu}
-            />
-            <MenuItem
-              href="/my-bids"
-              icon={<Gavel className="w-4 h-4" />}
-              label="Đang đấu giá"
-              badge={MOCK_COUNTS.activeAuctions}
               onClick={closeMenu}
             />
 
