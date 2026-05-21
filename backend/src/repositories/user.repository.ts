@@ -223,6 +223,7 @@ export class UserRepository {
         phone: true,
         createdAt: true,
         accountStatus: true,
+        balance: true,
         _count: {
           select: { reviewsReceived: true }
         }

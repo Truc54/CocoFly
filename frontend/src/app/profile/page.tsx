@@ -15,6 +15,11 @@ import {
   ChevronRight,
   Pin,
   Loader2,
+  Wallet,
+  ArrowUpRight,
+  ArrowDownLeft,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { userApi } from "@/lib/api";
 
@@ -31,6 +36,8 @@ interface ProfileData {
   phoneVerified: boolean;
   joinDate: string;
   pinnedCount: number;
+  balance: number;
+  totalTransactions: number;
 }
 
 interface RelatedAuction {
@@ -55,6 +62,14 @@ interface ReviewItem {
   date: string;
   type: "positive" | "negative" | "neutral";
   auctionTitle: string | null;
+}
+
+interface TransactionItem {
+  id: string;
+  type: "SEND" | "RECEIVE";
+  amount: number;
+  date: string;
+  description: string;
 }
 
 // ─── Tab Button ──────────────────────────────────────────────────────────────
@@ -123,10 +138,11 @@ function CardSkeleton() {
 const MAX_PINS = 3;
 
 export default function ProfilePage() {
-  const [activeTab, setActiveTab] = useState<"relatedAuctions" | "reviews">("relatedAuctions");
+  const [activeTab, setActiveTab] = useState<"relatedAuctions" | "reviews" | "transactions">("relatedAuctions");
   const [reviewFilter, setReviewFilter] = useState<"all" | "positive" | "neutral" | "negative">("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [reviewPage, setReviewPage] = useState(1);
+  const [transactionPage, setTransactionPage] = useState(1);
 
   // API state
   const [profile, setProfile] = useState<ProfileData | null>(null);
@@ -134,10 +150,14 @@ export default function ProfilePage() {
   const [auctionMeta, setAuctionMeta] = useState({ total: 0, totalPages: 1 });
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
   const [reviewMeta, setReviewMeta] = useState({ total: 0, totalPages: 1 });
+  const [transactions, setTransactions] = useState<TransactionItem[]>([]);
+  const [transactionMeta, setTransactionMeta] = useState({ total: 0, totalPages: 1 });
+  const [showBalance, setShowBalance] = useState(false);
 
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [loadingAuctions, setLoadingAuctions] = useState(true);
   const [loadingReviews, setLoadingReviews] = useState(false);
+  const [loadingTransactions, setLoadingTransactions] = useState(false);
   const [pinLoading, setPinLoading] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
@@ -208,6 +228,27 @@ export default function ProfilePage() {
     }
   }, [activeTab, reviewPage, loadReviews]);
 
+  // ── Load Transactions ───────────────────────────────────────────────────────
+
+  const loadTransactions = useCallback(async (page: number) => {
+    try {
+      setLoadingTransactions(true);
+      const res = await userApi.getTransactions(page, 10);
+      setTransactions(prev => page === 1 ? res.data : [...prev, ...res.data]);
+      setTransactionMeta(res.meta);
+    } catch (err: any) {
+      console.error("Failed to load transactions:", err);
+    } finally {
+      setLoadingTransactions(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "transactions") {
+      loadTransactions(transactionPage);
+    }
+  }, [activeTab, transactionPage, loadTransactions]);
+
   // Infinite scroll observer
   const observerTarget = useRef<HTMLDivElement>(null);
 
@@ -219,6 +260,8 @@ export default function ProfilePage() {
             setCurrentPage((p) => p + 1);
           } else if (activeTab === "reviews" && reviewPage < reviewMeta.totalPages && !loadingReviews) {
             setReviewPage((p) => p + 1);
+          } else if (activeTab === "transactions" && transactionPage < transactionMeta.totalPages && !loadingTransactions) {
+            setTransactionPage((p) => p + 1);
           }
         }
       },
@@ -230,7 +273,7 @@ export default function ProfilePage() {
     }
 
     return () => observer.disconnect();
-  }, [activeTab, currentPage, reviewPage, auctionMeta, reviewMeta, loadingAuctions, loadingReviews]);
+  }, [activeTab, currentPage, reviewPage, transactionPage, auctionMeta, reviewMeta, transactionMeta, loadingAuctions, loadingReviews, loadingTransactions]);
 
   // ── Toggle Pin ────────────────────────────────────────────────────────────
 
@@ -346,6 +389,19 @@ export default function ProfilePage() {
                         <ArrowUpCircle className="w-4 h-4" />
                         Nâng cấp tài khoản
                       </Link>
+                      {profile.role === "seller" && (
+                        <div className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-xl border-2 border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 shadow-[2px_2px_0px_#A7F3D0] ml-auto">
+                          <Wallet className="w-4 h-4" />
+                          Số dư: {showBalance ? `${new Intl.NumberFormat("vi-VN").format(profile.balance)} đ` : "********"}
+                          <button
+                            onClick={() => setShowBalance(!showBalance)}
+                            className="ml-1 text-emerald-600 hover:text-emerald-800 transition-colors focus:outline-none"
+                            title={showBalance ? "Ẩn số dư" : "Hiện số dư"}
+                          >
+                            {showBalance ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
@@ -375,6 +431,11 @@ export default function ProfilePage() {
             <TabButton active={activeTab === "reviews"} onClick={() => { setActiveTab("reviews"); setReviewPage(1); }} count={profile?.totalReviews || reviewMeta.total}>
               Đánh giá
             </TabButton>
+            {isOwnProfile && (
+              <TabButton active={activeTab === "transactions"} onClick={() => { setActiveTab("transactions"); setTransactionPage(1); }} count={profile?.totalTransactions ?? transactionMeta.total}>
+                Lịch sử giao dịch
+              </TabButton>
+            )}
           </div>
 
           {/* Tab Content */}
@@ -572,6 +633,39 @@ export default function ProfilePage() {
               </>
             )}
 
+            {/* ── Transactions Tab ── */}
+            {activeTab === "transactions" && (
+              <div className="space-y-3">
+                {transactions.length > 0 ? (
+                  transactions.map((tx) => (
+                    <div key={tx.id} className="flex items-center justify-between p-4 bg-white dark:bg-slate-800/60 rounded-xl border-2 border-slate-200 dark:border-slate-700 shadow-[2px_2px_0px_#E2B9A1]">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 shadow-[2px_2px_0px_rgba(0,0,0,0.1)] ${
+                          tx.type === "RECEIVE" 
+                            ? "bg-emerald-50 border-emerald-500 text-emerald-600 dark:bg-emerald-500/20" 
+                            : "bg-red-50 border-red-500 text-red-600 dark:bg-red-500/20"
+                        }`}>
+                          {tx.type === "RECEIVE" ? <ArrowDownLeft className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{tx.description}</p>
+                          <p className="text-[11px] text-slate-400 mt-0.5">{new Date(tx.date).toLocaleDateString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric" })}</p>
+                        </div>
+                      </div>
+                      <div className={`text-base font-bold ${tx.type === "RECEIVE" ? "text-emerald-600" : "text-red-600"}`}>
+                        {tx.type === "RECEIVE" ? "+" : "-"}{new Intl.NumberFormat("vi-VN").format(tx.amount)} đ
+                      </div>
+                    </div>
+                  ))
+                ) : !loadingTransactions && (
+                  <div className="text-center py-16">
+                    <Wallet className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto" />
+                    <p className="text-sm text-slate-400 mt-3">Chưa có giao dịch nào</p>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Infinite Scroll Sentinel */}
             <div ref={observerTarget} className="h-4 w-full" />
             {loadingAuctions && activeTab === "relatedAuctions" && currentPage > 1 && (
@@ -591,6 +685,22 @@ export default function ProfilePage() {
                       </div>
                     </div>
                     <div className="h-4 w-full bg-slate-200 dark:bg-slate-700 rounded mt-3" />
+                  </div>
+                ))}
+              </div>
+            )}
+            {loadingTransactions && activeTab === "transactions" && transactionPage > 1 && (
+              <div className="space-y-3 mt-6">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={`loading-tx-${i}`} className="animate-pulse flex items-center justify-between p-4 bg-white dark:bg-slate-800/60 rounded-xl border-2 border-slate-200 dark:border-slate-700 shadow-[2px_2px_0px_#E2B9A1]">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700" />
+                      <div className="space-y-2">
+                        <div className="h-4 w-40 bg-slate-200 dark:bg-slate-700 rounded" />
+                        <div className="h-3 w-24 bg-slate-200 dark:bg-slate-700 rounded" />
+                      </div>
+                    </div>
+                    <div className="h-5 w-24 bg-slate-200 dark:bg-slate-700 rounded" />
                   </div>
                 ))}
               </div>

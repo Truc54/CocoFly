@@ -143,6 +143,8 @@ export const userApi = {
     fetchApi(`/api/users/me/related-auctions?page=${page}&limit=${limit}`),
   getMyReviews: (page: number = 1, limit: number = 10) =>
     fetchApi(`/api/users/me/reviews?page=${page}&limit=${limit}`),
+  getTransactions: (page: number = 1, limit: number = 10) => 
+    fetchApi(`/api/users/me/transactions?page=${page}&limit=${limit}`),
 };
 
 export const mediaApi = {

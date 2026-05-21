@@ -169,6 +169,21 @@ export class UserService {
 
     const pinnedCount = await this.userRepository.countPinnedAuctions(userId);
 
+    const { default: prismaClient } = await import('../config/prisma');
+
+    // 1. Fetch transaction count
+    const totalTransactions = await prismaClient.payment.count({
+      where: {
+        OR: [
+          { buyerId: userId, status: { in: ['paid', 'escrow_released'] } },
+          { sellerId: userId, status: 'escrow_released' }
+        ]
+      }
+    });
+
+    // 2. Read balance from DB
+    const finalBalance = Number((user as any).balance || 0);
+
     return {
       id: user.id,
       fullName: user.fullName,
@@ -180,6 +195,8 @@ export class UserService {
       phoneVerified: !!user.phone,
       joinDate: user.createdAt.toISOString(),
       pinnedCount,
+      balance: finalBalance,
+      totalTransactions,
     };
   }
 
@@ -227,7 +244,7 @@ export class UserService {
       const thumbnail = auction.item.media[0];
       const isPinned = auction.pinnedByUsers.length > 0;
 
-      let role: string;
+      let role: string = '';
       if (auction.sellerId === userId) {
         role = 'Chủ đấu giá';
       } else if (auction.winnerId === userId) {
@@ -273,6 +290,60 @@ export class UserService {
     return {
       data,
       meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  // ── Transactions ────────────────────────────────────────────────────────
+  async getMyTransactions(userId: string, page: number, limit: number = 10) {
+    const skip = (page - 1) * limit;
+    const { default: prismaClient } = await import('../config/prisma');
+
+    const [payments, total] = await Promise.all([
+      prismaClient.payment.findMany({
+        where: {
+          OR: [
+            { buyerId: userId, status: { in: ['paid', 'escrow_released'] } },
+            { sellerId: userId, status: 'escrow_released' }
+          ]
+        },
+        include: {
+          auction: { select: { item: { select: { title: true } } } }
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prismaClient.payment.count({
+        where: {
+          OR: [
+            { buyerId: userId, status: { in: ['paid', 'escrow_released'] } },
+            { sellerId: userId, status: 'escrow_released' }
+          ]
+        }
+      })
+    ]);
+
+    const transactions = payments.map(p => {
+      const isSender = p.buyerId === userId;
+      return {
+        id: p.id,
+        type: isSender ? 'SEND' : 'RECEIVE',
+        amount: isSender ? Number(p.amount) : Number(p.sellerAmount),
+        date: (isSender ? (p.paidAt || p.createdAt) : (p.deliveredAt || p.paidAt || p.createdAt)).toISOString(),
+        description: isSender 
+          ? `Thanh toán cho "${p.auction.item.title}"`
+          : `Nhận tiền từ "${p.auction.item.title}"`,
+      };
+    });
+
+    return {
+      data: transactions,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
     };
   }
 }

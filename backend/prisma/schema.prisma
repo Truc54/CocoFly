@@ -52,6 +52,7 @@ model User {
   banReason            String?       @map("ban_reason")
   nonPaymentStrikes    Int           @default(0) @map("non_payment_strikes") // New anti-fraud measure
   rating               Decimal       @default(0) @db.Decimal(4, 2)
+  balance              Decimal       @default(0) @db.Decimal(18, 2)
   totalAuctionsWon     Int           @default(0) @map("total_auctions_won")
   totalAuctionsCreated Int           @default(0) @map("total_auctions_created")
   lastLoginAt          DateTime?     @map("last_login_at") @db.Timestamptz()

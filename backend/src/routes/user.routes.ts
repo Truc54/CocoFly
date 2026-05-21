@@ -61,3 +61,11 @@ userRoutes.get(
   authGuard,
   userController.getMyReviews.bind(userController),
 );
+
+// GET /api/users/me/transactions
+userRoutes.get(
+  '/me/transactions',
+  authGuard,
+  userController.getMyTransactions.bind(userController),
+);
+

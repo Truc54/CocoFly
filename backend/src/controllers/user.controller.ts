@@ -123,5 +123,19 @@ export class UserController {
       next(err);
     }
   }
+
+  async getMyTransactions(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      if (!req.user) throw new AppError('Unauthorized', 401);
+
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 10));
+
+      const result = await this.userService.getMyTransactions(req.user.userId, page, limit);
+      res.status(200).json({ success: true, ...result });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 

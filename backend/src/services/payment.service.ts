@@ -258,15 +258,23 @@ export class PaymentService {
     if (payment.status !== 'paid') throw new AppError('Thanh toán chưa hoàn tất', 400);
     if (payment.shippingStatus !== 'shipped') throw new AppError('Đơn hàng chưa được giao, không thể xác nhận', 400);
 
-    // Update payment to delivered and release escrow
-    await prisma.payment.update({
-      where: { id: paymentId },
-      data: {
-        shippingStatus: 'delivered',
-        deliveredAt: new Date(),
-        status: 'escrow_released',
-      },
-    });
+    // Update payment to delivered, release escrow, and update seller balance
+    await prisma.$transaction([
+      prisma.payment.update({
+        where: { id: paymentId },
+        data: {
+          shippingStatus: 'delivered',
+          deliveredAt: new Date(),
+          status: 'escrow_released',
+        },
+      }),
+      prisma.user.update({
+        where: { id: payment.sellerId },
+        data: {
+          balance: { increment: payment.sellerAmount }
+        }
+      })
+    ]);
 
     const notificationService = new NotificationService();
     // Notify seller
