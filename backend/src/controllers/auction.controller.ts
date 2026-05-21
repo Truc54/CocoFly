@@ -196,7 +196,8 @@ export class AuctionController {
       const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 10));
 
       const result = await this.auctionService.getSellerAuctions(sellerId, tab, page, limit);
-      res.json({ success: true, data: result });
+      const counts = await this.auctionService.getSellerAuctionCounts(sellerId);
+      res.json({ success: true, data: { ...result, counts } });
     } catch (err) {
       next(err);
     }

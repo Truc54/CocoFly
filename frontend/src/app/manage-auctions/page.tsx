@@ -229,6 +229,7 @@ export default function ManageAuctionsPage() {
   // Data state
   const [auctions, setAuctions] = useState<SellerAuction[]>([]);
   const [pagination, setPagination] = useState<PaginationInfo | null>(null);
+  const [counts, setCounts] = useState<{ ongoing: number; upcoming: number; ended: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -244,9 +245,10 @@ export default function ManageAuctionsPage() {
       setLoading(true);
       setError(null);
       const res = await auctionApi.getMyListings(tab, p, LIMIT);
-      const { auctions: data, pagination: pag } = res.data;
+      const { auctions: data, pagination: pag, counts: fetchedCounts } = res.data;
       setAuctions(data);
       setPagination(pag);
+      if (fetchedCounts) setCounts(fetchedCounts);
     } catch (err: any) {
       setError(err.message || "Không thể tải danh sách đấu giá");
     } finally {
@@ -324,9 +326,11 @@ export default function ManageAuctionsPage() {
             >
               {tab.icon}
               {tab.label}
-              {pagination && activeTab === tab.key && pagination.totalItems > 0 && (
-                <span className="min-w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-bold px-1.5 bg-[#E25C24] text-white">
-                  {pagination.totalItems}
+              {counts && counts[tab.key] > 0 && (
+                <span className={`min-w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-bold px-1.5 ${
+                  activeTab === tab.key ? "bg-[#E25C24] text-white" : "bg-slate-200 text-slate-600"
+                }`}>
+                  {counts[tab.key]}
                 </span>
               )}
             </button>
@@ -492,7 +496,7 @@ export default function ManageAuctionsPage() {
                         )}
                       </>
                     )}
-                    {activeTab === "ended" && !auction.payment && auction.status === "failed" && (
+                    {activeTab === "ended" && !auction.payment && (auction.status === "failed" || !auction.winner) && (
                       <span className="inline-flex items-center justify-center px-4 py-1.5 text-xs font-bold rounded-lg bg-slate-100 text-slate-500 border border-slate-200 cursor-default whitespace-nowrap">
                         Thất bại
                       </span>

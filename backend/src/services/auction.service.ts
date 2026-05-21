@@ -346,6 +346,10 @@ export class AuctionService {
     };
   }
 
+  async getSellerAuctionCounts(sellerId: string): Promise<{ ongoing: number; upcoming: number; ended: number }> {
+    return this.auctionRepository.getSellerAuctionCounts(sellerId);
+  }
+
   async deleteAuction(auctionId: string, sellerId: string): Promise<void> {
     const result = await this.auctionRepository.deleteScheduledAuction(auctionId, sellerId);
 

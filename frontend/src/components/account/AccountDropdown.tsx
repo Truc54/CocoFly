@@ -296,7 +296,6 @@ export default function AccountDropdown() {
               href="/won-auctions"
               icon={<Gavel className="w-4 h-4" />}
               label="Sản phẩm đã đấu giá"
-              badge={MOCK_COUNTS.activeAuctions}
               onClick={closeMenu}
             />
             {role === "seller" && (
@@ -311,7 +310,6 @@ export default function AccountDropdown() {
               href="/watchlist"
               icon={<Heart className="w-4 h-4" />}
               label="Đấu giá yêu thích"
-              badge={MOCK_COUNTS.watchlist}
               onClick={closeMenu}
             />
 

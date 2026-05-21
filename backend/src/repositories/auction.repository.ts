@@ -532,6 +532,21 @@ export class AuctionRepository {
     return { auctions, total };
   }
 
+  async getSellerAuctionCounts(sellerId: string) {
+    const [ongoing, upcoming, ended] = await Promise.all([
+      prisma.auction.count({
+        where: { sellerId, status: AuctionStatus.active },
+      }),
+      prisma.auction.count({
+        where: { sellerId, status: AuctionStatus.scheduled },
+      }),
+      prisma.auction.count({
+        where: { sellerId, status: { in: [AuctionStatus.ended, AuctionStatus.failed] } },
+      }),
+    ]);
+    return { ongoing, upcoming, ended };
+  }
+
   async deleteScheduledAuction(auctionId: string, sellerId: string) {
     return prisma.$transaction(async (tx) => {
       const auction = await tx.auction.findUnique({
