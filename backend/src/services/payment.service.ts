@@ -249,6 +249,45 @@ export class PaymentService {
     });
   }
 
+  // ── Buyer: Confirm Delivery ──────────────────────────────────────────────
+  async confirmDelivery(paymentId: string, buyerId: string): Promise<void> {
+    const payment = await this.paymentRepo.findById(paymentId);
+
+    if (!payment) throw new AppError('Không tìm thấy thanh toán', 404);
+    if (payment.buyerId !== buyerId) throw new AppError('Bạn không có quyền thực hiện thao tác này', 403);
+    if (payment.status !== 'paid') throw new AppError('Thanh toán chưa hoàn tất', 400);
+    if (payment.shippingStatus !== 'shipped') throw new AppError('Đơn hàng chưa được giao, không thể xác nhận', 400);
+
+    // Update payment to delivered and release escrow
+    await prisma.payment.update({
+      where: { id: paymentId },
+      data: {
+        shippingStatus: 'delivered',
+        deliveredAt: new Date(),
+        status: 'escrow_released',
+      },
+    });
+
+    const notificationService = new NotificationService();
+    // Notify seller
+    await notificationService.send({
+      userId: payment.sellerId,
+      auctionId: payment.auctionId,
+      type: 'payment_confirmed',
+      title: 'Người mua đã nhận hàng!',
+      message: `${Number(payment.sellerAmount).toLocaleString()}₫ đã được chuyển vào tài khoản của bạn.`,
+    });
+
+    // Notify buyer
+    await notificationService.send({
+      userId: payment.buyerId,
+      auctionId: payment.auctionId,
+      type: 'system',
+      title: 'Xác nhận nhận hàng thành công',
+      message: 'Cảm ơn bạn đã sử dụng CocoFly. Đừng quên đánh giá sản phẩm nhé!',
+    });
+  }
+
   // ── Private: Mark as paid + cancel timeout + schedule shipping ─────────
   private async markAsPaid(paymentId: string, transactionId: string): Promise<void> {
     const payment = await prisma.payment.update({

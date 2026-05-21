@@ -179,4 +179,18 @@ export class PaymentController {
       res.status(statusCode).json({ success: false, message: error.message });
     }
   }
+
+  // PATCH /api/payments/:id/confirm-delivery — Buyer confirms receipt
+  async confirmDelivery(req: Request, res: Response): Promise<void> {
+    try {
+      const paymentId = req.params.id as string;
+      const buyerId = (req as any).user?.userId;
+
+      await this.paymentService.confirmDelivery(paymentId, buyerId);
+      res.status(200).json({ success: true, message: 'Đã xác nhận nhận hàng' });
+    } catch (error: any) {
+      const statusCode = error.statusCode || 400;
+      res.status(statusCode).json({ success: false, message: error.message });
+    }
+  }
 }

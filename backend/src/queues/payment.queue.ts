@@ -25,7 +25,7 @@ const PAYMENT_TIMEOUT_MS = 48 * 60 * 60 * 1000; // 48 hours
 const REMINDER_24H_MS = 24 * 60 * 60 * 1000;     // 24 hours before deadline
 const REMINDER_6H_MS = 42 * 60 * 60 * 1000;      // 6 hours before deadline (48h - 6h = 42h after creation)
 const SHIPPING_TIMEOUT_MS = 5 * 24 * 60 * 60 * 1000; // 5 days
-const AUTO_CONFIRM_MS = 7 * 24 * 60 * 60 * 1000;     // 7 days after shipped
+
 
 export async function schedulePaymentTimeout(auctionId: string, buyerId: string): Promise<void> {
   await paymentQueue.add(
@@ -86,14 +86,4 @@ export async function scheduleShippingTimeout(paymentId: string, sellerId: strin
   console.log(`📦 Scheduled shipping timeout for payment ${paymentId} (5 days)`);
 }
 
-export async function scheduleAutoConfirmDelivery(paymentId: string): Promise<void> {
-  await paymentQueue.add(
-    'auto-confirm-delivery',
-    { paymentId },
-    {
-      delay: AUTO_CONFIRM_MS,
-      jobId: `auto-confirm-${paymentId}`,
-    },
-  );
-  console.log(`📦 Scheduled auto-confirm delivery for payment ${paymentId} (7 days)`);
-}
+

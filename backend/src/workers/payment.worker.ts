@@ -24,9 +24,7 @@ interface ShippingTimeoutPayload {
   sellerId: string;
 }
 
-interface AutoConfirmPayload {
-  paymentId: string;
-}
+
 
 const REDIS_CONNECTION = {
   host: new URL(env.REDIS_URL).hostname || 'localhost',
@@ -51,9 +49,6 @@ export async function startPaymentWorker(): Promise<void> {
           break;
         case 'shipping-timeout':
           await handleShippingTimeout(job.data as ShippingTimeoutPayload);
-          break;
-        case 'auto-confirm-delivery':
-          await handleAutoConfirmDelivery(job.data as AutoConfirmPayload);
           break;
         default:
           console.warn(`⚠️ Unknown payment job type: ${job.name}`);
@@ -279,47 +274,4 @@ async function handleShippingTimeout(data: ShippingTimeoutPayload): Promise<void
   console.log(`📦 Auto-refunded payment ${paymentId} — seller ${sellerId} did not ship`);
 }
 
-// ── Auto Confirm Delivery Handler (7 days after shipped) ─────────────────
-async function handleAutoConfirmDelivery(data: AutoConfirmPayload): Promise<void> {
-  const { paymentId } = data;
 
-  const payment = await prisma.payment.findUnique({
-    where: { id: paymentId },
-    select: { id: true, status: true, shippingStatus: true, buyerId: true, sellerId: true, auctionId: true, sellerAmount: true },
-  });
-
-  if (!payment || payment.status !== 'paid' || payment.shippingStatus !== 'shipped') {
-    console.log(`📦 Delivery already confirmed for payment ${paymentId}, skipping`);
-    return;
-  }
-
-  // Auto-confirm: mark as delivered + release escrow
-  await prisma.payment.update({
-    where: { id: paymentId },
-    data: {
-      shippingStatus: 'delivered',
-      deliveredAt: new Date(),
-      status: 'escrow_released',
-    },
-  });
-
-  // Notify buyer
-  await notificationService.send({
-    userId: payment.buyerId,
-    auctionId: payment.auctionId,
-    type: 'system',
-    title: 'Tự động xác nhận nhận hàng!',
-    message: 'Đã quá 7 ngày kể từ khi gửi hàng. Giao dịch được tự động hoàn tất.',
-  });
-
-  // Notify seller: escrow released
-  await notificationService.send({
-    userId: payment.sellerId,
-    auctionId: payment.auctionId,
-    type: 'payment_confirmed',
-    title: 'Tiền đã được giải phóng!',
-    message: `${Number(payment.sellerAmount).toLocaleString()}₫ đã được chuyển vào tài khoản của bạn.`,
-  });
-
-  console.log(`📦 Auto-confirmed delivery for payment ${paymentId}, escrow released`);
-}

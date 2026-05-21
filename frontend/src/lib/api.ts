@@ -19,7 +19,8 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}): Pro
   
   // Use 'include' to securely send the HttpOnly refresh cookie to the backend
   const defaultOptions: RequestInit = {
-    credentials: "include", 
+    credentials: "include",
+    cache: "no-store", 
   };
 
   let token = authStorage.getToken();
@@ -230,4 +231,6 @@ export const paymentApi = {
     fetchApi(`/api/auctions/payments/${paymentId}/decline`, { method: 'POST' }),
   confirmShipping: (paymentId: string) =>
     fetchApi(`/api/payments/${paymentId}/confirm-shipping`, { method: 'PATCH' }),
+  confirmDelivery: (paymentId: string) =>
+    fetchApi(`/api/payments/${paymentId}/confirm-delivery`, { method: 'PATCH' }),
 };

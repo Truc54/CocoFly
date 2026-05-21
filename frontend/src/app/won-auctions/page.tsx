@@ -16,7 +16,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-import { userApi } from "@/lib/api";
+import { userApi, paymentApi } from "@/lib/api";
 
 // ─── Types & Config ──────────────────────────────────────────────────────────
 type OrderTab = "bidding" | "won" | "delivering" | "received";
@@ -33,6 +33,7 @@ interface OrderItem {
   myBid?: string;
   isPaid?: boolean;
   deliveryCountdown?: string;
+  paymentId?: string;
 }
 
 const TABS: { key: OrderTab; label: string; icon: React.ReactNode }[] = [
@@ -100,6 +101,16 @@ function WonAuctionsContent() {
   const [receivedOrders, setReceivedOrders] = useState<string[]>([]);
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [deliveryConfirmTarget, setDeliveryConfirmTarget] = useState<string | null>(null);
+  const [deliveryConfirmLoading, setDeliveryConfirmLoading] = useState(false);
+  const [deliverySuccess, setDeliverySuccess] = useState(false);
+
+  useEffect(() => {
+    if (deliverySuccess) {
+      const timer = setTimeout(() => setDeliverySuccess(false), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [deliverySuccess]);
 
   const endTimes = useMemo(() => (activeTab === "bidding" ? orders.map(o => o.date) : []), [orders, activeTab]);
   const timeLefts = useCountdown(endTimes);
@@ -107,9 +118,18 @@ function WonAuctionsContent() {
   React.useEffect(() => {
     let isMounted = true;
     setIsLoading(true);
+    fetchAuctions();
+      
+    return () => {
+      isMounted = false;
+    };
+  }, [activeTab, page]);
+
+  const fetchAuctions = () => {
+    setIsLoading(true);
     userApi.getParticipatedAuctions(activeTab, page, 10)
       .then((res) => {
-        if (isMounted && res?.data) {
+        if (res?.data) {
           setOrders(res.data);
           setMeta(res.meta);
           setCounts(res.counts || {});
@@ -117,17 +137,23 @@ function WonAuctionsContent() {
       })
       .catch((err) => console.error("Error fetching auctions:", err))
       .finally(() => {
-        if (isMounted) setIsLoading(false);
+        setIsLoading(false);
       });
-      
-    return () => {
-      isMounted = false;
-    };
-  }, [activeTab, page]);
+  };
   
-  const handleReceive = (id: string) => {
-    setReceivedOrders(prev => [...prev, id]);
-    // TODO: Call API to update status
+  const handleReceive = async (paymentId: string) => {
+    if (!paymentId) return;
+    setDeliveryConfirmLoading(true);
+    try {
+      await paymentApi.confirmDelivery(paymentId);
+      setDeliverySuccess(true);
+      setDeliveryConfirmTarget(null);
+      fetchAuctions(); // refetch to update status
+    } catch (err: any) {
+      alert(err.message || "Có lỗi xảy ra khi xác nhận");
+    } finally {
+      setDeliveryConfirmLoading(false);
+    }
   };
   
   const tabCounts = TABS.map(t => ({ ...t, count: counts[t.key] || 0 }));
@@ -185,15 +211,15 @@ function WonAuctionsContent() {
                   {/* Content */}
                   <div className="flex-1 min-w-0 w-full flex flex-col justify-between h-full">
                     <div className="flex items-start justify-between gap-4 w-full">
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 space-y-1">
                         <div className="text-base font-bold text-slate-800 line-clamp-2">
                           {order.name}
                         </div>
-                        <p className="text-xs font-medium text-slate-500 mt-1">Chủ đấu giá: {order.seller}</p>
+                        <p className="text-xs font-medium text-slate-500">Chủ đấu giá: {order.seller}</p>
                       </div>
 
                       {/* Action Buttons per status - moved to top right */}
-                      {(order.status === "won" || order.status === "received") && (
+                      {(order.status === "won" || order.status === "received" || order.status === "delivering") && (
                         <div className="flex flex-col items-end gap-2 flex-shrink-0">
                           {order.status === "won" && (
                             order.isPaid ? (
@@ -215,36 +241,34 @@ function WonAuctionsContent() {
                               </button>
                             )
                           )}
+                          {order.status === "delivering" && (
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (order.paymentId) {
+                                  setDeliveryConfirmTarget(order.paymentId);
+                                } else {
+                                  alert("Không tìm thấy thông tin thanh toán");
+                                }
+                              }}
+                              className="inline-flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-lg border-2 border-blue-500 bg-blue-500 text-white shadow-[2px_2px_0px_#2563eb] hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_#2563eb] transition-all w-[150px]"
+                            >
+                              <Package className="w-3.5 h-3.5" /> Đã nhận
+                            </button>
+                          )}
                           {order.status === "received" && (
-                            <>
-                              {receivedOrders.includes(order.id) ? (
-                                <span className="inline-flex items-center justify-center px-4 py-1.5 text-xs font-bold rounded-lg bg-emerald-50 text-emerald-600 border-2 border-emerald-100 cursor-default w-[150px]">
-                                  Đã nhận sản phẩm
-                                </span>
-                              ) : (
-                                <button 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleReceive(order.id);
-                                  }}
-                                  className="inline-flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-lg border-2 border-blue-500 bg-blue-500 text-white shadow-[2px_2px_0px_#2563eb] hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_#2563eb] transition-all w-[150px]"
-                                >
-                                  <Package className="w-3.5 h-3.5" /> Đã nhận
-                                </button>
-                              )}
-                              <button 
-                                onClick={(e) => e.stopPropagation()}
-                                className="inline-flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-lg border-2 border-[#E25C24] bg-[#E25C24] text-white shadow-[2px_2px_0px_#E2B9A1] hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_#E2B9A1] transition-all w-[150px]"
-                              >
-                                <MessageSquare className="w-3.5 h-3.5" /> Đánh giá
-                              </button>
-                            </>
+                            <button 
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-lg border-2 border-[#E25C24] bg-[#E25C24] text-white shadow-[2px_2px_0px_#E2B9A1] hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_#E2B9A1] transition-all min-w-[120px]"
+                            >
+                              <MessageSquare className="w-3.5 h-3.5" /> Đánh giá
+                            </button>
                           )}
                         </div>
                       )}
                     </div>
 
-                    <div className="flex flex-col gap-1.5 mt-3">
+                    <div className="flex flex-col gap-1.5 mt-auto pt-3">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-lg font-extrabold text-[#E25C24]">{order.currentPrice}</p>
                         {order.status === "bidding" && order.myBid && (
@@ -262,7 +286,7 @@ function WonAuctionsContent() {
                       ) : order.status === "delivering" ? (
                         <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-600">
                           <Truck className="w-3.5 h-3.5" />
-                          Thời gian đơn hàng tới: {order.deliveryCountdown}
+                          Thời gian giao hàng dự kiến: {order.deliveryCountdown || "3-5 ngày"}
                         </span>
                       ) : (
                         <span className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
@@ -328,6 +352,52 @@ function WonAuctionsContent() {
             >
               <ChevronRight className="w-5 h-5" />
             </button>
+          </div>
+        )}
+
+        {/* Success Toast Notification - Top Right */}
+        {deliverySuccess && (
+          <div className="fixed top-6 right-6 z-[200] animate-slide-in-right">
+            <div className="flex items-center gap-3 bg-white border-2 border-green-300 px-5 py-3.5 rounded-xl shadow-[4px_4px_0px_#86efac] min-w-[280px]">
+              <div className="w-8 h-8 rounded-full bg-green-100 border-2 border-green-300 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-green-600 text-lg">check</span>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-bold text-slate-800">Thành công!</p>
+                <p className="text-xs text-slate-500 mt-0.5">Xác nhận đã nhận hàng thành công</p>
+              </div>
+              <button onClick={() => setDeliverySuccess(false)} className="text-slate-400 hover:text-slate-600 transition-colors shrink-0">
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Confirmation Dialog */}
+        {deliveryConfirmTarget && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 relative animate-in zoom-in-95 duration-200">
+              <h3 className="text-lg font-bold text-slate-800 mb-2">Xác nhận đã nhận hàng</h3>
+              <p className="text-sm text-slate-500 mb-6">
+                Bạn xác nhận đã nhận được sản phẩm đúng như mô tả? Tiền sẽ được chuyển cho người bán và không thể hoàn lại sau khi xác nhận.
+              </p>
+              <div className="flex items-center gap-3 w-full">
+                <button
+                  onClick={() => setDeliveryConfirmTarget(null)}
+                  disabled={deliveryConfirmLoading}
+                  className="flex-1 px-4 py-2.5 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={() => handleReceive(deliveryConfirmTarget)}
+                  disabled={deliveryConfirmLoading}
+                  className="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors shadow-[2px_2px_0px_#2563eb] hover:shadow-[3px_3px_0px_#2563eb] disabled:opacity-50 disabled:shadow-none disabled:translate-y-0.5"
+                >
+                  {deliveryConfirmLoading ? "Đang xử lý..." : "Xác nhận"}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

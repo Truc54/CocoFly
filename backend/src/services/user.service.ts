@@ -100,6 +100,7 @@ export class UserService {
       const latestPayment = auction.payments.length > 0 ? auction.payments[0] : null;
 
       let status: 'bidding' | 'won' | 'delivering' | 'received' = 'bidding';
+      let deliveryCountdown: string | undefined;
 
       // Determine status
       if (auction.status === 'active' || auction.status === 'scheduled') {
@@ -109,6 +110,14 @@ export class UserService {
           status = 'received';
         } else if (latestPayment?.shippingStatus === 'shipped') {
           status = 'delivering';
+          if (latestPayment.shippedAt) {
+            const deliveryTime = new Date(latestPayment.shippedAt.getTime() + 7 * 24 * 60 * 60 * 1000);
+            deliveryCountdown = deliveryTime.toLocaleDateString("vi-VN", {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric"
+            });
+          }
         } else {
           status = 'won'; // encompasses unpaid, paid but pending shipping
         }
@@ -131,8 +140,10 @@ export class UserService {
         seller: auction.seller.fullName || 'Unknown Seller',
         date: auction.endTime.toISOString(),
         status,
+        deliveryCountdown,
         myBid: myMaxBid ? formatCurrency(myMaxBid) : undefined,
         isPaid: latestPayment?.status === 'paid' || latestPayment?.status === 'escrow_released',
+        paymentId: latestPayment?.id,
       };
     });
     const currentTabTotal = tab ? counts[tab as keyof typeof counts] || 0 : Object.values(counts).reduce((a, b) => a + b, 0);
