@@ -73,10 +73,11 @@ model User {
   reviewsGiven     Review[]         @relation("ReviewAuthor")
   reviewsReceived  Review[]         @relation("ReviewTarget")
   uploadedMedia    ItemMedia[]
-  auditLogs        AuditLog[] // New relation
-  openedDisputes   Dispute[]        @relation("DisputeOpener") // New relation
+  auditLogs        AuditLog[]
+  openedDisputes   Dispute[]        @relation("DisputeOpener")
   resolvedDisputes Dispute[]        @relation("DisputeResolver") // New relation
   chatMessageLikes ChatMessageLike[]
+  pinnedAuctions   PinnedAuction[]
 
   @@map("users")
 }
@@ -277,8 +278,9 @@ model Auction {
   watchers      AuctionWatcher[]
   chatRoom      ChatRoom?
   payments      Payment[]
-  notifications Notification[]
-  reviews       Review[]
+  notifications    Notification[]
+  reviews          Review[]
+  pinnedByUsers    PinnedAuction[]
 
   @@index([status, endTime])
   @@index([sellerId, status])
@@ -557,6 +559,23 @@ model Address {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("addresses")
+}
+
+// ============================================================================
+// PINNED AUCTIONS (PROFILE SHOWCASE)
+// ============================================================================
+
+model PinnedAuction {
+  userId    String   @map("user_id") @db.Uuid
+  auctionId String   @map("auction_id") @db.Uuid
+  sortOrder Int      @default(0) @map("sort_order") @db.SmallInt
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  auction Auction @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+
+  @@id([userId, auctionId])
+  @@map("pinned_auctions")
 }
 
 // ============================================================================

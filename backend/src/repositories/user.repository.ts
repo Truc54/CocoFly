@@ -207,4 +207,137 @@ export class UserRepository {
     ]);
     return { bidding, won, delivering, received };
   }
+
+  // ── Profile Data ────────────────────────────────────────────────────────────
+
+  async getProfileData(userId: string) {
+    return prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        fullName: true,
+        avatarUrl: true,
+        bio: true,
+        rating: true,
+        role: true,
+        phone: true,
+        createdAt: true,
+        accountStatus: true,
+        _count: {
+          select: { reviewsReceived: true }
+        }
+      }
+    });
+  }
+
+  // ── Pinned Auctions ─────────────────────────────────────────────────────────
+
+  async getPinnedAuctions(userId: string) {
+    return prisma.pinnedAuction.findMany({
+      where: { userId },
+      orderBy: { sortOrder: 'asc' },
+      include: {
+        auction: {
+          include: {
+            item: {
+              include: {
+                media: { where: { isActive: true }, orderBy: { sortOrder: 'asc' }, take: 1 },
+                category: { select: { name: true } }
+              }
+            },
+            seller: { select: { id: true, fullName: true } }
+          }
+        }
+      }
+    });
+  }
+
+  async countPinnedAuctions(userId: string) {
+    return prisma.pinnedAuction.count({ where: { userId } });
+  }
+
+  async isPinned(userId: string, auctionId: string) {
+    const pin = await prisma.pinnedAuction.findUnique({
+      where: { userId_auctionId: { userId, auctionId } }
+    });
+    return !!pin;
+  }
+
+  async pinAuction(userId: string, auctionId: string, sortOrder: number) {
+    return prisma.pinnedAuction.create({
+      data: { userId, auctionId, sortOrder }
+    });
+  }
+
+  async unpinAuction(userId: string, auctionId: string) {
+    return prisma.pinnedAuction.delete({
+      where: { userId_auctionId: { userId, auctionId } }
+    });
+  }
+
+  // ── Related Auctions (seller or bidder/winner) ──────────────────────────────
+
+  async getRelatedAuctions(userId: string, page: number, limit: number) {
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.AuctionWhereInput = {
+      OR: [
+        { sellerId: userId },
+        { winnerId: userId }
+      ]
+    };
+
+    const [auctions, total] = await Promise.all([
+      prisma.auction.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          item: {
+            include: {
+              media: { where: { isActive: true }, orderBy: { sortOrder: 'asc' }, take: 1 },
+              category: { select: { name: true } }
+            }
+          },
+          seller: { select: { id: true, fullName: true } },
+          pinnedByUsers: {
+            where: { userId },
+            select: { userId: true }
+          }
+        }
+      }),
+      prisma.auction.count({ where })
+    ]);
+
+    return { auctions, total };
+  }
+
+  // ── Received Reviews ────────────────────────────────────────────────────────
+
+  async getReceivedReviews(userId: string, page: number, limit: number) {
+    const skip = (page - 1) * limit;
+
+    const where = { targetId: userId };
+
+    const [reviews, total] = await Promise.all([
+      prisma.review.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          author: {
+            select: { id: true, fullName: true, avatarUrl: true }
+          },
+          auction: {
+            select: { id: true, item: { select: { title: true } } }
+          }
+        }
+      }),
+      prisma.review.count({ where })
+    ]);
+
+    return { reviews, total };
+  }
 }

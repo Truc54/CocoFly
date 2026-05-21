@@ -33,3 +33,31 @@ userRoutes.get(
   authGuard,
   userController.getParticipatedAuctions.bind(userController),
 );
+
+// GET /api/users/me/profile
+userRoutes.get(
+  '/me/profile',
+  authGuard,
+  userController.getMyProfile.bind(userController),
+);
+
+// POST /api/users/me/pin/:auctionId — toggle pin/unpin (max 3)
+userRoutes.post(
+  '/me/pin/:auctionId',
+  authGuard,
+  userController.togglePinAuction.bind(userController),
+);
+
+// GET /api/users/me/related-auctions
+userRoutes.get(
+  '/me/related-auctions',
+  authGuard,
+  userController.getMyRelatedAuctions.bind(userController),
+);
+
+// GET /api/users/me/reviews
+userRoutes.get(
+  '/me/reviews',
+  authGuard,
+  userController.getMyReviews.bind(userController),
+);

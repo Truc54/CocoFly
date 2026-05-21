@@ -160,4 +160,120 @@ export class UserService {
       counts
     };
   }
+
+  // ── Profile ───────────────────────────────────────────────────────────────
+
+  async getMyProfile(userId: string) {
+    const user = await this.userRepository.getProfileData(userId);
+    if (!user) throw new AppError('Người dùng không tồn tại', 404);
+
+    const pinnedCount = await this.userRepository.countPinnedAuctions(userId);
+
+    return {
+      id: user.id,
+      fullName: user.fullName,
+      avatarUrl: user.avatarUrl,
+      bio: user.bio,
+      rating: Number(user.rating),
+      totalReviews: user._count.reviewsReceived,
+      role: user.role,
+      phoneVerified: !!user.phone,
+      joinDate: user.createdAt.toISOString(),
+      pinnedCount,
+    };
+  }
+
+  // ── Pin Auction ───────────────────────────────────────────────────────────
+
+  private static MAX_PINS = 3;
+
+  async togglePinAuction(userId: string, auctionId: string) {
+    const alreadyPinned = await this.userRepository.isPinned(userId, auctionId);
+
+    if (alreadyPinned) {
+      await this.userRepository.unpinAuction(userId, auctionId);
+      return { pinned: false };
+    }
+
+    // Verify auction exists
+    const { default: prismaClient } = await import('../config/prisma');
+    const auction = await prismaClient.auction.findUnique({
+      where: { id: auctionId },
+      select: { id: true }
+    });
+    if (!auction) throw new AppError('Phiên đấu giá không tồn tại', 404);
+
+    // Enforce max 3
+    const currentCount = await this.userRepository.countPinnedAuctions(userId);
+    if (currentCount >= UserService.MAX_PINS) {
+      throw new AppError(`Bạn chỉ có thể ghim tối đa ${UserService.MAX_PINS} đấu giá`, 400);
+    }
+
+    await this.userRepository.pinAuction(userId, auctionId, currentCount);
+    return { pinned: true };
+  }
+
+  // ── Related Auctions ──────────────────────────────────────────────────────
+
+  async getMyRelatedAuctions(userId: string, page: number = 1, limit: number = 8) {
+    const { auctions, total } = await this.userRepository.getRelatedAuctions(userId, page, limit);
+
+    const formatCurrency = (amount: any) => {
+      if (!amount) return '0 đ';
+      return new Intl.NumberFormat('vi-VN').format(Number(amount)) + ' đ';
+    };
+
+    const data = auctions.map(auction => {
+      const thumbnail = auction.item.media[0];
+      const isPinned = auction.pinnedByUsers.length > 0;
+
+      let role: string;
+      if (auction.sellerId === userId) {
+        role = 'Chủ đấu giá';
+      } else if (auction.winnerId === userId) {
+        role = 'Người chiến thắng';
+      }
+
+      return {
+        id: auction.id,
+        category: auction.item.category?.name?.toUpperCase() || '',
+        name: auction.item.title,
+        image: thumbnail?.cdnUrl || null,
+        currentPrice: formatCurrency(auction.currentPrice),
+        endDate: auction.endTime.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+        bids: auction.totalBids,
+        role,
+        isPinned,
+        status: auction.status,
+      };
+    });
+
+    return {
+      data,
+      meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  // ── Reviews ───────────────────────────────────────────────────────────────
+
+  async getMyReviews(userId: string, page: number = 1, limit: number = 10) {
+    const { reviews, total } = await this.userRepository.getReceivedReviews(userId, page, limit);
+
+    const data = reviews.map(review => ({
+      id: review.id,
+      author: review.author.fullName || 'Người dùng',
+      authorAvatar: review.author.avatarUrl,
+      rating: review.rating,
+      comment: review.comment,
+      date: review.createdAt.toISOString(),
+      type: review.rating >= 4 ? 'positive' : review.rating <= 2 ? 'negative' : 'neutral',
+      auctionTitle: review.auction?.item?.title || null,
+    }));
+
+    return {
+      data,
+      meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    };
+  }
 }
+

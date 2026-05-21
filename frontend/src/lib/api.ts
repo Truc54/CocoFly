@@ -137,6 +137,12 @@ export const userApi = {
     qs.set('limit', limit.toString());
     return fetchApi(`/api/users/me/participated-auctions?${qs.toString()}`);
   },
+  getMyProfile: () => fetchApi('/api/users/me/profile'),
+  togglePin: (auctionId: string) => fetchApi(`/api/users/me/pin/${auctionId}`, { method: 'POST' }),
+  getMyRelatedAuctions: (page: number = 1, limit: number = 8) =>
+    fetchApi(`/api/users/me/related-auctions?page=${page}&limit=${limit}`),
+  getMyReviews: (page: number = 1, limit: number = 10) =>
+    fetchApi(`/api/users/me/reviews?page=${page}&limit=${limit}`),
 };
 
 export const mediaApi = {
