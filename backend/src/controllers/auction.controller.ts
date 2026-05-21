@@ -269,5 +269,25 @@ export class AuctionController {
       next(err);
     }
   }
+
+  // ── Review Seller ────────────────────────────────────────────────────────
+
+  async addReview(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.userId;
+      const auctionId = req.params.auctionId as string;
+      const { rating, comment } = req.body;
+
+      if (!rating || typeof rating !== 'number' || rating < 1 || rating > 5) {
+        res.status(400).json({ success: false, message: 'Rating phải từ 1 đến 5' });
+        return;
+      }
+
+      const review = await this.auctionService.addReview(auctionId, userId, rating, comment);
+      res.json({ success: true, message: 'Đánh giá thành công', data: review });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 

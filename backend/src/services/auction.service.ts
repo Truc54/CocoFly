@@ -485,4 +485,53 @@ export class AuctionService {
   async isWatching(auctionId: string, userId: string) {
     return this.auctionRepository.isWatching(auctionId, userId);
   }
+
+  // ── Review Seller ────────────────────────────────────────────────────────
+
+  async addReview(auctionId: string, authorId: string, rating: number, comment?: string) {
+    const auction = await prisma.auction.findUnique({
+      where: { id: auctionId },
+      include: {
+        payments: { where: { buyerId: authorId } },
+      }
+    });
+
+    if (!auction) throw new AppError('Phiên đấu giá không tồn tại', 404);
+    if (auction.sellerId === authorId) throw new AppError('Không thể đánh giá chính mình', 400);
+
+    const payment = auction.payments[0];
+    if (!payment || payment.shippingStatus !== 'delivered') {
+      throw new AppError('Chỉ có thể đánh giá sau khi đã nhận hàng', 400);
+    }
+
+    const existing = await prisma.review.findUnique({
+      where: {
+        auctionId_authorId: { auctionId, authorId }
+      }
+    });
+
+    if (existing) throw new AppError('Bạn đã đánh giá cho phiên đấu giá này rồi', 400);
+
+    const review = await prisma.review.create({
+      data: {
+        auctionId,
+        authorId,
+        targetId: auction.sellerId,
+        rating,
+        comment
+      }
+    });
+
+    const allReviews = await prisma.review.aggregate({
+      where: { targetId: auction.sellerId },
+      _avg: { rating: true }
+    });
+
+    await prisma.user.update({
+      where: { id: auction.sellerId },
+      data: { rating: allReviews._avg.rating || 0 }
+    });
+
+    return review;
+  }
 }

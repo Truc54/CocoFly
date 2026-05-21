@@ -188,6 +188,10 @@ export class UserRepository {
         payments: {
           orderBy: { createdAt: 'desc' },
           take: 1
+        },
+        reviews: {
+          where: { authorId: userId },
+          take: 1
         }
       },
       orderBy: { createdAt: 'desc' }

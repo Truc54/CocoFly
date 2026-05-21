@@ -199,6 +199,11 @@ export const auctionApi = {
   getWatchlist: (page: number = 1, limit: number = 10) =>
     fetchApi(`/api/auctions/watchlist?page=${page}&limit=${limit}`),
   getWatchStatus: (auctionId: string) => fetchApi(`/api/auctions/${auctionId}/watch-status`),
+  // ── Review Seller
+  reviewSeller: (id: string, data: { rating: number; comment?: string }) => fetchApi(`/api/auctions/${id}/review`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
 };
 
 export const categoryApi = {

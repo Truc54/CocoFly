@@ -16,7 +16,9 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-import { userApi, paymentApi } from "@/lib/api";
+import { Star } from "lucide-react";
+
+import { userApi, paymentApi, auctionApi } from "@/lib/api";
 
 // ─── Types & Config ──────────────────────────────────────────────────────────
 type OrderTab = "bidding" | "won" | "delivering" | "received";
@@ -34,6 +36,7 @@ interface OrderItem {
   isPaid?: boolean;
   deliveryCountdown?: string;
   paymentId?: string;
+  hasReviewed?: boolean;
 }
 
 const TABS: { key: OrderTab; label: string; icon: React.ReactNode }[] = [
@@ -76,8 +79,8 @@ function WonAuctionsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab") as OrderTab | null;
-  const initialTab = tabParam && ["bidding", "won", "delivering", "received"].includes(tabParam) 
-    ? tabParam 
+  const initialTab = tabParam && ["bidding", "won", "delivering", "received"].includes(tabParam)
+    ? tabParam
     : "bidding";
 
   const [activeTab, setActiveTab] = useState<OrderTab>(initialTab);
@@ -105,12 +108,26 @@ function WonAuctionsContent() {
   const [deliveryConfirmLoading, setDeliveryConfirmLoading] = useState(false);
   const [deliverySuccess, setDeliverySuccess] = useState(false);
 
+  // Review states
+  const [reviewTarget, setReviewTarget] = useState<string | null>(null);
+  const [reviewRating, setReviewRating] = useState<number>(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewSuccess, setReviewSuccess] = useState(false);
+
   useEffect(() => {
     if (deliverySuccess) {
       const timer = setTimeout(() => setDeliverySuccess(false), 4000);
       return () => clearTimeout(timer);
     }
   }, [deliverySuccess]);
+
+  useEffect(() => {
+    if (reviewSuccess) {
+      const timer = setTimeout(() => setReviewSuccess(false), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [reviewSuccess]);
 
   const endTimes = useMemo(() => (activeTab === "bidding" ? orders.map(o => o.date) : []), [orders, activeTab]);
   const timeLefts = useCountdown(endTimes);
@@ -119,7 +136,7 @@ function WonAuctionsContent() {
     let isMounted = true;
     setIsLoading(true);
     fetchAuctions();
-      
+
     return () => {
       isMounted = false;
     };
@@ -140,7 +157,7 @@ function WonAuctionsContent() {
         setIsLoading(false);
       });
   };
-  
+
   const handleReceive = async (paymentId: string) => {
     if (!paymentId) return;
     setDeliveryConfirmLoading(true);
@@ -155,7 +172,27 @@ function WonAuctionsContent() {
       setDeliveryConfirmLoading(false);
     }
   };
-  
+
+  const handleReview = async () => {
+    if (!reviewTarget) return;
+    setReviewLoading(true);
+    try {
+      await auctionApi.reviewSeller(reviewTarget, {
+        rating: reviewRating,
+        comment: reviewComment
+      });
+      setReviewSuccess(true);
+      setReviewTarget(null);
+      setReviewRating(5);
+      setReviewComment("");
+      fetchAuctions();
+    } catch (err: any) {
+      alert(err.message || "Có lỗi xảy ra khi gửi đánh giá");
+    } finally {
+      setReviewLoading(false);
+    }
+  };
+
   const tabCounts = TABS.map(t => ({ ...t, count: counts[t.key] || 0 }));
 
   return (
@@ -198,8 +235,8 @@ function WonAuctionsContent() {
           <div className="space-y-3">
             {orders.map((order, idx) => {
               return (
-                <div 
-                  key={order.id} 
+                <div
+                  key={order.id}
                   onClick={() => router.push(`/auction/${order.id}`)}
                   className="group flex flex-col sm:flex-row items-start gap-4 rounded-xl border-2 border-slate-200 bg-white p-4 hover:-translate-y-1 hover:shadow-[4px_4px_0px_#E2B9A1] transition-all cursor-pointer relative"
                 >
@@ -223,14 +260,14 @@ function WonAuctionsContent() {
                         <div className="flex flex-col items-end gap-2 flex-shrink-0">
                           {order.status === "won" && (
                             order.isPaid ? (
-                              <button 
+                              <button
                                 onClick={(e) => e.stopPropagation()}
                                 className="inline-flex items-center px-4 py-1.5 text-xs font-bold rounded-lg bg-emerald-50 text-emerald-600 border-2 border-emerald-100 cursor-default"
                               >
                                 Đã thanh toán
                               </button>
                             ) : (
-                              <button 
+                              <button
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   router.push(`/checkout/${order.id}`);
@@ -242,7 +279,7 @@ function WonAuctionsContent() {
                             )
                           )}
                           {order.status === "delivering" && (
-                            <button 
+                            <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 if (order.paymentId) {
@@ -257,12 +294,25 @@ function WonAuctionsContent() {
                             </button>
                           )}
                           {order.status === "received" && (
-                            <button 
-                              onClick={(e) => e.stopPropagation()}
-                              className="inline-flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-lg border-2 border-[#E25C24] bg-[#E25C24] text-white shadow-[2px_2px_0px_#E2B9A1] hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_#E2B9A1] transition-all min-w-[120px]"
-                            >
-                              <MessageSquare className="w-3.5 h-3.5" /> Đánh giá
-                            </button>
+                            order.hasReviewed ? (
+                              <button
+                                onClick={(e) => e.stopPropagation()}
+                                disabled
+                                className="inline-flex items-center justify-center px-4 py-1.5 text-xs font-bold rounded-lg border-2 border-orange-200 bg-orange-50 text-[#E25C24] cursor-default min-w-[120px]"
+                              >
+                                Đã đánh giá
+                              </button>
+                            ) : (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setReviewTarget(order.id);
+                                }}
+                                className="inline-flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-lg border-2 border-[#E25C24] bg-[#E25C24] text-white shadow-[2px_2px_0px_#E2B9A1] hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_#E2B9A1] transition-all min-w-[120px]"
+                              >
+                                <MessageSquare className="w-3.5 h-3.5" /> Đánh giá
+                              </button>
+                            )
                           )}
                         </div>
                       )}
@@ -277,7 +327,7 @@ function WonAuctionsContent() {
                           </span>
                         )}
                       </div>
-                      
+
                       {order.status === "bidding" ? (
                         <span className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
                           <Clock className="w-3.5 h-3.5" />
@@ -330,21 +380,20 @@ function WonAuctionsContent() {
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
-            
+
             {Array.from({ length: meta.totalPages }, (_, i) => i + 1).map(p => (
               <button
                 key={p}
                 onClick={() => setPage(p)}
-                className={`w-10 h-10 rounded-lg border-2 font-bold transition-all ${
-                  page === p 
-                    ? "bg-[#E25C24] border-[#E25C24] text-white shadow-[2px_2px_0px_#E2B9A1]" 
+                className={`w-10 h-10 rounded-lg border-2 font-bold transition-all ${page === p
+                    ? "bg-[#E25C24] border-[#E25C24] text-white shadow-[2px_2px_0px_#E2B9A1]"
                     : "border-slate-200 text-slate-600 hover:border-[#E25C24] hover:text-[#E25C24]"
-                }`}
+                  }`}
               >
                 {p}
               </button>
             ))}
-            
+
             <button
               onClick={() => setPage(p => Math.min(meta.totalPages, p + 1))}
               disabled={page === meta.totalPages}
@@ -375,8 +424,14 @@ function WonAuctionsContent() {
 
         {/* Confirmation Dialog */}
         {deliveryConfirmTarget && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 relative animate-in zoom-in-95 duration-200">
+          <div 
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-in fade-in duration-200"
+            onClick={() => setDeliveryConfirmTarget(null)}
+          >
+            <div 
+              className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 relative animate-in zoom-in-95 duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
               <h3 className="text-lg font-bold text-slate-800 mb-2">Xác nhận đã nhận hàng</h3>
               <p className="text-sm text-slate-500 mb-6">
                 Bạn xác nhận đã nhận được sản phẩm đúng như mô tả? Tiền sẽ được chuyển cho người bán và không thể hoàn lại sau khi xác nhận.
@@ -395,6 +450,89 @@ function WonAuctionsContent() {
                   className="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors shadow-[2px_2px_0px_#2563eb] hover:shadow-[3px_3px_0px_#2563eb] disabled:opacity-50 disabled:shadow-none disabled:translate-y-0.5"
                 >
                   {deliveryConfirmLoading ? "Đang xử lý..." : "Xác nhận"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Review Success Toast Notification */}
+        {reviewSuccess && (
+          <div className="fixed top-24 right-6 z-[200] animate-slide-in-right">
+            <div className="flex items-center gap-3 bg-white border-2 border-green-300 px-5 py-3.5 rounded-xl shadow-[4px_4px_0px_#86efac] min-w-[280px]">
+              <div className="w-8 h-8 rounded-full bg-green-100 border-2 border-green-300 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-green-600 text-lg">check</span>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-bold text-slate-800">Thành công!</p>
+                <p className="text-xs text-slate-500 mt-0.5">Cảm ơn bạn đã gửi đánh giá</p>
+              </div>
+              <button onClick={() => setReviewSuccess(false)} className="text-slate-400 hover:text-slate-600 transition-colors shrink-0">
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Review Dialog */}
+        {reviewTarget && (
+          <div 
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-in fade-in duration-200"
+            onClick={() => {
+              setReviewTarget(null);
+              setReviewRating(5);
+              setReviewComment("");
+            }}
+          >
+            <div 
+              className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 relative animate-in zoom-in-95 duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-2xl font-bold text-slate-800 mb-2">Đánh giá</h3>
+
+              <div className="mb-4">
+                <label className="block text-sm font-bold text-slate-700 mb-2">Chất lượng dịch vụ</label>
+                <div className="flex items-center gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      onClick={() => setReviewRating(star)}
+                      className={`p-1 transition-all hover:scale-110 ${reviewRating >= star ? "text-yellow-400" : "text-slate-200"}`}
+                    >
+                      <Star className="w-8 h-8 fill-current" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-bold text-slate-700 mb-2">Nhận xét chi tiết</label>
+                <textarea
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  placeholder="Người bán thân thiện, giao hàng nhanh chóng..."
+                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-slate-200 focus:ring-0 outline-none transition-colors text-sm min-h-[100px] resize-none"
+                />
+              </div>
+
+              <div className="flex items-center gap-3 w-full">
+                <button
+                  onClick={() => {
+                    setReviewTarget(null);
+                    setReviewRating(5);
+                    setReviewComment("");
+                  }}
+                  disabled={reviewLoading}
+                  className="flex-1 px-4 py-2.5 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleReview}
+                  disabled={reviewLoading}
+                  className="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-[#E25C24] hover:bg-[#c94d1b] rounded-lg transition-colors shadow-[2px_2px_0px_#E2B9A1] hover:shadow-[3px_3px_0px_#E2B9A1] disabled:opacity-50 disabled:shadow-none disabled:translate-y-0.5"
+                >
+                  {reviewLoading ? "Đang gửi..." : "Gửi đánh giá"}
                 </button>
               </div>
             </div>

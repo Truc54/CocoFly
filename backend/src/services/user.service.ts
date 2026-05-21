@@ -144,6 +144,7 @@ export class UserService {
         myBid: myMaxBid ? formatCurrency(myMaxBid) : undefined,
         isPaid: latestPayment?.status === 'paid' || latestPayment?.status === 'escrow_released',
         paymentId: latestPayment?.id,
+        hasReviewed: auction.reviews && auction.reviews.length > 0,
       };
     });
     const currentTabTotal = tab ? counts[tab as keyof typeof counts] || 0 : Object.values(counts).reduce((a, b) => a + b, 0);

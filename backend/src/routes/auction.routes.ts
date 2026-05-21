@@ -86,3 +86,11 @@ auctionRoutes.post(
   auctionController.declinePayment.bind(auctionController),
 );
 
+// ── Review routes ───────────────────────────────────────────────────────────
+
+auctionRoutes.post(
+  '/:auctionId/review',
+  authGuard,
+  auctionController.addReview.bind(auctionController),
+);
+
