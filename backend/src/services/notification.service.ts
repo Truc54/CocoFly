@@ -1,5 +1,6 @@
 import { NotificationType } from '@prisma/client';
 import { NotificationRepository } from '../repositories/notification.repository';
+import prisma from '../config/prisma';
 
 const repo = new NotificationRepository();
 
@@ -24,6 +25,32 @@ export class NotificationService {
    * Send a single notification: persist to DB + push via Socket.IO
    */
   async send(payload: SendNotificationPayload) {
+    // Check user's notification settings before sending
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId },
+      select: { notificationSettings: true }
+    });
+
+    if (user && user.notificationSettings) {
+      let settings: Record<string, boolean> = {};
+      if (typeof user.notificationSettings === 'string') {
+        try {
+          settings = JSON.parse(user.notificationSettings);
+        } catch (e) {
+          settings = {};
+        }
+      } else {
+        settings = user.notificationSettings as Record<string, boolean>;
+      }
+      
+      console.log(`[NotificationService] Check user ${payload.userId} setting for ${payload.type}:`, settings[payload.type]);
+      // If the setting exists and is explicitly false or 'false' (string), skip notification
+      if (settings[payload.type] === false || String(settings[payload.type]) === 'false') {
+        console.log(`[NotificationService] Skipped notification ${payload.type} for user ${payload.userId}`);
+        return null;
+      }
+    }
+
     const notification = await repo.create(payload);
 
     this.pushToSocket(payload.userId, notification);
@@ -36,12 +63,43 @@ export class NotificationService {
    * Uses Promise.all to create one-by-one, then pushes individually via Socket.IO.
    */
   async sendMany(payloads: SendNotificationPayload[]) {
-    if (payloads.length === 0) return;
+    if (payloads.length === 0) return [];
+
+    // Fetch settings for all users involved to avoid N+1 queries
+    const userIds = [...new Set(payloads.map(p => p.userId))];
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, notificationSettings: true }
+    });
+
+    const userSettingsMap = new Map<string, Record<string, boolean>>();
+    users.forEach(u => {
+      if (u.notificationSettings) {
+        let parsed: Record<string, boolean> = {};
+        if (typeof u.notificationSettings === 'string') {
+          try { parsed = JSON.parse(u.notificationSettings); } catch (e) {}
+        } else {
+          parsed = u.notificationSettings as Record<string, boolean>;
+        }
+        userSettingsMap.set(u.id, parsed);
+      }
+    });
+
+    // Filter payloads based on individual user settings
+    const filteredPayloads = payloads.filter(payload => {
+      const settings = userSettingsMap.get(payload.userId);
+      if (settings && (settings[payload.type] === false || String(settings[payload.type]) === 'false')) {
+        return false; // Skip if explicitly disabled
+      }
+      return true;
+    });
+
+    if (filteredPayloads.length === 0) return [];
 
     // For Socket.IO push, we need individual records with IDs,
     // so we create them one-by-one (createMany doesn't return records in Prisma)
     const results = await Promise.all(
-      payloads.map(async (payload) => {
+      filteredPayloads.map(async (payload) => {
         const notification = await repo.create(payload);
         this.pushToSocket(payload.userId, notification);
         return notification;

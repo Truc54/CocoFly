@@ -47,6 +47,7 @@ model User {
   phone                String?       @db.VarChar(20)
   avatarUrl            String?       @map("avatar_url")
   bio                  String?
+  notificationSettings Json?         @default("{}") @map("notification_settings") @db.JsonB
   role                 UserRole      @default(buyer)
   accountStatus        AccountStatus @default(unverified) @map("account_status") // New Enum instead of `isVerified` and `isBanned`
   banReason            String?       @map("ban_reason")

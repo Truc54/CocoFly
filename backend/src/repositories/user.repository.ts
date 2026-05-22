@@ -10,6 +10,20 @@ export class UserRepository {
     return prisma.user.findUnique({ where: { id } });
   }
 
+  async updateProfile(userId: string, data: { fullName?: string; bio?: string; avatarUrl?: string }) {
+    return prisma.user.update({
+      where: { id: userId },
+      data,
+    });
+  }
+
+  async updateNotificationSettings(id: string, notificationSettings: any) {
+    return prisma.user.update({
+      where: { id },
+      data: { notificationSettings },
+    });
+  }
+
   async create(data: { email: string; passwordHash: string | null; fullName: string; avatarUrl?: string | null; accountStatus?: 'unverified' | 'active' | 'suspended' | 'banned' }) {
     return prisma.user.create({
       data: {
@@ -215,6 +229,7 @@ export class UserRepository {
       where: { id: userId },
       select: {
         id: true,
+        email: true,
         fullName: true,
         avatarUrl: true,
         bio: true,
@@ -224,6 +239,7 @@ export class UserRepository {
         createdAt: true,
         accountStatus: true,
         balance: true,
+        notificationSettings: true,
         _count: {
           select: { reviewsReceived: true }
         }

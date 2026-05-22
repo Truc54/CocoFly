@@ -184,11 +184,18 @@ export class UserService {
     // 2. Read balance from DB
     const finalBalance = Number((user as any).balance || 0);
 
+    // 3. Fetch address
+    const address = await this.userRepository.getFirstAddress(userId);
+
     return {
       id: user.id,
+      email: user.email,
+      phone: user.phone || '',
       fullName: user.fullName,
       avatarUrl: user.avatarUrl,
       bio: user.bio,
+      notificationSettings: user.notificationSettings || {},
+      address: address ? address.addressLine : '',
       rating: Number(user.rating),
       totalReviews: user._count.reviewsReceived,
       role: user.role,
@@ -198,6 +205,32 @@ export class UserService {
       balance: finalBalance,
       totalTransactions,
     };
+  }
+
+  async updateProfile(userId: string, data: { fullName?: string; bio?: string; address?: string; avatarUrl?: string }) {
+    const { address, ...profileData } = data;
+
+    // Update user basic info
+    const updateData: any = profileData;
+
+    if (Object.keys(updateData).length > 0) {
+      await this.userRepository.updateProfile(userId, updateData);
+    }
+
+    // Update address if provided
+    if (address !== undefined && address.trim() !== '') {
+      // Find current user to get their phone number or just use a default
+      const user = await this.userRepository.findById(userId);
+      const phone = user?.phone || ''; // Fallback if no phone
+      await this.saveAddress(userId, address, phone);
+    }
+
+    return this.getMyProfile(userId);
+  }
+
+  async updateNotificationSettings(userId: string, settings: any) {
+    await this.userRepository.updateNotificationSettings(userId, settings);
+    return { success: true, notificationSettings: settings };
   }
 
   // ── Pin Auction ───────────────────────────────────────────────────────────
@@ -330,7 +363,7 @@ export class UserService {
         type: isSender ? 'SEND' : 'RECEIVE',
         amount: isSender ? Number(p.amount) : Number(p.sellerAmount),
         date: (isSender ? (p.paidAt || p.createdAt) : (p.deliveredAt || p.paidAt || p.createdAt)).toISOString(),
-        description: isSender 
+        description: isSender
           ? `Thanh toán cho "${p.auction.item.title}"`
           : `Nhận tiền từ "${p.auction.item.title}"`,
       };

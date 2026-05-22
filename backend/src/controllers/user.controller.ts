@@ -79,6 +79,28 @@ export class UserController {
     }
   }
 
+  async updateProfile(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      if (!req.user) throw new AppError('Unauthorized', 401);
+
+      const profile = await this.userService.updateProfile(req.user.userId, req.body);
+      res.status(200).json({ success: true, data: profile });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async updateNotificationSettings(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      if (!req.user) throw new AppError('Unauthorized', 401);
+
+      const result = await this.userService.updateNotificationSettings(req.user.userId, req.body);
+      res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async togglePinAuction(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       if (!req.user) throw new AppError('Unauthorized', 401);

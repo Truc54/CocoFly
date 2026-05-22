@@ -170,7 +170,7 @@ export default function AccountDropdown() {
                 ...prev,
                 rating: res.data.rating || 0,
                 totalReviews: res.data.totalReviews || 0,
-                avatarUrl: res.data.avatar || prev.avatarUrl
+                avatarUrl: res.data.avatarUrl || res.data.avatar || prev.avatarUrl
               } : null);
             }
           } catch (e) {

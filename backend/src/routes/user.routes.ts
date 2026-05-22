@@ -41,6 +41,20 @@ userRoutes.get(
   userController.getMyProfile.bind(userController),
 );
 
+// PUT /api/users/me/profile
+userRoutes.put(
+  '/me/profile',
+  authGuard,
+  userController.updateProfile.bind(userController),
+);
+
+// PUT /api/users/me/notifications
+userRoutes.put(
+  '/me/notifications',
+  authGuard,
+  userController.updateNotificationSettings.bind(userController),
+);
+
 // POST /api/users/me/pin/:auctionId — toggle pin/unpin (max 3)
 userRoutes.post(
   '/me/pin/:auctionId',

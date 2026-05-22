@@ -138,6 +138,14 @@ export const userApi = {
     return fetchApi(`/api/users/me/participated-auctions?${qs.toString()}`);
   },
   getMyProfile: () => fetchApi('/api/users/me/profile'),
+  updateProfile: (data: { fullName?: string; bio?: string; address?: string; avatarUrl?: string }) => fetchApi('/api/users/me/profile', {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+  updateNotificationSettings: (settings: any) => fetchApi('/api/users/me/notifications', {
+    method: 'PUT',
+    body: JSON.stringify(settings),
+  }),
   togglePin: (auctionId: string) => fetchApi(`/api/users/me/pin/${auctionId}`, { method: 'POST' }),
   getMyRelatedAuctions: (page: number = 1, limit: number = 8) =>
     fetchApi(`/api/users/me/related-auctions?page=${page}&limit=${limit}`),
