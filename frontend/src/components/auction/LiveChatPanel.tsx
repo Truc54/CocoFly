@@ -21,6 +21,7 @@ interface LiveChatPanelProps {
   viewerCount: number;
   isLoggedIn: boolean;
   isEnded: boolean;
+  sellerId?: string;
 }
 
 export default function LiveChatPanel({
@@ -31,6 +32,7 @@ export default function LiveChatPanel({
   viewerCount,
   isLoggedIn,
   isEnded,
+  sellerId,
 }: LiveChatPanelProps) {
   const [activeTab, setActiveTab] = useState<"chat" | "bids">("chat");
   const [inputText, setInputText] = useState("");
@@ -136,6 +138,11 @@ export default function LiveChatPanel({
                         <span className="text-xs font-bold text-slate-800 dark:text-white">
                           {msg.senderName}
                         </span>
+                        {sellerId && msg.senderId === sellerId && (
+                          <span className="bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 text-[9px] font-extrabold px-1.5 py-0.5 border border-orange-200 dark:border-orange-900/60 rounded uppercase tracking-wider">
+                            Chủ phòng
+                          </span>
+                        )}
                       </div>
                       
                       {msg.parentId && (
