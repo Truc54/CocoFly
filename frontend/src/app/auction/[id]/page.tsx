@@ -30,13 +30,19 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  // ── Watch state ──
   const [isWatching, setIsWatching] = useState(false);
   const [watchLoading, setWatchLoading] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
-    setIsLoggedIn(!!authStorage.getToken());
+    const token = authStorage.getToken();
+    setIsLoggedIn(!!token);
+    if (token) {
+      setCurrentUser(authStorage.getUser());
+    }
   }, []);
+
+  const isHost = !!(currentUser && auction?.seller && currentUser.id === auction.seller.id);
 
   useEffect(() => {
     let cancelled = false;
@@ -111,7 +117,7 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
     );
   }
 
-  return <AuctionDetailContent auction={auction} related={related} activeImageIdx={activeImageIdx} setActiveImageIdx={setActiveImageIdx} isLoggedIn={isLoggedIn} isWatching={isWatching} watchLoading={watchLoading} onToggleWatch={handleToggleWatch} />;
+  return <AuctionDetailContent auction={auction} related={related} activeImageIdx={activeImageIdx} setActiveImageIdx={setActiveImageIdx} isLoggedIn={isLoggedIn} isWatching={isWatching} watchLoading={watchLoading} onToggleWatch={handleToggleWatch} isHost={isHost} />;
 }
 
 // ─── INNER COMPONENT (needs hooks after auction loads) ────────────────────────
@@ -125,6 +131,7 @@ function AuctionDetailContent({
   isWatching,
   watchLoading,
   onToggleWatch,
+  isHost,
 }: {
   auction: AuctionDetail;
   related: RelatedAuction[];
@@ -134,6 +141,7 @@ function AuctionDetailContent({
   isWatching: boolean;
   watchLoading: boolean;
   onToggleWatch: () => void;
+  isHost: boolean;
 }) {
   const {
     currentPrice,
@@ -256,7 +264,7 @@ function AuctionDetailContent({
           </div>
 
           {/* Seller Info */}
-          {auction.seller && (
+          {auction.seller && !isHost && (
             <div className="flex items-center gap-4 p-4 border-2 border-slate-200 shadow-[4px_4px_0px_#cbd5e1] bg-white dark:bg-slate-800 dark:border-slate-700">
               <div className="w-12 h-12 rounded-full bg-slate-200 border-2 border-slate-800 flex items-center justify-center text-xl font-bold shrink-0 text-slate-800 overflow-hidden">
                 {auction.seller.avatarUrl ? (
@@ -338,21 +346,6 @@ function AuctionDetailContent({
               </div>
             </div>
 
-            {/* Connection status + Watchers count */}
-            <div className="flex items-center gap-3">
-              {isLoggedIn && (
-                <div className={`flex items-center gap-1.5 text-[10px] font-bold ${connected ? "text-green-600" : "text-slate-400"}`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${connected ? "bg-green-500 animate-pulse" : "bg-slate-300"}`}></span>
-                  {connected ? "REALTIME" : "OFFLINE"}
-                </div>
-              )}
-              <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
-                  <path d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
-                </svg>
-                {auction.totalWatchers} người thích
-              </div>
-            </div>
           </div>
 
           {/* Bidding Panel or Ended Overlay */}
@@ -368,6 +361,7 @@ function AuctionDetailContent({
             />
           ) : (
             <BiddingPanel
+              auctionId={auction.id}
               currentPrice={currentPrice}
               bidIncrement={auction.bidIncrement}
               buyoutPrice={auction.buyoutPrice}
@@ -386,6 +380,10 @@ function AuctionDetailContent({
               onBuyout={buyout}
               onClearError={clearError}
               onToggleWatch={onToggleWatch}
+              isHost={isHost}
+              leaderName={winnerName}
+              totalBids={totalBids}
+              startTime={auction.scheduledStart}
             />
           )}
 
@@ -398,6 +396,7 @@ function AuctionDetailContent({
             viewerCount={viewerCount}
             isLoggedIn={isLoggedIn}
             isEnded={auctionStatus === "ended" || auctionStatus === "buyout"}
+            sellerId={auction.seller?.id}
           />
         </div>
       </div>

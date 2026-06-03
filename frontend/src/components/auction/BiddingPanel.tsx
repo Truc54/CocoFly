@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { auctionApi } from "@/lib/api";
 import CountdownTimer from "./CountdownTimer";
 
 function formatVND(n: number) {
@@ -13,6 +15,7 @@ function formatEndDate(iso: string) {
 }
 
 interface BiddingPanelProps {
+  auctionId: string;
   currentPrice: number;
   bidIncrement: number;
   buyoutPrice: number | null;
@@ -32,9 +35,14 @@ interface BiddingPanelProps {
   onBuyout: () => void;
   onClearError: () => void;
   onToggleWatch: () => void;
+  isHost?: boolean;
+  leaderName?: string | null;
+  totalBids?: number;
+  startTime?: string;
 }
 
 export default function BiddingPanel({
+  auctionId,
   currentPrice,
   bidIncrement,
   buyoutPrice,
@@ -54,7 +62,29 @@ export default function BiddingPanel({
   onBuyout,
   onClearError,
   onToggleWatch,
+  isHost = false,
+  leaderName = null,
+  totalBids = 0,
+  startTime,
 }: BiddingPanelProps) {
+  const router = useRouter();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const handleDelete = async () => {
+    try {
+      setDeleteLoading(true);
+      await auctionApi.remove(auctionId);
+      setShowDeleteConfirm(false);
+      // Redirect to home "/" after deletion from details page
+      router.push("/");
+    } catch (err: any) {
+      alert(err.message || "Không thể xóa phiên đấu giá");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   const suggestedPrice = currentPrice + bidIncrement;
   const [bidAmount, setBidAmount] = useState<string>("");
   const [isProxy, setIsProxy] = useState(false);
@@ -199,21 +229,25 @@ export default function BiddingPanel({
           <div>
             <p className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">
               <span className="material-symbols-outlined text-[16px]">schedule</span>
-              Kết thúc lúc {formatEndDate(endTime)}
+              {status === "scheduled" && startTime ? (
+                <>Bắt đầu lúc {formatEndDate(startTime)}</>
+              ) : (
+                <>Kết thúc lúc {formatEndDate(endTime)}</>
+              )}
             </p>
-            {isExtended && (
+            {status !== "scheduled" && isExtended && (
               <p className="text-[10px] text-orange-600 font-bold mt-1 flex items-center gap-1">
                 <span className="material-symbols-outlined text-[12px]">update</span>
                 Đã gia hạn {extendCount} lần
               </p>
             )}
           </div>
-          <CountdownTimer endTime={endTime} />
+          <CountdownTimer endTime={status === "scheduled" && startTime ? startTime : endTime} />
         </div>
       </div>
 
       {/* Bid Input */}
-      {isActive && isLoggedIn && (
+      {isActive && isLoggedIn && !isHost && (
         <div className="mb-4">
           <div className="relative mb-3">
             <input
@@ -223,6 +257,7 @@ export default function BiddingPanel({
               placeholder={isProxy ? `Giá tối đa (Tối thiểu ${formatVND(suggestedPrice)})` : `Nhập giá (Tối thiểu ${formatVND(suggestedPrice)})`}
               onKeyDown={(e) => e.key === "Enter" && !isBidDisabled && handleBidClick()}
               disabled={isBidDisabled}
+              aria-label="Nhập giá đặt"
               className={`w-full pl-4 pr-12 py-3 bg-white border-2 rounded-none text-base font-bold focus:ring-0 outline-none transition-all placeholder:text-slate-400 placeholder:font-normal shadow-[inset_2px_2px_0px_#f1f5f9] disabled:opacity-50 disabled:bg-slate-50 text-slate-800 ${
                 displayError
                   ? "border-red-400"
@@ -262,7 +297,54 @@ export default function BiddingPanel({
 
       {/* CTA Buttons */}
       <div className="space-y-3">
-        {isActive && isLoggedIn ? (
+        {isHost ? (
+          status === "active" ? (
+            <div className="space-y-2 border-t-2 border-slate-100 dark:border-slate-700 pt-4 mt-2">
+              <div className="flex justify-between items-center py-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary text-[20px]">person</span>
+                  <span className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400">Người dẫn đầu</span>
+                </div>
+                <span className="text-sm sm:text-base font-bold text-slate-800 dark:text-white truncate max-w-[200px]" title={leaderName || "Chưa có"}>
+                  {leaderName || "Chưa có"}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary text-[20px]">gavel</span>
+                  <span className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400">Số lượt đặt</span>
+                </div>
+                <span className="text-sm sm:text-base font-bold text-slate-800 dark:text-white">
+                  {totalBids ?? 0} lượt
+                </span>
+              </div>
+            </div>
+          ) : status === "scheduled" ? (
+            <div className="flex gap-3">
+              <button
+                onClick={() => router.push(`/auction/${auctionId}/edit`)}
+                className="flex-1 py-3 bg-[#0066FF] text-white font-bold text-base rounded-full border-2 border-[#0066FF] shadow-[4px_4px_0px_#bfdbfe] hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_#bfdbfe] active:translate-y-0 active:shadow-[2px_2px_0px_#bfdbfe] transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[20px]">edit</span>
+                Chỉnh sửa
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="flex-1 py-3 font-bold text-sm sm:text-base rounded-full border-2 border-red-500 bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 shadow-[3px_3px_0px_#fecaca] dark:shadow-[3px_3px_0px_#7f1d1d/40] hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#fecaca] hover:bg-red-100 dark:hover:bg-red-900/30 active:translate-y-0 active:shadow-[2px_2px_0px_#fecaca] transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[18px]">delete</span>
+                Xóa phiên
+              </button>
+            </div>
+          ) : (
+            <button
+              disabled
+              className="w-full py-3 bg-slate-200 text-slate-500 font-bold text-base rounded-full border-2 border-slate-200 cursor-default flex items-center justify-center gap-2"
+            >
+              ĐÃ KẾT THÚC
+            </button>
+          )
+        ) : isActive && isLoggedIn ? (
           <>
             {/* Info Texts above button */}
             {displayError && (
@@ -358,6 +440,36 @@ export default function BiddingPanel({
         )}
       </div>
 
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in" onClick={() => setShowDeleteConfirm(false)}>
+          <div className="bg-white dark:bg-slate-800 w-full max-w-md border-2 border-slate-200 dark:border-slate-700 shadow-[8px_8px_0px_#fca5a5] rounded-2xl overflow-hidden animate-slide-up" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 border-2 border-red-300 dark:border-red-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="material-symbols-outlined text-red-600 dark:text-red-500 text-3xl">delete_forever</span>
+              </div>
+              <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Xác nhận xóa phiên</h3>
+              <p className="text-slate-600 dark:text-slate-300 mb-6 leading-relaxed">
+                Bạn có chắc chắn muốn xóa phiên đấu giá này không? Hành động này không thể hoàn tác.
+              </p>
+              <div className="flex gap-3">
+                <button onClick={() => setShowDeleteConfirm(false)} disabled={deleteLoading} className="flex-1 py-3 font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 border-2 border-slate-200 transition-all cursor-pointer rounded-xl">
+                  Hủy bỏ
+                </button>
+                <button onClick={handleDelete} disabled={deleteLoading} className="flex-1 py-3 font-bold text-white bg-red-600 border-2 border-red-600 hover:bg-red-700 shadow-[4px_4px_0px_#fca5a5] hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_#fca5a5] active:translate-y-0 active:shadow-[2px_2px_0px_#fca5a5] transition-all cursor-pointer rounded-xl flex items-center justify-center gap-2">
+                  {deleteLoading && (
+                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  )}
+                  {deleteLoading ? "Đang xóa..." : "Xác nhận xóa"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
