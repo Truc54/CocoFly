@@ -176,6 +176,9 @@ export class AuctionRepository {
         seller: {
           select: { id: true, fullName: true, avatarUrl: true, rating: true },
         },
+        winner: {
+          select: { id: true, fullName: true, avatarUrl: true },
+        },
         bids: {
           orderBy: { createdAt: 'desc' },
           take: 10,
@@ -491,5 +494,251 @@ export class AuctionRepository {
         data: { status: 'active' },
       });
     });
+  }
+
+  // ── Seller Auction Management ──────────────────────────────────────────────
+
+  async findSellerAuctions(sellerId: string, statuses: AuctionStatus[], page: number, limit: number) {
+    const where: Prisma.AuctionWhereInput = {
+      sellerId,
+      status: { in: statuses },
+    };
+
+    const [auctions, total] = await Promise.all([
+      prisma.auction.findMany({
+        where,
+        include: {
+          item: {
+            include: {
+              media: { where: { sortOrder: 0 }, take: 1 },
+              category: { select: { id: true, name: true } },
+            },
+          },
+          winner: { select: { id: true, fullName: true, avatarUrl: true } },
+          payments: {
+            where: { status: { in: ['pending', 'processing', 'paid', 'escrow_released'] } },
+            select: { id: true, status: true, shippingStatus: true },
+            take: 1,
+            orderBy: { createdAt: 'desc' },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.auction.count({ where }),
+    ]);
+
+    return { auctions, total };
+  }
+
+  async getSellerAuctionCounts(sellerId: string) {
+    const [ongoing, upcoming, ended] = await Promise.all([
+      prisma.auction.count({
+        where: { sellerId, status: AuctionStatus.active },
+      }),
+      prisma.auction.count({
+        where: { sellerId, status: AuctionStatus.scheduled },
+      }),
+      prisma.auction.count({
+        where: { sellerId, status: { in: [AuctionStatus.ended, AuctionStatus.failed] } },
+      }),
+    ]);
+    return { ongoing, upcoming, ended };
+  }
+
+  async deleteScheduledAuction(auctionId: string, sellerId: string) {
+    return prisma.$transaction(async (tx) => {
+      const auction = await tx.auction.findUnique({
+        where: { id: auctionId },
+        select: { id: true, sellerId: true, status: true, itemId: true },
+      });
+
+      if (!auction) throw new Error('Phiên đấu giá không tồn tại');
+      if (auction.sellerId !== sellerId) throw new Error('Bạn không có quyền xóa phiên đấu giá này');
+      if (auction.status !== AuctionStatus.scheduled) throw new Error('Chỉ có thể xóa phiên đấu giá chưa bắt đầu');
+
+      // Delete chatRoom, auction, media, item (cascade order)
+      await tx.chatRoom.deleteMany({ where: { auctionId } });
+      await tx.auction.delete({ where: { id: auctionId } });
+      await tx.itemMedia.deleteMany({ where: { itemId: auction.itemId } });
+      await tx.item.delete({ where: { id: auction.itemId } });
+
+      return { itemId: auction.itemId };
+    });
+  }
+
+  async updateScheduledAuction(auctionId: string, sellerId: string, data: {
+    title?: string;
+    description?: string;
+    condition?: string;
+    brand?: string;
+    location?: string;
+    categoryId?: number;
+    startingPrice?: number;
+    buyoutPrice?: number | null;
+    bidIncrement?: number;
+    scheduledStart?: string;
+    endTime?: string;
+    media?: any[];
+  }) {
+    return prisma.$transaction(async (tx) => {
+      const auction = await tx.auction.findUnique({
+        where: { id: auctionId },
+        select: { id: true, sellerId: true, status: true, itemId: true },
+      });
+
+      if (!auction) throw new Error('Phiên đấu giá không tồn tại');
+      if (auction.sellerId !== sellerId) throw new Error('Bạn không có quyền chỉnh sửa phiên đấu giá này');
+      if (auction.status !== AuctionStatus.scheduled) throw new Error('Chỉ có thể chỉnh sửa phiên đấu giá chưa bắt đầu');
+
+      // Update Item fields
+      const itemUpdate: Record<string, any> = {};
+      if (data.title !== undefined) itemUpdate.title = data.title;
+      if (data.description !== undefined) itemUpdate.description = data.description;
+      if (data.condition !== undefined) itemUpdate.condition = data.condition;
+      if (data.brand !== undefined) itemUpdate.brand = data.brand;
+      if (data.location !== undefined) itemUpdate.location = data.location;
+      if (data.categoryId !== undefined) itemUpdate.categoryId = data.categoryId;
+
+      if (Object.keys(itemUpdate).length > 0) {
+        await tx.item.update({ where: { id: auction.itemId }, data: itemUpdate });
+      }
+
+      // Update Auction fields
+      const auctionUpdate: Record<string, any> = {};
+      if (data.startingPrice !== undefined) {
+        auctionUpdate.startingPrice = new Decimal(data.startingPrice);
+        auctionUpdate.currentPrice = new Decimal(data.startingPrice);
+      }
+      if (data.buyoutPrice !== undefined) {
+        auctionUpdate.buyoutPrice = data.buyoutPrice !== null ? new Decimal(data.buyoutPrice) : null;
+      }
+      if (data.bidIncrement !== undefined) auctionUpdate.bidIncrement = new Decimal(data.bidIncrement);
+      if (data.scheduledStart !== undefined) auctionUpdate.scheduledStart = new Date(data.scheduledStart);
+      if (data.endTime !== undefined) auctionUpdate.endTime = new Date(data.endTime);
+
+      if (Object.keys(auctionUpdate).length > 0) {
+        await tx.auction.update({ where: { id: auctionId }, data: auctionUpdate });
+      }
+
+      let removedMediaKeys: string[] = [];
+
+      // Update Media
+      if (data.media) {
+        // Fetch existing media to determine what was removed
+        const existingMedia = await tx.itemMedia.findMany({
+          where: { itemId: auction.itemId },
+          select: { storageKey: true },
+        });
+
+        const newMediaKeys = data.media.map((m: any) => m.storageKey);
+        removedMediaKeys = existingMedia
+          .map(m => m.storageKey)
+          .filter(key => !newMediaKeys.includes(key));
+
+        // Delete all old media for this item
+        await tx.itemMedia.deleteMany({ where: { itemId: auction.itemId } });
+
+        // Insert new media
+        await tx.itemMedia.createMany({
+          data: data.media.map((m: any, index: number) => ({
+            itemId: auction.itemId,
+            uploaderId: sellerId,
+            type: 'image' as const,
+            purpose: m.sortOrder === 0 ? 'thumbnail' as const : 'gallery' as const,
+            storageKey: m.storageKey,
+            cdnUrl: m.cdnUrl,
+            mimeType: m.mimeType || 'image/jpeg',
+            fileSize: m.fileSize ? BigInt(m.fileSize) : null,
+            width: m.width || 0,
+            height: m.height || 0,
+            sortOrder: m.sortOrder !== undefined ? m.sortOrder : index,
+            processStatus: 'ready' as const,
+          })),
+        });
+      }
+
+      return { auctionId, itemId: auction.itemId, removedMediaKeys };
+    });
+  }
+
+  // ── Watchlist (Favorites) ─────────────────────────────────────────────────
+
+  async toggleWatch(auctionId: string, userId: string): Promise<boolean> {
+    const existing = await prisma.auctionWatcher.findUnique({
+      where: { auctionId_userId: { auctionId, userId } },
+    });
+
+    if (existing) {
+      await prisma.$transaction([
+        prisma.auctionWatcher.delete({
+          where: { auctionId_userId: { auctionId, userId } },
+        }),
+        prisma.auction.update({
+          where: { id: auctionId },
+          data: { totalWatchers: { decrement: 1 } },
+        }),
+      ]);
+      return false; // unwatched
+    }
+
+    await prisma.$transaction([
+      prisma.auctionWatcher.create({
+        data: { auctionId, userId },
+      }),
+      prisma.auction.update({
+        where: { id: auctionId },
+        data: { totalWatchers: { increment: 1 } },
+      }),
+    ]);
+    return true; // watched
+  }
+
+  async isWatching(auctionId: string, userId: string): Promise<boolean> {
+    const record = await prisma.auctionWatcher.findUnique({
+      where: { auctionId_userId: { auctionId, userId } },
+    });
+    return !!record;
+  }
+
+  async getWatchlist(userId: string, page: number, limit: number) {
+    const where = { userId };
+    const skip = (page - 1) * limit;
+
+    const [watchers, total] = await Promise.all([
+      prisma.auctionWatcher.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+        include: {
+          auction: {
+            include: {
+              item: {
+                include: {
+                  media: { where: { sortOrder: 0 }, take: 1 },
+                  category: { select: { id: true, name: true } },
+                },
+              },
+              seller: {
+                select: { id: true, fullName: true, avatarUrl: true, rating: true },
+              },
+            },
+          },
+        },
+      }),
+      prisma.auctionWatcher.count({ where }),
+    ]);
+
+    return { watchers, total };
+  }
+
+  async getWatchedAuctionIds(userId: string, auctionIds: string[]): Promise<string[]> {
+    const records = await prisma.auctionWatcher.findMany({
+      where: { userId, auctionId: { in: auctionIds } },
+      select: { auctionId: true },
+    });
+    return records.map((r) => r.auctionId);
   }
 }

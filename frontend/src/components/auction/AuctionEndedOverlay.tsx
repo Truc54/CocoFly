@@ -1,97 +1,91 @@
 "use client";
 
-import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { paymentApi } from "@/lib/api";
-import { authStorage } from "@/lib/auth-storage";
-
 function formatVND(n: number) {
   return n.toLocaleString("vi-VN");
 }
 
-interface AuctionEndedOverlayProps {
-  winnerId: string | null;
-  finalPrice: number | null;
-  isBuyout: boolean;
+function formatDate(dateString: string) {
+  try {
+    const d = new Date(dateString);
+    return new Intl.DateTimeFormat('vi-VN', {
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit'
+    }).format(d);
+  } catch {
+    return dateString;
+  }
 }
 
-export default function AuctionEndedOverlay({ winnerId, finalPrice, isBuyout }: AuctionEndedOverlayProps) {
-  const [declining, setDeclining] = useState(false);
-  const user = authStorage.getUser() as { id?: string } | null;
-  const isWinner = user?.id && winnerId && user.id === winnerId;
-  const params = useParams();
-  const router = useRouter();
-  const auctionId = params?.id as string;
+interface AuctionEndedOverlayProps {
+  winnerId: string | null;
+  winnerName: string | null;
+  finalPrice: number | null;
+  isBuyout: boolean;
+  startTime: string;
+  endTime: string;
+  totalBids: number;
+}
 
+export default function AuctionEndedOverlay({
+  winnerId,
+  winnerName,
+  finalPrice,
+  isBuyout,
+  startTime,
+  endTime,
+  totalBids,
+}: AuctionEndedOverlayProps) {
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-none border-2 border-slate-800 dark:border-slate-600 p-6 shadow-[6px_6px_0px_#1e293b]">
+    <div className="bg-white dark:bg-slate-800 rounded-none border-2 border-[#8f5c38] p-8 shadow-[6px_6px_0px_#E2B9A1] relative">
       {/* Header */}
-      <div className="text-center mb-6">
-        <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-slate-100 border-2 border-slate-800 flex items-center justify-center shadow-[3px_3px_0px_#1e293b]">
-          <span className="material-symbols-outlined text-3xl text-slate-800">
-            {winnerId ? "emoji_events" : "cancel"}
+      <div className="flex flex-col items-center justify-center text-center mb-8">
+        <div className="mb-4">
+          <span className="material-symbols-outlined text-[48px] text-[#8f5c38]">
+            {winnerId ? "workspace_premium" : "cancel"}
           </span>
         </div>
-        <h3 className="text-lg font-extrabold text-slate-800 dark:text-white uppercase tracking-wide">
+        <h3 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-widest">
           {isBuyout ? "ĐÃ MUA NGAY" : winnerId ? "ĐẤU GIÁ KẾT THÚC" : "KHÔNG CÓ NGƯỜI THẮNG"}
         </h3>
       </div>
 
-      {/* Result */}
-      {finalPrice && (
-        <div className="text-center mb-6 p-4 bg-slate-50 dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 rounded-none">
-          <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-1">Giá cuối</p>
-          <p className="text-2xl font-extrabold text-slate-800 dark:text-white tabular-nums">
-            {formatVND(finalPrice)} <span className="text-base text-slate-500">VNĐ</span>
-          </p>
-        </div>
-      )}
+      <hr className="border-t-2 border-slate-200 dark:border-slate-700 border-dashed mb-6" />
 
-      {/* Winner Actions */}
-      {isWinner && (
-        <div className="space-y-3">
-          <div className="text-center p-3 bg-green-50 border-2 border-green-200 rounded-none">
-            <p className="text-sm font-bold text-green-700 flex items-center justify-center gap-2">
-              <span className="material-symbols-outlined text-lg">celebration</span>
-              Chúc mừng! Bạn đã thắng!
-            </p>
+      {/* Info List */}
+      <div className="space-y-4 px-2 sm:px-6">
+        <div className="flex justify-between items-baseline">
+          <span className="text-xs font-bold text-slate-800 uppercase tracking-widest">Bắt đầu lúc</span>
+          <span className="text-base font-bold text-slate-800 dark:text-slate-200">{formatDate(startTime)}</span>
+        </div>
+        
+        <div className="flex justify-between items-baseline">
+          <span className="text-xs font-bold text-slate-800 uppercase tracking-widest">Kết thúc lúc</span>
+          <span className="text-base font-bold text-slate-800 dark:text-slate-200">{formatDate(endTime)}</span>
+        </div>
+
+        <div className="flex justify-between items-baseline">
+          <span className="text-xs font-bold text-slate-800 uppercase tracking-widest">Số lượt đặt</span>
+          <span className="text-base font-bold text-slate-800 dark:text-slate-200">{totalBids}</span>
+        </div>
+
+        {winnerId && (
+          <div className="flex justify-between items-baseline pt-2">
+            <span className="text-xs font-bold text-slate-800 uppercase tracking-widest">Người chiến thắng</span>
+            <span className="text-lg font-black text-[#E25C24] uppercase tracking-wide">{winnerName || "Ẩn danh"}</span>
           </div>
+        )}
 
-          <button 
-            onClick={() => router.push(`/checkout/${auctionId}`)}
-            className="w-full py-3 bg-[#0066FF] text-white font-bold text-base rounded-full border-2 border-[#0066FF] shadow-[4px_4px_0px_#bfdbfe] hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_#bfdbfe] transition-all flex items-center justify-center gap-2 cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[20px]">payment</span>
-            Thanh toán ngay
-          </button>
-
-          <button
-            onClick={async () => {
-              if (declining) return;
-              // TODO: Need paymentId — for now this is a placeholder
-              setDeclining(true);
-            }}
-            disabled={declining}
-            className="w-full py-2.5 bg-white text-slate-500 font-medium text-sm rounded-full border-2 border-slate-200 hover:border-red-300 hover:text-red-600 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-          >
-            <span className="material-symbols-outlined text-[16px]">close</span>
-            Từ chối mua
-          </button>
-        </div>
-      )}
-
-      {/* Non-winner view */}
-      {!isWinner && winnerId && (
-        <div className="text-center text-sm text-slate-500">
-          <p>Phiên đấu giá đã kết thúc thành công.</p>
-        </div>
-      )}
-
-      {!winnerId && (
-        <div className="text-center text-sm text-slate-500">
-          <p>Không có lượt đặt giá nào. Sản phẩm đã được mở khóa.</p>
-        </div>
-      )}
+        {finalPrice !== null && finalPrice > 0 && (
+          <>
+            <hr className="border-t border-slate-100 dark:border-slate-700 my-2" />
+            <div className="flex justify-between items-baseline">
+              <span className="text-xs font-bold text-slate-800 uppercase tracking-widest">Giá chốt cuối cùng</span>
+              <span className="text-xl font-black text-[#E25C24]">{formatVND(finalPrice)} VNĐ</span>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
+

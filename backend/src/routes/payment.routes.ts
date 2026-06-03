@@ -23,6 +23,8 @@ paymentRoutes.get('/momo/return', controller.momoReturn.bind(controller));
 // ── Buyer Routes (PROTECTED — need auth) ─────────────────────────────────
 paymentRoutes.use(authGuard); // Apply authGuard to all routes below this line for buyers and admins
 paymentRoutes.post('/:id/initiate', controller.initiatePayment.bind(controller));
+paymentRoutes.patch('/:id/confirm-shipping', controller.confirmShipping.bind(controller));
+paymentRoutes.patch('/:id/confirm-delivery', controller.confirmDelivery.bind(controller));
 paymentRoutes.get('/auction/:auctionId', controller.getByAuction.bind(controller));
 paymentRoutes.get('/my/:role', controller.getMyPayments.bind(controller));
 paymentRoutes.get('/:id', controller.getById.bind(controller));

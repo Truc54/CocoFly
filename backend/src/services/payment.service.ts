@@ -4,6 +4,8 @@ import { createMoMoPayment, verifyMoMoIPN, MOMO_RESULT_CODES } from '../gateways
 import { cancelPaymentTimeout, scheduleShippingTimeout } from '../queues/payment.queue';
 import prisma from '../config/prisma';
 import { PaymentMethod } from '@prisma/client';
+import { AppError } from '../utils/AppError';
+import { NotificationService } from './notification.service';
 
 /**
  * Service Layer:
@@ -50,8 +52,9 @@ export class PaymentService {
 
     switch (method) {
       case 'vnpay': {
+        const uniqueOrderId = `${paymentId}_${Date.now()}`;
         const url = createVNPayUrl({
-          orderId: paymentId,
+          orderId: uniqueOrderId,
           amount,
           orderInfo,
           ipAddress,
@@ -60,8 +63,9 @@ export class PaymentService {
       }
 
       case 'momo': {
+        const uniqueOrderId = `${paymentId}_${Date.now()}`;
         const result = await createMoMoPayment({
-          orderId: paymentId,
+          orderId: uniqueOrderId,
           amount,
           orderInfo,
         });
@@ -104,55 +108,64 @@ export class PaymentService {
     const result = verifyVNPayReturn(query);
 
     if (!result.isValid) {
-      return { success: false, paymentId: result.orderId, message: 'Chữ ký không hợp lệ' };
+      return { success: false, paymentId: result.orderId.split('_')[0], message: 'Chữ ký không hợp lệ' };
     }
 
-    const payment = await this.paymentRepo.findById(result.orderId);
+    const paymentId = result.orderId.split('_')[0];
+    const payment = await this.paymentRepo.findById(paymentId);
     if (!payment) {
-      return { success: false, paymentId: result.orderId, message: 'Không tìm thấy thanh toán' };
+      return { success: false, paymentId, message: 'Không tìm thấy thanh toán' };
     }
 
     // Already paid (idempotency)
     if (payment.status === 'paid' || payment.status === 'escrow_released') {
-      return { success: true, paymentId: result.orderId, message: 'Đã thanh toán' };
+      return { success: true, paymentId, message: 'Đã thanh toán' };
     }
 
     if (result.responseCode === '00') {
       await this.markAsPaid(payment.id, result.transactionId);
-      return { success: true, paymentId: result.orderId, message: 'Thanh toán thành công' };
+      return { success: true, paymentId, message: 'Thanh toán thành công' };
     }
 
     // Payment failed — revert to pending so buyer can retry
     await this.paymentRepo.updateStatus(payment.id, { status: 'pending' });
     const errorMsg = VNPAY_RESPONSE_CODES[result.responseCode] || 'Giao dịch thất bại';
-    return { success: false, paymentId: result.orderId, message: errorMsg };
+    return { success: false, paymentId, message: errorMsg };
   }
 
   // ── MoMo IPN Handler ───────────────────────────────────────────────────
-  async handleMoMoIPN(data: any): Promise<{ success: boolean; message: string }> {
+  async handleMoMoIPN(data: any): Promise<{ success: boolean; paymentId: string; message: string }> {
     const result = verifyMoMoIPN(data);
+    const originalPaymentId = result.orderId ? result.orderId.split('_')[0] : '';
 
     if (!result.isValid) {
-      return { success: false, message: 'Chữ ký không hợp lệ' };
+      return { success: false, paymentId: originalPaymentId, message: 'Chữ ký không hợp lệ' };
     }
 
-    const payment = await this.paymentRepo.findById(result.orderId);
+    const paymentId = result.orderId.split('_')[0];
+    const payment = await this.paymentRepo.findById(paymentId);
     if (!payment) {
-      return { success: false, message: 'Không tìm thấy thanh toán' };
+      return { success: false, paymentId, message: 'Không tìm thấy thanh toán' };
     }
 
     if (payment.status === 'paid' || payment.status === 'escrow_released') {
-      return { success: true, message: 'Đã thanh toán' };
+      return { success: true, paymentId, message: 'Đã thanh toán' };
     }
 
-    if (result.resultCode === 0) {
-      await this.markAsPaid(payment.id, result.transactionId);
-      return { success: true, message: 'Thanh toán thành công' };
+    if (result.resultCode == 0 || result.resultCode == 9000) {
+      try {
+        await this.markAsPaid(payment.id, result.transactionId);
+        return { success: true, paymentId, message: 'Thanh toán thành công' };
+      } catch (err: any) {
+        console.error('MoMo markAsPaid Error:', err);
+        return { success: false, paymentId, message: err.message };
+      }
     }
 
     await this.paymentRepo.updateStatus(payment.id, { status: 'pending' });
-    const errorMsg = MOMO_RESULT_CODES[result.resultCode] || result.message;
-    return { success: false, message: errorMsg };
+    const code = Number(result.resultCode);
+    const errorMsg = MOMO_RESULT_CODES[code] || result.message || 'Lỗi giao dịch';
+    return { success: false, paymentId, message: errorMsg };
   }
 
   // ── Admin: Confirm Banking Payment ─────────────────────────────────────
@@ -181,15 +194,14 @@ export class PaymentService {
       note: `Hoàn tiền ${amount.toLocaleString()}₫ | Lý do: ${reason} | Admin: ${adminId}`,
     });
 
+    const notificationService = new NotificationService();
     // Notify buyer
-    await prisma.notification.create({
-      data: {
-        userId: payment.buyerId,
-        auctionId: payment.auctionId,
-        type: 'payment_confirmed',
-        title: 'Hoàn tiền thành công',
-        message: `Bạn đã được hoàn ${amount.toLocaleString()}₫. Lý do: ${reason}`,
-      },
+    await notificationService.send({
+      userId: payment.buyerId,
+      auctionId: payment.auctionId,
+      type: 'payment_confirmed',
+      title: 'Hoàn tiền thành công',
+      message: `Bạn đã được hoàn ${amount.toLocaleString()}₫. Lý do: ${reason}`,
     });
   }
 
@@ -206,6 +218,82 @@ export class PaymentService {
     return role === 'buyer'
       ? this.paymentRepo.findPaymentsByBuyer(userId)
       : this.paymentRepo.findPaymentsBySeller(userId);
+  }
+
+  // ── Seller: Confirm Shipping ──────────────────────────────────────────────
+  async confirmShipping(paymentId: string, sellerId: string): Promise<void> {
+    const payment = await this.paymentRepo.findForShipping(paymentId);
+
+    if (!payment) throw new AppError('Không tìm thấy thanh toán', 404);
+    if (payment.sellerId !== sellerId) throw new AppError('Bạn không có quyền xác nhận giao hàng này', 403);
+    if (payment.status !== 'paid') throw new AppError('Thanh toán chưa được xác nhận', 400);
+    if (payment.shippingStatus !== 'pending') throw new AppError('Đã xác nhận giao hàng trước đó', 400);
+
+    await prisma.payment.update({
+      where: { id: paymentId },
+      data: {
+        shippingStatus: 'shipped',
+        shippedAt: new Date(),
+      },
+    });
+
+    const notificationService = new NotificationService();
+    const itemTitle = payment.auction?.item?.title || 'Sản phẩm';
+
+    await notificationService.send({
+      userId: payment.buyerId,
+      auctionId: payment.auctionId,
+      type: 'shipping_update',
+      title: 'Người bán đã gửi hàng!',
+      message: `Sản phẩm "${itemTitle}" đã được gửi đi. Vui lòng xác nhận khi nhận được hàng.`,
+    });
+  }
+
+  // ── Buyer: Confirm Delivery ──────────────────────────────────────────────
+  async confirmDelivery(paymentId: string, buyerId: string): Promise<void> {
+    const payment = await this.paymentRepo.findById(paymentId);
+
+    if (!payment) throw new AppError('Không tìm thấy thanh toán', 404);
+    if (payment.buyerId !== buyerId) throw new AppError('Bạn không có quyền thực hiện thao tác này', 403);
+    if (payment.status !== 'paid') throw new AppError('Thanh toán chưa hoàn tất', 400);
+    if (payment.shippingStatus !== 'shipped') throw new AppError('Đơn hàng chưa được giao, không thể xác nhận', 400);
+
+    // Update payment to delivered, release escrow, and update seller balance
+    await prisma.$transaction([
+      prisma.payment.update({
+        where: { id: paymentId },
+        data: {
+          shippingStatus: 'delivered',
+          deliveredAt: new Date(),
+          status: 'escrow_released',
+        },
+      }),
+      prisma.user.update({
+        where: { id: payment.sellerId },
+        data: {
+          balance: { increment: payment.sellerAmount }
+        }
+      })
+    ]);
+
+    const notificationService = new NotificationService();
+    // Notify seller
+    await notificationService.send({
+      userId: payment.sellerId,
+      auctionId: payment.auctionId,
+      type: 'payment_confirmed',
+      title: 'Người mua đã nhận hàng!',
+      message: `${Number(payment.sellerAmount).toLocaleString()}₫ đã được chuyển vào tài khoản của bạn.`,
+    });
+
+    // Notify buyer
+    await notificationService.send({
+      userId: payment.buyerId,
+      auctionId: payment.auctionId,
+      type: 'system',
+      title: 'Xác nhận nhận hàng thành công',
+      message: 'Cảm ơn bạn đã sử dụng CocoFly. Đừng quên đánh giá sản phẩm nhé!',
+    });
   }
 
   // ── Private: Mark as paid + cancel timeout + schedule shipping ─────────
@@ -228,26 +316,24 @@ export class PaymentService {
     // Schedule shipping timeout (seller has 5 days to ship)
     await scheduleShippingTimeout(paymentId, payment.sellerId);
 
+    const notificationService = new NotificationService();
+
     // Notify buyer: payment confirmed
-    await prisma.notification.create({
-      data: {
-        userId: payment.buyerId,
-        auctionId: payment.auctionId,
-        type: 'payment_confirmed',
-        title: 'Thanh toán thành công!',
-        message: `Thanh toán ${Number(payment.amount).toLocaleString()}₫ cho "${payment.auction.item.title}" đã được xác nhận.`,
-      },
+    await notificationService.send({
+      userId: payment.buyerId,
+      auctionId: payment.auctionId,
+      type: 'payment_confirmed',
+      title: 'Thanh toán thành công!',
+      message: `Thanh toán ${Number(payment.amount).toLocaleString()}₫ cho "${payment.auction.item.title}" đã được xác nhận.`,
     });
 
     // Notify seller: buyer has paid, ship within 5 days
-    await prisma.notification.create({
-      data: {
-        userId: payment.sellerId,
-        auctionId: payment.auctionId,
-        type: 'payment_confirmed',
-        title: 'Người mua đã thanh toán!',
-        message: `Vui lòng gửi hàng trong vòng 5 ngày.`,
-      },
+    await notificationService.send({
+      userId: payment.sellerId,
+      auctionId: payment.auctionId,
+      type: 'payment_confirmed',
+      title: 'Người mua đã thanh toán!',
+      message: `Vui lòng gửi hàng trong vòng 5 ngày.`,
     });
   }
 }

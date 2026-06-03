@@ -76,16 +76,21 @@ export class PaymentController {
 
   // GET /api/payments/momo/return — MoMo redirects buyer back
   async momoReturn(req: Request, res: Response): Promise<void> {
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    const resultCode = req.query.resultCode as string;
-    const orderId = req.query.orderId as string;
-    const success = resultCode === '0';
-    const params = new URLSearchParams({
-      success: success.toString(),
-      paymentId: orderId || '',
-      message: success ? 'Thanh toán thành công' : 'Thanh toán thất bại',
-    });
-    res.redirect(`${frontendUrl}/payments/result?${params.toString()}`);
+    try {
+      // Process MoMo return exactly like IPN to update DB synchronously during localhost dev
+      const result = await this.paymentService.handleMoMoIPN(req.query);
+
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      const params = new URLSearchParams({
+        success: result.success.toString(),
+        paymentId: result.paymentId,
+        message: result.message,
+      });
+      res.redirect(`${frontendUrl}/payments/result?${params.toString()}`);
+    } catch (error: any) {
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      res.redirect(`${frontendUrl}/payments/result?success=false&message=${encodeURIComponent(error.message)}`);
+    }
   }
 
   // POST /api/payments/:id/confirm — Admin confirms banking transfer
@@ -156,6 +161,34 @@ export class PaymentController {
       res.status(200).json({ success: true, data: payments });
     } catch (error: any) {
       res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  // PATCH /api/payments/:id/confirm-shipping — Seller confirms shipment
+  async confirmShipping(req: Request, res: Response): Promise<void> {
+    try {
+      const paymentId = req.params.id as string;
+      const sellerId = (req as any).user?.userId;
+
+      await this.paymentService.confirmShipping(paymentId, sellerId);
+      res.status(200).json({ success: true, message: 'Đã xác nhận giao hàng' });
+    } catch (error: any) {
+      const statusCode = error.statusCode || 400;
+      res.status(statusCode).json({ success: false, message: error.message });
+    }
+  }
+
+  // PATCH /api/payments/:id/confirm-delivery — Buyer confirms receipt
+  async confirmDelivery(req: Request, res: Response): Promise<void> {
+    try {
+      const paymentId = req.params.id as string;
+      const buyerId = (req as any).user?.userId;
+
+      await this.paymentService.confirmDelivery(paymentId, buyerId);
+      res.status(200).json({ success: true, message: 'Đã xác nhận nhận hàng' });
+    } catch (error: any) {
+      const statusCode = error.statusCode || 400;
+      res.status(statusCode).json({ success: false, message: error.message });
     }
   }
 }

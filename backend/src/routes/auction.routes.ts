@@ -19,6 +19,8 @@ const auctionController = new AuctionController();
 auctionRoutes.get('/live', auctionController.getLiveAuctions.bind(auctionController));
 auctionRoutes.get('/upcoming', auctionController.getUpcomingAuctions.bind(auctionController));
 auctionRoutes.get('/suggestions', auctionController.getSuggestions.bind(auctionController));
+auctionRoutes.get('/my-listings', authGuard, auctionController.getMyListings.bind(auctionController));
+auctionRoutes.get('/watchlist', authGuard, auctionController.getWatchlist.bind(auctionController));
 
 // ── Create auction (Seller only — authGuard verifies JWT, service verifies role)
 auctionRoutes.post(
@@ -34,6 +36,20 @@ auctionRoutes.get(
   auctionController.getAuction.bind(auctionController),
 );
 
+// ── Update auction (Seller only — scheduled auctions)
+auctionRoutes.put(
+  '/:auctionId',
+  authGuard,
+  auctionController.updateAuction.bind(auctionController),
+);
+
+// ── Delete auction (Seller only — scheduled auctions)
+auctionRoutes.delete(
+  '/:auctionId',
+  authGuard,
+  auctionController.deleteAuction.bind(auctionController),
+);
+
 // ── Get bid history for an auction (public)
 auctionRoutes.get(
   '/:auctionId/bids',
@@ -47,6 +63,20 @@ auctionRoutes.get(
   auctionController.getMyBidStatus.bind(auctionController),
 );
 
+// ── Watchlist (Favorites) ───────────────────────────────────────────────────
+
+auctionRoutes.post(
+  '/:auctionId/watch',
+  authGuard,
+  auctionController.toggleWatch.bind(auctionController),
+);
+
+auctionRoutes.get(
+  '/:auctionId/watch-status',
+  authGuard,
+  auctionController.getWatchStatus.bind(auctionController),
+);
+
 // ── Payment routes ──────────────────────────────────────────────────────────
 
 // Runner-up declines purchase (no penalty)
@@ -54,5 +84,13 @@ auctionRoutes.post(
   '/payments/:paymentId/decline',
   authGuard,
   auctionController.declinePayment.bind(auctionController),
+);
+
+// ── Review routes ───────────────────────────────────────────────────────────
+
+auctionRoutes.post(
+  '/:auctionId/review',
+  authGuard,
+  auctionController.addReview.bind(auctionController),
 );
 

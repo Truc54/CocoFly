@@ -41,12 +41,16 @@ export interface AuctionDetail {
   bidIncrement: number;
   scheduledStart: string;
   endTime: string;
+  actualEndTime: string | null;
   autoExtend: boolean;
   autoExtendMinutes: number | null;
   autoExtendThreshold: number | null;
   totalBids: number;
   totalWatchers: number;
   chatRoomId: string | null;
+  winnerId: string | null;
+  winnerName: string | null;
+  finalPrice: number | null;
   seller: AuctionSeller | null;
   recentBids: BidEntry[];
 }

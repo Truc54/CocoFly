@@ -26,3 +26,60 @@ userRoutes.post(
   authGuard,
   userController.saveAddress.bind(userController),
 );
+
+// GET /api/users/me/participated-auctions
+userRoutes.get(
+  '/me/participated-auctions',
+  authGuard,
+  userController.getParticipatedAuctions.bind(userController),
+);
+
+// GET /api/users/me/profile
+userRoutes.get(
+  '/me/profile',
+  authGuard,
+  userController.getMyProfile.bind(userController),
+);
+
+// PUT /api/users/me/profile
+userRoutes.put(
+  '/me/profile',
+  authGuard,
+  userController.updateProfile.bind(userController),
+);
+
+// PUT /api/users/me/notifications
+userRoutes.put(
+  '/me/notifications',
+  authGuard,
+  userController.updateNotificationSettings.bind(userController),
+);
+
+// POST /api/users/me/pin/:auctionId — toggle pin/unpin (max 3)
+userRoutes.post(
+  '/me/pin/:auctionId',
+  authGuard,
+  userController.togglePinAuction.bind(userController),
+);
+
+// GET /api/users/me/related-auctions
+userRoutes.get(
+  '/me/related-auctions',
+  authGuard,
+  userController.getMyRelatedAuctions.bind(userController),
+);
+
+// GET /api/users/me/reviews
+userRoutes.get(
+  '/me/reviews',
+  authGuard,
+  userController.getMyReviews.bind(userController),
+);
+
+// GET /api/users/me/transactions
+userRoutes.get(
+  '/me/transactions',
+  authGuard,
+  userController.getMyTransactions.bind(userController),
+);
+

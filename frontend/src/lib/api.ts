@@ -19,7 +19,8 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}): Pro
   
   // Use 'include' to securely send the HttpOnly refresh cookie to the backend
   const defaultOptions: RequestInit = {
-    credentials: "include", 
+    credentials: "include",
+    cache: "no-store", 
   };
 
   let token = authStorage.getToken();
@@ -129,6 +130,29 @@ export const userApi = {
     method: 'POST',
     body: JSON.stringify({ addressLine, phone }),
   }),
+  getParticipatedAuctions: (tab?: string, page: number = 1, limit: number = 10) => {
+    const qs = new URLSearchParams();
+    if (tab) qs.set('tab', tab);
+    qs.set('page', page.toString());
+    qs.set('limit', limit.toString());
+    return fetchApi(`/api/users/me/participated-auctions?${qs.toString()}`);
+  },
+  getMyProfile: () => fetchApi('/api/users/me/profile'),
+  updateProfile: (data: { fullName?: string; bio?: string; address?: string; avatarUrl?: string }) => fetchApi('/api/users/me/profile', {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+  updateNotificationSettings: (settings: any) => fetchApi('/api/users/me/notifications', {
+    method: 'PUT',
+    body: JSON.stringify(settings),
+  }),
+  togglePin: (auctionId: string) => fetchApi(`/api/users/me/pin/${auctionId}`, { method: 'POST' }),
+  getMyRelatedAuctions: (page: number = 1, limit: number = 8) =>
+    fetchApi(`/api/users/me/related-auctions?page=${page}&limit=${limit}`),
+  getMyReviews: (page: number = 1, limit: number = 10) =>
+    fetchApi(`/api/users/me/reviews?page=${page}&limit=${limit}`),
+  getTransactions: (page: number = 1, limit: number = 10) => 
+    fetchApi(`/api/users/me/transactions?page=${page}&limit=${limit}`),
 };
 
 export const mediaApi = {
@@ -173,6 +197,29 @@ export const auctionApi = {
     fetchApi(`/api/auctions/suggestions?q=${encodeURIComponent(q)}&status=${status}&limit=${limit}`),
   // ── Get user's bid status for an auction (requires auth)
   getMyBidStatus: (id: string) => fetchApi(`/api/auctions/${id}/my-status`),
+  // ── Seller: manage own auctions
+  getMyListings: (tab?: string, page: number = 1, limit: number = 10) => {
+    const qs = new URLSearchParams();
+    if (tab) qs.set('tab', tab);
+    qs.set('page', page.toString());
+    qs.set('limit', limit.toString());
+    return fetchApi(`/api/auctions/my-listings?${qs.toString()}`);
+  },
+  update: (id: string, data: any) => fetchApi(`/api/auctions/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+  remove: (id: string) => fetchApi(`/api/auctions/${id}`, { method: 'DELETE' }),
+  // ── Watchlist (Favorites)
+  toggleWatch: (auctionId: string) => fetchApi(`/api/auctions/${auctionId}/watch`, { method: 'POST' }),
+  getWatchlist: (page: number = 1, limit: number = 10) =>
+    fetchApi(`/api/auctions/watchlist?page=${page}&limit=${limit}`),
+  getWatchStatus: (auctionId: string) => fetchApi(`/api/auctions/${auctionId}/watch-status`),
+  // ── Review Seller
+  reviewSeller: (id: string, data: { rating: number; comment?: string }) => fetchApi(`/api/auctions/${id}/review`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
 };
 
 export const categoryApi = {
@@ -203,4 +250,8 @@ export const paymentApi = {
   }),
   decline: (paymentId: string) =>
     fetchApi(`/api/auctions/payments/${paymentId}/decline`, { method: 'POST' }),
+  confirmShipping: (paymentId: string) =>
+    fetchApi(`/api/payments/${paymentId}/confirm-shipping`, { method: 'PATCH' }),
+  confirmDelivery: (paymentId: string) =>
+    fetchApi(`/api/payments/${paymentId}/confirm-delivery`, { method: 'PATCH' }),
 };

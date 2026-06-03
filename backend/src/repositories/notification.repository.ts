@@ -108,7 +108,7 @@ export class NotificationRepository {
 
   async getUnreadCount(userId: string): Promise<number> {
     return prisma.notification.count({
-      where: { userId, isRead: false },
+      where: { userId, isRead: false, expiresAt: { gt: new Date() } },
     });
   }
 

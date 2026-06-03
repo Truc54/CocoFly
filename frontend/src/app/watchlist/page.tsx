@@ -1,61 +1,121 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Heart,
   Clock,
-  AlertTriangle,
-  TrendingUp,
-  Trash2,
+  Calendar,
   Gavel,
-  Package,
+  Eye,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { auctionApi } from "@/lib/api";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-type BidStatus = "leading" | "outbid" | "ended";
 
-interface WatchlistItem {
-  id: number;
-  name: string;
-  image: string;
-  currentPrice: string;
-  timeLeft: string;
-  bidStatus: BidStatus;
+interface WatchlistAuction {
+  id: string;
+  title: string;
+  thumbnailUrl: string | null;
+  currentPrice: number;
+  startingPrice: number;
+  endTime: string;
+  scheduledStart: string;
+  status: string;
   totalBids: number;
-  myBid?: string;
+  totalWatchers: number;
+  category: { id: number; name: string } | null;
+  seller: { id: string; fullName: string; avatarUrl: string | null } | null;
 }
 
-// ─── Mock Data ───────────────────────────────────────────────────────────────
-const MOCK_WATCHLIST: WatchlistItem[] = [
-  { id: 1, name: "iPhone 15 Pro Max 256GB - Titan Xanh", image: "https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=400&h=400&fit=crop", currentPrice: "28.500.000đ", timeLeft: "2h 15m", bidStatus: "leading", totalBids: 12, myBid: "28.500.000đ" },
-  { id: 2, name: "MacBook Air M3 2024 - Midnight", image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&h=400&fit=crop", currentPrice: "25.000.000đ", timeLeft: "5h 30m", bidStatus: "outbid", totalBids: 8, myBid: "23.000.000đ" },
-  { id: 3, name: "Sony WH-1000XM5 Headphones", image: "https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?w=400&h=400&fit=crop", currentPrice: "6.800.000đ", timeLeft: "1d 3h", bidStatus: "leading", totalBids: 5, myBid: "6.800.000đ" },
-  { id: 4, name: "Nike Air Jordan 1 Retro High OG", image: "https://images.unsplash.com/photo-1600269452121-4f2416e55c28?w=400&h=400&fit=crop", currentPrice: "8.200.000đ", timeLeft: "45m", bidStatus: "outbid", totalBids: 22, myBid: "7.500.000đ" },
-  { id: 5, name: "Đồng hồ Casio G-Shock GA-2100", image: "https://images.unsplash.com/photo-1523170335258-f5ed11844a49?w=400&h=400&fit=crop", currentPrice: "3.400.000đ", timeLeft: "Đã kết thúc", bidStatus: "ended", totalBids: 15 },
-];
+interface Pagination {
+  page: number;
+  limit: number;
+  totalItems: number;
+  totalPages: number;
+}
 
-// ─── Status config ───────────────────────────────────────────────────────────
-const STATUS_CONFIG: Record<BidStatus, { label: string; className: string; icon: React.ReactNode }> = {
-  leading: { label: "Đang dẫn đầu", className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20", icon: <TrendingUp className="w-3 h-3" /> },
-  outbid: { label: "Bị vượt giá", className: "bg-red-500/10 text-red-600 border-red-500/20 animate-pulse", icon: <AlertTriangle className="w-3 h-3" /> },
-  ended: { label: "Đã kết thúc", className: "bg-muted text-muted-foreground border-border", icon: <Clock className="w-3 h-3" /> },
-};
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function formatVND(n: number) {
+  return n.toLocaleString("vi-VN");
+}
+
+function getTimeLeft(endTime: string): string {
+  const diff = new Date(endTime).getTime() - Date.now();
+  if (diff <= 0) return "Đã kết thúc";
+  const days = Math.floor(diff / 86400000);
+  const hours = Math.floor((diff % 86400000) / 3600000);
+  const mins = Math.floor((diff % 3600000) / 60000);
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${mins}m`;
+  return `${mins}m`;
+}
+
+function getStatusLabel(status: string) {
+  switch (status) {
+    case "active":
+      return { label: "ĐANG DIỄN RA", color: "bg-green-500" };
+    case "scheduled":
+      return { label: "SẮP DIỄN RA", color: "bg-blue-500" };
+    case "ended":
+    case "failed":
+      return { label: "ĐÃ KẾT THÚC", color: "bg-slate-500" };
+    default:
+      return { label: status.toUpperCase(), color: "bg-slate-400" };
+  }
+}
 
 // ═════════════════════════════════════════════════════════════════════════════
 export default function WatchlistPage() {
-  const [items, setItems] = useState(MOCK_WATCHLIST);
+  const router = useRouter();
+  const [auctions, setAuctions] = useState<WatchlistAuction[]>([]);
+  const [pagination, setPagination] = useState<Pagination | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const LIMIT = 10;
 
-  const [animatingId, setAnimatingId] = useState<number | null>(null);
+  const fetchWatchlist = useCallback(async (p: number) => {
+    try {
+      setLoading(true);
+      const res = await auctionApi.getWatchlist(p, LIMIT);
+      setAuctions(res.data.auctions || []);
+      setPagination(res.data.pagination || null);
+    } catch {
+      setAuctions([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const handleRemove = (id: number) => {
-    setAnimatingId(id);
-    setTimeout(() => {
-      setItems(prev => prev.filter(i => i.id !== id));
-      setAnimatingId(null);
-    }, 300);
+  useEffect(() => {
+    fetchWatchlist(page);
+  }, [page, fetchWatchlist]);
+
+  const handleRemove = async (auctionId: string) => {
+    setRemovingId(auctionId);
+    try {
+      await auctionApi.toggleWatch(auctionId);
+      // Wait for animation then remove from list
+      setTimeout(() => {
+        setAuctions((prev) => {
+          const next = prev.filter((a) => a.id !== auctionId);
+          if (next.length === 0 && page > 1) {
+            setPage((p) => p - 1);
+          }
+          return next;
+        });
+        setRemovingId(null);
+      }, 300);
+    } catch {
+      setRemovingId(null);
+    }
   };
 
   return (
@@ -65,96 +125,211 @@ export default function WatchlistPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
               <Heart className="w-6 h-6 text-red-500 fill-red-500" />
-              Watchlist
+              Đấu giá yêu thích
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {items.length} sản phẩm đang theo dõi
-            </p>
+            {pagination && pagination.totalItems > 0 && (
+              <p className="text-sm text-slate-500 mt-1">
+                {pagination.totalItems} sản phẩm
+              </p>
+            )}
           </div>
         </div>
 
-        {/* Items Grid */}
-        {items.length > 0 ? (
+        {/* Loading State */}
+        {loading ? (
           <div className="space-y-3">
-            {items.map(item => {
-              const status = STATUS_CONFIG[item.bidStatus];
-              const isOutbid = item.bidStatus === "outbid";
-              const isEnded = item.bidStatus === "ended";
-
-              return (
-                <div
-                  key={item.id}
-                  className={`group flex flex-col sm:flex-row items-start gap-4 rounded-2xl border border-border bg-card p-4 transition-all duration-300 hover:shadow-md
-                    ${animatingId === item.id ? "opacity-0 scale-95" : "opacity-100 scale-100"}`}
-                >
-                  {/* Image */}
-                  <Link href={`/auction/${item.id}`} className="relative flex-shrink-0 w-full sm:w-28 aspect-square sm:aspect-square rounded-xl overflow-hidden">
-                    <Image src={item.image} alt={item.name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" unoptimized />
-                    {isEnded && <div className="absolute inset-0 bg-black/40 flex items-center justify-center"><span className="text-xs font-bold text-white">ĐÃ KẾT THÚC</span></div>}
-                  </Link>
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0 w-full">
-                    <div className="flex items-start justify-between gap-2">
-                      <Link href={`/auction/${item.id}`} className="text-sm font-medium text-foreground hover:text-primary transition-colors line-clamp-2">
-                        {item.name}
-                      </Link>
-                      <button
-                        onClick={() => handleRemove(item.id)}
-                        className="flex-shrink-0 p-1.5 rounded-lg text-red-500 hover:bg-red-50 transition-colors focus:outline-none focus:ring-0"
-                        aria-label="Bỏ theo dõi"
-                      >
-                        <Heart className="w-5 h-5 fill-current" />
-                      </button>
-                    </div>
-
-                    <div className="flex items-center gap-3 mt-2 flex-wrap">
-                      <p className="text-lg font-bold text-primary">{item.currentPrice}</p>
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-md border ${status.className}`}>
-                        {status.icon} {status.label}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {item.timeLeft}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Gavel className="w-3 h-3" />
-                        {item.totalBids} lượt đặt giá
-                      </span>
-                      {item.myBid && (
-                        <span className="flex items-center gap-1">
-                          <Package className="w-3 h-3" />
-                          Giá của bạn: <span className="font-medium text-foreground">{item.myBid}</span>
-                        </span>
-                      )}
-                    </div>
-
-                    {/* CTA for outbid */}
-                    {isOutbid && (
-                      <Link
-                        href={`/auction/${item.id}`}
-                        className="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors"
-                      >
-                        <Gavel className="w-3 h-3" />
-                        Đặt giá lại ngay
-                      </Link>
-                    )}
-                  </div>
+            {[...Array(3)].map((_, i) => (
+              <div
+                key={i}
+                className="flex gap-4 p-4 rounded-xl border-2 border-slate-200 bg-white animate-pulse"
+              >
+                <div className="w-28 h-28 rounded-lg bg-slate-200 shrink-0" />
+                <div className="flex-1 space-y-3">
+                  <div className="h-5 bg-slate-200 rounded w-3/4" />
+                  <div className="h-4 bg-slate-200 rounded w-1/2" />
+                  <div className="h-4 bg-slate-200 rounded w-1/3" />
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
+        ) : auctions.length > 0 ? (
+          <>
+            {/* Items List */}
+            <div className="space-y-3">
+              {auctions.map((item) => {
+                const isEnded = item.status === "ended" || item.status === "failed";
+                const isUpcoming = item.status === "scheduled";
+                const statusInfo = getStatusLabel(item.status);
+
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => router.push(`/auction/${item.id}`)}
+                    className={`group flex flex-col sm:flex-row items-start gap-4 rounded-xl border-2 border-slate-200 bg-white p-4 hover:-translate-y-1 hover:shadow-[4px_4px_0px_#E2B9A1] transition-all cursor-pointer relative
+                      ${removingId === item.id ? "opacity-0 scale-95 duration-300" : "opacity-100 scale-100"}`}
+                  >
+                    {/* Image */}
+                    <Link
+                      href={`/auction/${item.id}`}
+                      className="relative flex-shrink-0 w-full sm:w-28 aspect-square rounded-lg border-2 border-slate-100 overflow-hidden bg-slate-50"
+                    >
+                      <Image
+                        src={item.thumbnailUrl || "https://placehold.co/300x300/f1f5f9/94a3b8?text=No+Image"}
+                        alt={item.title}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        unoptimized
+                      />
+                      {/* Status Badge on Image */}
+                      {(isEnded || isUpcoming) && (
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                          <span className="text-xs font-bold text-white">
+                            {statusInfo.label}
+                          </span>
+                        </div>
+                      )}
+                    </Link>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0 w-full flex justify-between gap-4 sm:min-h-[88px]">
+                      {/* Left Info */}
+                      <div className="flex flex-col justify-between flex-1 min-w-0">
+                        <div>
+                          <Link
+                            href={`/auction/${item.id}`}
+                            className="text-base font-bold text-slate-800 line-clamp-2"
+                          >
+                            {item.title}
+                          </Link>
+                          <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                            {item.category && (
+                              <span className="text-xs font-medium text-slate-400">
+                                {item.category.name}
+                              </span>
+                            )}
+                            <span className="flex items-center gap-1 text-xs font-medium text-slate-500">
+                              <Gavel className="w-3.5 h-3.5" />
+                              {item.totalBids} lượt đặt giá
+                            </span>
+                            <span className="flex items-center gap-1 text-xs font-medium text-slate-500">
+                              <Eye className="w-3.5 h-3.5" />
+                              {item.totalWatchers} theo dõi
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-1.5 mt-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-lg font-extrabold text-[#E25C24]">
+                              {formatVND(item.currentPrice)}đ
+                            </p>
+                            {/* Status badge */}
+                            <span
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold text-white ${statusInfo.color}`}
+                            >
+                              {item.status === "active" && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                              )}
+                              {statusInfo.label}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-4 text-xs font-medium text-slate-500">
+                            {item.status === "active" ? (
+                              <span className="flex items-center gap-1.5">
+                                <Clock className="w-3.5 h-3.5" />
+                                <span className="font-bold">
+                                  Còn {getTimeLeft(item.endTime)}
+                                </span>
+                              </span>
+                            ) : item.status === "scheduled" ? (
+                              <span className="flex items-center gap-1.5">
+                                <Calendar className="w-3.5 h-3.5" />
+                                {new Date(item.scheduledStart).toLocaleString("vi-VN", {
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1.5">
+                                <Calendar className="w-3.5 h-3.5" />
+                                Kết thúc {new Date(item.endTime).toLocaleDateString("vi-VN")}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right Action */}
+                      <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleRemove(item.id);
+                          }}
+                          disabled={removingId === item.id}
+                          className="flex-shrink-0 p-1.5 rounded-lg text-red-500 hover:bg-red-50 transition-colors focus:outline-none disabled:opacity-50 cursor-pointer"
+                          title="Bỏ theo dõi"
+                        >
+                          {removingId === item.id ? (
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                          ) : (
+                            <Heart className="w-5 h-5 fill-current" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Pagination */}
+            {pagination && pagination.totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 mt-8">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                  className="p-2 rounded-lg border-2 border-slate-200 hover:border-slate-300 disabled:opacity-30 transition-colors cursor-pointer"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className={`w-9 h-9 rounded-lg text-sm font-bold transition-all cursor-pointer ${
+                      p === page
+                        ? "bg-primary text-white border-2 border-primary shadow-[2px_2px_0px_#8f5c38]"
+                        : "border-2 border-slate-200 text-slate-600 hover:border-slate-300"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
+                  disabled={page >= pagination.totalPages}
+                  className="p-2 rounded-lg border-2 border-slate-200 hover:border-slate-300 disabled:opacity-30 transition-colors cursor-pointer"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </>
         ) : (
           /* Empty State */
           <div className="text-center py-20">
             <Heart className="w-16 h-16 text-muted-foreground/20 mx-auto" />
             <h3 className="text-lg font-semibold text-foreground mt-4">Chưa có sản phẩm nào</h3>
-            <p className="text-sm text-muted-foreground mt-1">Hãy thêm sản phẩm vào watchlist để theo dõi biến động giá.</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Hãy thêm sản phẩm vào yêu thích để theo dõi biến động giá.
+            </p>
             <Link
               href="/live"
               className="inline-flex items-center gap-2 mt-4 px-5 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"

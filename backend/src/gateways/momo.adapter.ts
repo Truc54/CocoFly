@@ -152,7 +152,7 @@ export function verifyMoMoIPN(data: MoMoIPNData): {
     orderId: data.orderId,
     amount: data.amount,
     resultCode: data.resultCode,
-    transactionId: data.transId.toString(),
+    transactionId: data.transId ? data.transId.toString() : '',
     message: data.message,
   };
 }

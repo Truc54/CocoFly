@@ -12,8 +12,9 @@ interface AuctionSocketState {
   endTime: string;
   isExtended: boolean;
   extendCount: number;
-  auctionStatus: "active" | "ended" | "buyout";
+  auctionStatus: "active" | "ended" | "buyout" | "scheduled";
   winnerId: string | null;
+  winnerName: string | null;
   finalPrice: number | null;
   bids: BidEntry[];
   isLeading: boolean | null;
@@ -48,6 +49,9 @@ export function useAuctionSocket(
     endTime: string;
     recentBids: BidEntry[];
     status: string;
+    winnerId?: string | null;
+    winnerName?: string | null;
+    finalPrice?: number | null;
   },
 ): UseAuctionSocketReturn {
   const [state, setState] = useState<AuctionSocketState>(() => {
@@ -63,15 +67,23 @@ export function useAuctionSocket(
       }
     }
 
+    // Map DB status to socket status
+    const isEnded = initialData.status === "ended" || initialData.status === "failed";
+    let statusMap: AuctionSocketState["auctionStatus"] = isEnded ? "ended" : "active";
+    if (initialData.status === "scheduled") {
+      statusMap = "scheduled";
+    }
+
     return {
       currentPrice: initialData.currentPrice,
       totalBids: initialData.totalBids,
       endTime: initialData.endTime,
       isExtended: false,
       extendCount: 0,
-      auctionStatus: initialData.status as "active" | "ended",
-      winnerId: null,
-      finalPrice: null,
+      auctionStatus: statusMap,
+      winnerId: initialData.winnerId ?? null,
+      winnerName: initialData.winnerName ?? null,
+      finalPrice: initialData.finalPrice ?? null,
       bids: initialData.recentBids,
       isLeading: initialIsLeading,
       hasBid: initialHasBid,
@@ -193,18 +205,19 @@ export function useAuctionSocket(
     };
 
     // ── Auction ended ─────────────────────────────────────────────────────
-    const onEnded = (data: { auctionId: string; winnerId: string | null; finalPrice: number | null }) => {
+    const onEnded = (data: { auctionId: string; winnerId: string | null; winnerName?: string | null; finalPrice: number | null }) => {
       if (!mountedRef.current || data.auctionId !== auctionId) return;
       setState((prev) => ({
         ...prev,
         auctionStatus: "ended",
         winnerId: data.winnerId,
         finalPrice: data.finalPrice,
+        ...(data.winnerName !== undefined ? { winnerName: data.winnerName } : {}),
       }));
     };
 
     // ── Buyout ────────────────────────────────────────────────────────────
-    const onBuyout = (data: { auctionId: string; buyerId: string; price: number }) => {
+    const onBuyout = (data: { auctionId: string; buyerId: string; buyerName?: string | null; price: number }) => {
       if (!mountedRef.current || data.auctionId !== auctionId) return;
       setState((prev) => ({
         ...prev,
@@ -212,6 +225,7 @@ export function useAuctionSocket(
         currentPrice: data.price,
         winnerId: data.buyerId,
         finalPrice: data.price,
+        ...(data.buyerName !== undefined ? { winnerName: data.buyerName } : {}),
       }));
     };
 

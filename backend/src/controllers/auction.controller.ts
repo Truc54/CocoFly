@@ -168,18 +168,123 @@ export class AuctionController {
           data: { status: 'active' },
         });
 
-        await prisma.notification.create({
-          data: {
-            userId: auction.sellerId,
-            auctionId: payment.auctionId,
-            type: 'auction_failed',
-            title: 'Người mua đã từ chối',
-            message: 'Người mua đã từ chối mua sản phẩm. Phiên đấu giá thất bại.',
-          },
+        const { NotificationService } = require('../services/notification.service');
+        const notificationService = new NotificationService();
+
+        await notificationService.send({
+          userId: auction.sellerId,
+          auctionId: payment.auctionId,
+          type: 'auction_failed',
+          title: 'Người mua đã từ chối',
+          message: 'Người mua đã từ chối mua sản phẩm. Phiên đấu giá thất bại.',
         });
       }
 
       res.json({ success: true, message: 'Đã từ chối mua sản phẩm' });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  // ── Seller Auction Management ──────────────────────────────────────────────
+
+  async getMyListings(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const sellerId = req.user!.userId;
+      const tab = (req.query.tab as string) || 'ongoing';
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 10));
+
+      const result = await this.auctionService.getSellerAuctions(sellerId, tab, page, limit);
+      const counts = await this.auctionService.getSellerAuctionCounts(sellerId);
+      res.json({ success: true, data: { ...result, counts } });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async updateAuction(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const sellerId = req.user!.userId;
+      const auctionId = req.params.auctionId as string;
+
+      const result = await this.auctionService.updateAuction(auctionId, sellerId, req.body);
+      res.json({ success: true, message: 'Cập nhật thành công', data: result });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async deleteAuction(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const sellerId = req.user!.userId;
+      const auctionId = req.params.auctionId as string;
+
+      await this.auctionService.deleteAuction(auctionId, sellerId);
+      res.json({ success: true, message: 'Đã xóa phiên đấu giá' });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  // ── Watchlist (Favorites) ──────────────────────────────────────────────────
+
+  async toggleWatch(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.userId;
+      const auctionId = req.params.auctionId as string;
+
+      const result = await this.auctionService.toggleWatchAuction(auctionId, userId);
+      res.json({
+        success: true,
+        message: result.watching ? 'Đã thêm vào yêu thích' : 'Đã bỏ yêu thích',
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async getWatchlist(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.userId;
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 10));
+
+      const result = await this.auctionService.getWatchlist(userId, page, limit);
+      res.json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async getWatchStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.userId;
+      const auctionId = req.params.auctionId as string;
+
+      const watching = await this.auctionService.isWatching(auctionId, userId);
+      res.json({ success: true, data: { watching } });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  // ── Review Seller ────────────────────────────────────────────────────────
+
+  async addReview(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.userId;
+      const auctionId = req.params.auctionId as string;
+      const { rating, comment } = req.body;
+
+      if (!rating || typeof rating !== 'number' || rating < 1 || rating > 5) {
+        res.status(400).json({ success: false, message: 'Rating phải từ 1 đến 5' });
+        return;
+      }
+
+      const review = await this.auctionService.addReview(auctionId, userId, rating, comment);
+      res.json({ success: true, message: 'Đánh giá thành công', data: review });
     } catch (err) {
       next(err);
     }

@@ -6,18 +6,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Star,
-  Trophy,
-  Tag,
   Heart,
   ArrowUpCircle,
   Settings,
   LogOut,
-  ChevronRight,
   Gavel,
   LayoutDashboard,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { authApi } from "@/lib/api";
+import { authApi, userApi } from "@/lib/api";
 import { authStorage } from "@/lib/auth-storage";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -133,33 +129,52 @@ export default function AccountDropdown() {
   // ── Hydration + load user ──────────────────────────────────────────────────
   useEffect(() => {
     setMounted(true);
-    const checkUser = () => {
+    const checkUser = async () => {
       try {
         const storedUser = authStorage.getUser() as AccountUser | null;
         const accessToken = authStorage.getToken();
 
+        let initialUser: AccountUser | null = null;
+
         if (storedUser) {
-          // Ensure rating and review count exist (mock defaults)
-          setUser({
+          // Use stored user but default to 0 for rating/reviews initially
+          initialUser = {
             ...storedUser,
-            rating: storedUser.rating ?? 4.9,
-            totalReviews: storedUser.totalReviews ?? 120,
-          });
+            rating: storedUser.rating ?? 0,
+            totalReviews: storedUser.totalReviews ?? 0,
+          };
         } else if (accessToken) {
           try {
             const payload = JSON.parse(atob(accessToken.split(".")[1]));
-            setUser({
+            initialUser = {
               email: payload.email,
               fullName: payload.fullName || "Người dùng",
               role: payload.role || "buyer",
-              rating: 4.9,
-              totalReviews: 120,
-            });
+              rating: 0,
+              totalReviews: 0,
+            };
           } catch {
-            setUser({ fullName: "Người dùng", role: "buyer", rating: 0, totalReviews: 0 });
+            initialUser = { fullName: "Người dùng", role: "buyer", rating: 0, totalReviews: 0 };
           }
-        } else {
-          setUser(null);
+        }
+
+        setUser(initialUser);
+
+        // Fetch real data to override the stats
+        if (accessToken) {
+          try {
+            const res = await userApi.getMyProfile();
+            if (res.data) {
+              setUser(prev => prev ? {
+                ...prev,
+                rating: res.data.rating || 0,
+                totalReviews: res.data.totalReviews || 0,
+                avatarUrl: res.data.avatarUrl || res.data.avatar || prev.avatarUrl
+              } : null);
+            }
+          } catch (e) {
+            console.error("Failed to load user profile stats for dropdown", e);
+          }
         }
       } catch {
         setUser(null);
@@ -275,6 +290,7 @@ export default function AccountDropdown() {
                     <p className="text-sm font-semibold text-foreground truncate">
                       {user.fullName || "Người dùng"}
                     </p>
+                    <RoleBadge role={role} />
                   </div>
 
                   {/* Reputation Score */}
@@ -297,39 +313,22 @@ export default function AccountDropdown() {
             <MenuSectionLabel>Hoạt động</MenuSectionLabel>
             <MenuItem
               href="/won-auctions"
-              icon={<Trophy className="w-4 h-4" />}
-              label="Sản phẩm đã thắng"
-              badge={MOCK_COUNTS.orders}
+              icon={<Gavel className="w-4 h-4" />}
+              label="Sản phẩm đã đấu giá"
               onClick={closeMenu}
             />
-            {!isBuyer && (
-              <>
-                <MenuItem
-                  href="/my-listings"
-                  icon={<Tag className="w-4 h-4" />}
-                  label="Sản phẩm đang bán"
-                  onClick={closeMenu}
-                />
-                <MenuItem
-                  href="/manage-auctions"
-                  icon={<LayoutDashboard className="w-4 h-4" />}
-                  label="Quản lý đấu giá"
-                  onClick={closeMenu}
-                />
-              </>
+            {role === "seller" && (
+              <MenuItem
+                href="/manage-auctions"
+                icon={<LayoutDashboard className="w-4 h-4" />}
+                label="Quản lý đấu giá"
+                onClick={closeMenu}
+              />
             )}
             <MenuItem
               href="/watchlist"
               icon={<Heart className="w-4 h-4" />}
-              label="Watchlist"
-              badge={MOCK_COUNTS.watchlist}
-              onClick={closeMenu}
-            />
-            <MenuItem
-              href="/my-bids"
-              icon={<Gavel className="w-4 h-4" />}
-              label="Đang đấu giá"
-              badge={MOCK_COUNTS.activeAuctions}
+              label="Đấu giá yêu thích"
               onClick={closeMenu}
             />
 

@@ -47,11 +47,13 @@ model User {
   phone                String?       @db.VarChar(20)
   avatarUrl            String?       @map("avatar_url")
   bio                  String?
+  notificationSettings Json?         @default("{}") @map("notification_settings") @db.JsonB
   role                 UserRole      @default(buyer)
   accountStatus        AccountStatus @default(unverified) @map("account_status") // New Enum instead of `isVerified` and `isBanned`
   banReason            String?       @map("ban_reason")
   nonPaymentStrikes    Int           @default(0) @map("non_payment_strikes") // New anti-fraud measure
   rating               Decimal       @default(0) @db.Decimal(4, 2)
+  balance              Decimal       @default(0) @db.Decimal(18, 2)
   totalAuctionsWon     Int           @default(0) @map("total_auctions_won")
   totalAuctionsCreated Int           @default(0) @map("total_auctions_created")
   lastLoginAt          DateTime?     @map("last_login_at") @db.Timestamptz()
@@ -73,10 +75,11 @@ model User {
   reviewsGiven     Review[]         @relation("ReviewAuthor")
   reviewsReceived  Review[]         @relation("ReviewTarget")
   uploadedMedia    ItemMedia[]
-  auditLogs        AuditLog[] // New relation
-  openedDisputes   Dispute[]        @relation("DisputeOpener") // New relation
+  auditLogs        AuditLog[]
+  openedDisputes   Dispute[]        @relation("DisputeOpener")
   resolvedDisputes Dispute[]        @relation("DisputeResolver") // New relation
   chatMessageLikes ChatMessageLike[]
+  pinnedAuctions   PinnedAuction[]
 
   @@map("users")
 }
@@ -277,8 +280,9 @@ model Auction {
   watchers      AuctionWatcher[]
   chatRoom      ChatRoom?
   payments      Payment[]
-  notifications Notification[]
-  reviews       Review[]
+  notifications    Notification[]
+  reviews          Review[]
+  pinnedByUsers    PinnedAuction[]
 
   @@index([status, endTime])
   @@index([sellerId, status])
@@ -557,6 +561,23 @@ model Address {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("addresses")
+}
+
+// ============================================================================
+// PINNED AUCTIONS (PROFILE SHOWCASE)
+// ============================================================================
+
+model PinnedAuction {
+  userId    String   @map("user_id") @db.Uuid
+  auctionId String   @map("auction_id") @db.Uuid
+  sortOrder Int      @default(0) @map("sort_order") @db.SmallInt
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  auction Auction @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+
+  @@id([userId, auctionId])
+  @@map("pinned_auctions")
 }
 
 // ============================================================================

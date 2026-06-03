@@ -6,6 +6,7 @@ import { AppError } from '../utils/AppError';
 import { scheduleAuctionEnd, auctionQueue } from '../queues/auction.queue';
 import { schedulePaymentTimeout } from '../queues/payment.queue';
 import { Decimal } from '@prisma/client/runtime/library';
+import { NotificationService } from './notification.service';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -48,6 +49,9 @@ interface BidResult {
 interface BuyoutResult {
   finalPrice: number;
   bidId: string;
+  buyerName: string | null;
+  bid: any;
+  totalBids: number;
 }
 
 // Lua script: release lock only if we still own it (atomic check+delete)
@@ -261,7 +265,7 @@ export class BiddingService {
       // Verify buyer account
       const buyer = await prisma.user.findUnique({
         where: { id: buyerId },
-        select: { accountStatus: true },
+        select: { accountStatus: true, fullName: true },
       });
       if (!buyer) {
         throw new AppError('Tài khoản không tồn tại', 404);
@@ -287,7 +291,13 @@ export class BiddingService {
 
       await this.handleBuyoutEnd(auctionId, buyerId, bid.id, buyoutPrice);
 
-      return { finalPrice: buyoutPrice, bidId: bid.id };
+      return { 
+        finalPrice: buyoutPrice, 
+        bidId: bid.id, 
+        buyerName: buyer.fullName,
+        bid,
+        totalBids: auction.totalBids + 1
+      };
     } finally {
       await redis.eval(RELEASE_LOCK_SCRIPT, 1, lockKey, lockValue);
     }
@@ -513,6 +523,26 @@ export class BiddingService {
 
       // Schedule payment timeout (48h)
       await schedulePaymentTimeout(auctionId, buyerId);
+
+      // Send Notifications
+      const notificationService = new NotificationService();
+      
+      await notificationService.sendMany([
+        {
+          userId: buyerId,
+          auctionId,
+          type: 'auction_won',
+          title: 'Chúc mừng! Bạn đã thắng đấu giá',
+          message: `Vui lòng thanh toán ${finalPrice.toLocaleString()} VNĐ trong 48 giờ.`,
+        },
+        {
+          userId: auction.sellerId,
+          auctionId,
+          type: 'auction_ending',
+          title: 'Đấu giá đã kết thúc!',
+          message: `Sản phẩm đã được bán thông qua Mua Ngay với giá ${finalPrice.toLocaleString()} VNĐ.`,
+        },
+      ]);
     }
 
     // Close chat room

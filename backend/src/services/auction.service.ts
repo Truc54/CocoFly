@@ -250,6 +250,11 @@ export class AuctionService {
       media: (auction.item?.media ?? []).map((m: any) => ({
         id: m.id,
         cdnUrl: m.cdnUrl,
+        storageKey: m.storageKey,
+        mimeType: m.mimeType,
+        fileSize: m.fileSize ? Number(m.fileSize) : null,
+        width: m.width,
+        height: m.height,
         sortOrder: m.sortOrder,
         type: m.type,
       })),
@@ -259,12 +264,16 @@ export class AuctionService {
       bidIncrement: Number(auction.bidIncrement),
       scheduledStart: auction.scheduledStart,
       endTime: auction.endTime,
+      actualEndTime: auction.actualEndTime ?? null,
       autoExtend: auction.autoExtend,
       autoExtendMinutes: auction.autoExtendMinutes,
       autoExtendThreshold: auction.autoExtendThreshold,
       totalBids: auction.totalBids,
       totalWatchers: auction.totalWatchers,
       chatRoomId: auction.chatRoom?.id ?? null,
+      winnerId: auction.winnerId ?? null,
+      winnerName: auction.winner?.fullName ?? null,
+      finalPrice: auction.finalPrice ? Number(auction.finalPrice) : null,
       seller: auction.seller
         ? {
             id: auction.seller.id,
@@ -285,5 +294,244 @@ export class AuctionService {
         },
       })),
     };
+  }
+
+  // ── Seller Auction Management ──────────────────────────────────────────────
+
+  async getSellerAuctions(sellerId: string, tab: string = 'ongoing', page: number = 1, limit: number = 10): Promise<PaginatedResult> {
+    const statusMap: Record<string, AuctionStatus[]> = {
+      ongoing: [AuctionStatus.active],
+      upcoming: [AuctionStatus.scheduled],
+      ended: [AuctionStatus.ended, AuctionStatus.failed],
+    };
+
+    const statuses = statusMap[tab] || statusMap.ongoing;
+    const { auctions, total } = await this.auctionRepository.findSellerAuctions(sellerId, statuses, page, limit);
+
+    return {
+      auctions: auctions.map((auction: any) => {
+        const thumbnail = auction.item?.media?.[0];
+        const payment = auction.payments?.[0] ?? null;
+
+        return {
+          id: auction.id,
+          status: auction.status,
+          title: auction.item?.title,
+          thumbnailUrl: thumbnail?.cdnUrl ?? null,
+          category: auction.item?.category ?? null,
+          currentPrice: Number(auction.currentPrice),
+          startingPrice: Number(auction.startingPrice),
+          finalPrice: auction.finalPrice ? Number(auction.finalPrice) : null,
+          bidIncrement: Number(auction.bidIncrement),
+          scheduledStart: auction.scheduledStart,
+          endTime: auction.endTime,
+          actualEndTime: auction.actualEndTime ?? null,
+          totalBids: auction.totalBids,
+          totalWatchers: auction.totalWatchers,
+          viewCount: auction.viewCount,
+          winner: auction.winner
+            ? { id: auction.winner.id, fullName: auction.winner.fullName, avatarUrl: auction.winner.avatarUrl }
+            : null,
+          payment: payment
+            ? { id: payment.id, status: payment.status, shippingStatus: payment.shippingStatus }
+            : null,
+        };
+      }),
+      pagination: {
+        page,
+        limit,
+        totalItems: total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async getSellerAuctionCounts(sellerId: string): Promise<{ ongoing: number; upcoming: number; ended: number }> {
+    return this.auctionRepository.getSellerAuctionCounts(sellerId);
+  }
+
+  async deleteAuction(auctionId: string, sellerId: string): Promise<void> {
+    const result = await this.auctionRepository.deleteScheduledAuction(auctionId, sellerId);
+
+    // Cancel scheduled BullMQ activation job
+    try {
+      const { auctionQueue } = require('../queues/auction.queue');
+      const job = await auctionQueue.getJob(`activate-${auctionId}`);
+      if (job) await job.remove();
+    } catch (err) {
+      console.error(`[AuctionService] Failed to cancel scheduled job for ${auctionId}:`, err);
+    }
+
+    // Cleanup Cloudinary images (non-blocking)
+    try {
+      const mediaRecords = await prisma.itemMedia.findMany({
+        where: { itemId: result.itemId },
+        select: { storageKey: true },
+      });
+      if (mediaRecords.length > 0) {
+        const deletePromises = mediaRecords.map((m) =>
+          cloudinary.uploader.destroy(m.storageKey).catch(() => null),
+        );
+        Promise.all(deletePromises).catch(() => null);
+      }
+    } catch {
+      // Media already deleted by transaction, skip
+    }
+  }
+
+  async updateAuction(auctionId: string, sellerId: string, data: any): Promise<{ auctionId: string; itemId: string }> {
+    // Move any new images to permanent folder on Cloudinary
+    if (data.media && data.media.length > 0) {
+      const movePromises = data.media.map(async (m: any) => {
+        try {
+          await cloudinary.api.update(m.storageKey, {
+            asset_folder: 'cocofly/auctions',
+          });
+        } catch (error) {
+          console.error(`[AuctionService] Failed to move image ${m.storageKey}:`, error);
+        }
+      });
+      await Promise.all(movePromises);
+    }
+
+    const result = await this.auctionRepository.updateScheduledAuction(auctionId, sellerId, data);
+    const { removedMediaKeys } = result as any;
+
+    // Reschedule BullMQ job if scheduledStart changed
+    if (data.scheduledStart) {
+      try {
+        const { auctionQueue } = require('../queues/auction.queue');
+        const oldJob = await auctionQueue.getJob(`activate-${auctionId}`);
+        if (oldJob) await oldJob.remove();
+        await scheduleAuctionActivation(auctionId, new Date(data.scheduledStart));
+      } catch (err) {
+        console.error(`[AuctionService] Failed to reschedule job for ${auctionId}:`, err);
+      }
+    }
+
+    // Cleanup removed Cloudinary images (non-blocking)
+    if (removedMediaKeys && removedMediaKeys.length > 0) {
+      try {
+        const deletePromises = removedMediaKeys.map((storageKey: string) =>
+          cloudinary.uploader.destroy(storageKey).catch(() => null),
+        );
+        Promise.all(deletePromises).catch(() => null);
+      } catch {
+        // Skip on error
+      }
+    }
+
+    return result;
+  }
+
+  // ── Watchlist (Favorites) ───────────────────────────────────────────────────
+
+  async toggleWatchAuction(auctionId: string, userId: string) {
+    const auction = await prisma.auction.findUnique({
+      where: { id: auctionId },
+      select: { id: true, sellerId: true },
+    });
+
+    if (!auction) throw new AppError('Phiên đấu giá không tồn tại', 404);
+    if (auction.sellerId === userId) throw new AppError('Không thể yêu thích đấu giá của chính mình', 400);
+
+    const watching = await this.auctionRepository.toggleWatch(auctionId, userId);
+    return { watching };
+  }
+
+  async getWatchlist(userId: string, page: number, limit: number): Promise<PaginatedResult> {
+    const { watchers, total } = await this.auctionRepository.getWatchlist(userId, page, limit);
+
+    return {
+      auctions: watchers.map((w: any) => {
+        const auction = w.auction;
+        const thumbnail = auction.item?.media?.[0];
+
+        return {
+          id: auction.id,
+          status: auction.status,
+          title: auction.item?.title,
+          thumbnailUrl: thumbnail?.cdnUrl ?? null,
+          category: auction.item?.category ?? null,
+          condition: auction.item?.condition,
+          location: auction.item?.location,
+          currentPrice: Number(auction.currentPrice),
+          startingPrice: Number(auction.startingPrice),
+          bidIncrement: Number(auction.bidIncrement),
+          scheduledStart: auction.scheduledStart,
+          endTime: auction.endTime,
+          totalBids: auction.totalBids,
+          totalWatchers: auction.totalWatchers,
+          watchedAt: w.createdAt,
+          seller: auction.seller
+            ? {
+                id: auction.seller.id,
+                fullName: auction.seller.fullName,
+                avatarUrl: auction.seller.avatarUrl,
+                rating: Number(auction.seller.rating),
+              }
+            : null,
+        };
+      }),
+      pagination: {
+        page,
+        limit,
+        totalItems: total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async isWatching(auctionId: string, userId: string) {
+    return this.auctionRepository.isWatching(auctionId, userId);
+  }
+
+  // ── Review Seller ────────────────────────────────────────────────────────
+
+  async addReview(auctionId: string, authorId: string, rating: number, comment?: string) {
+    const auction = await prisma.auction.findUnique({
+      where: { id: auctionId },
+      include: {
+        payments: { where: { buyerId: authorId } },
+      }
+    });
+
+    if (!auction) throw new AppError('Phiên đấu giá không tồn tại', 404);
+    if (auction.sellerId === authorId) throw new AppError('Không thể đánh giá chính mình', 400);
+
+    const payment = auction.payments[0];
+    if (!payment || payment.shippingStatus !== 'delivered') {
+      throw new AppError('Chỉ có thể đánh giá sau khi đã nhận hàng', 400);
+    }
+
+    const existing = await prisma.review.findUnique({
+      where: {
+        auctionId_authorId: { auctionId, authorId }
+      }
+    });
+
+    if (existing) throw new AppError('Bạn đã đánh giá cho phiên đấu giá này rồi', 400);
+
+    const review = await prisma.review.create({
+      data: {
+        auctionId,
+        authorId,
+        targetId: auction.sellerId,
+        rating,
+        comment
+      }
+    });
+
+    const allReviews = await prisma.review.aggregate({
+      where: { targetId: auction.sellerId },
+      _avg: { rating: true }
+    });
+
+    await prisma.user.update({
+      where: { id: auction.sellerId },
+      data: { rating: allReviews._avg.rating || 0 }
+    });
+
+    return review;
   }
 }
