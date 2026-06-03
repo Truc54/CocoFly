@@ -77,10 +77,8 @@ export class PaymentController {
   // GET /api/payments/momo/return — MoMo redirects buyer back
   async momoReturn(req: Request, res: Response): Promise<void> {
     try {
-      console.log('MOMO RETURN QUERY:', req.query);
       // Process MoMo return exactly like IPN to update DB synchronously during localhost dev
       const result = await this.paymentService.handleMoMoIPN(req.query);
-      console.log('MOMO RETURN RESULT:', result);
 
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
       const params = new URLSearchParams({

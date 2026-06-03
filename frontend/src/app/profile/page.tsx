@@ -11,8 +11,6 @@ import {
   Clock,
   ArrowUpCircle,
   Settings,
-  ChevronLeft,
-  ChevronRight,
   Pin,
   Loader2,
   Wallet,
@@ -136,6 +134,7 @@ function CardSkeleton() {
 // ═════════════════════════════════════════════════════════════════════════════
 
 const MAX_PINS = 3;
+const ITEMS_PER_PAGE = 8;
 
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<"relatedAuctions" | "reviews" | "transactions">("relatedAuctions");
@@ -161,7 +160,6 @@ export default function ProfilePage() {
   const [pinLoading, setPinLoading] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
-  const ITEMS_PER_PAGE = 8;
   const isOwnProfile = true;
 
   // ── Show Toast ─────────────────────────────────────────────────────────────

@@ -6,6 +6,7 @@ import { AppError } from '../utils/AppError';
 import { scheduleAuctionEnd, auctionQueue } from '../queues/auction.queue';
 import { schedulePaymentTimeout } from '../queues/payment.queue';
 import { Decimal } from '@prisma/client/runtime/library';
+import { NotificationService } from './notification.service';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -524,7 +525,6 @@ export class BiddingService {
       await schedulePaymentTimeout(auctionId, buyerId);
 
       // Send Notifications
-      const { NotificationService } = require('./notification.service');
       const notificationService = new NotificationService();
       
       await notificationService.sendMany([

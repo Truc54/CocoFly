@@ -208,13 +208,14 @@ function ConfirmShippingDialog({
   );
 }
 
+const LIMIT = 10;
+
 // ═════════════════════════════════════════════════════════════════════════════
 export default function ManageAuctionsPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<AuctionTab>("ongoing");
   const [isInitialized, setIsInitialized] = useState(false);
   const [page, setPage] = useState(1);
-  const LIMIT = 10;
 
   useEffect(() => {
     if (typeof window !== "undefined") {

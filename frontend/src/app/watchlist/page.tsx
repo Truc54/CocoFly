@@ -104,12 +104,14 @@ export default function WatchlistPage() {
       await auctionApi.toggleWatch(auctionId);
       // Wait for animation then remove from list
       setTimeout(() => {
-        setAuctions((prev) => prev.filter((a) => a.id !== auctionId));
+        setAuctions((prev) => {
+          const next = prev.filter((a) => a.id !== auctionId);
+          if (next.length === 0 && page > 1) {
+            setPage((p) => p - 1);
+          }
+          return next;
+        });
         setRemovingId(null);
-        // If last item on page, go back one page
-        if (auctions.length === 1 && page > 1) {
-          setPage((p) => p - 1);
-        }
       }, 300);
     } catch {
       setRemovingId(null);

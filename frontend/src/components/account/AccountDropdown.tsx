@@ -13,7 +13,6 @@ import {
   Gavel,
   LayoutDashboard,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { authApi, userApi } from "@/lib/api";
 import { authStorage } from "@/lib/auth-storage";
 
@@ -291,6 +290,7 @@ export default function AccountDropdown() {
                     <p className="text-sm font-semibold text-foreground truncate">
                       {user.fullName || "Người dùng"}
                     </p>
+                    <RoleBadge role={role} />
                   </div>
 
                   {/* Reputation Score */}

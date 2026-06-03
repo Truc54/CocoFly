@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, Suspense, useMemo } from "react";
+import React, { useState, useEffect, Suspense, useMemo, useCallback } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -101,7 +101,6 @@ function WonAuctionsContent() {
     }
   }, [initialTab]);
 
-  const [receivedOrders, setReceivedOrders] = useState<string[]>([]);
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [deliveryConfirmTarget, setDeliveryConfirmTarget] = useState<string | null>(null);
@@ -132,17 +131,7 @@ function WonAuctionsContent() {
   const endTimes = useMemo(() => (activeTab === "bidding" ? orders.map(o => o.date) : []), [orders, activeTab]);
   const timeLefts = useCountdown(endTimes);
 
-  React.useEffect(() => {
-    let isMounted = true;
-    setIsLoading(true);
-    fetchAuctions();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [activeTab, page]);
-
-  const fetchAuctions = () => {
+  const fetchAuctions = useCallback(() => {
     setIsLoading(true);
     userApi.getParticipatedAuctions(activeTab, page, 10)
       .then((res) => {
@@ -156,7 +145,11 @@ function WonAuctionsContent() {
       .finally(() => {
         setIsLoading(false);
       });
-  };
+  }, [activeTab, page]);
+
+  useEffect(() => {
+    fetchAuctions();
+  }, [fetchAuctions]);
 
   const handleReceive = async (paymentId: string) => {
     if (!paymentId) return;
