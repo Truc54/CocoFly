@@ -25,7 +25,7 @@ export class PaymentRepository {
 
   async findByAuctionId(auctionId: string) {
     return prisma.payment.findFirst({
-      where: { auctionId, status: { not: 'failed' } },
+      where: { auctionId },
       include: {
         auction: {
           select: {
