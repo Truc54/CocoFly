@@ -144,6 +144,7 @@ export class UserService {
         myBid: myMaxBid ? formatCurrency(myMaxBid) : undefined,
         isPaid: latestPayment?.status === 'paid' || latestPayment?.status === 'escrow_released',
         paymentStatus: latestPayment?.status,
+        paymentDeadline: latestPayment?.paymentDeadline ? latestPayment.paymentDeadline.toISOString() : null,
         paymentId: latestPayment?.id,
         hasReviewed: auction.reviews && auction.reviews.length > 0,
       };

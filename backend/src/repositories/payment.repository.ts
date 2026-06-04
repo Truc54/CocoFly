@@ -13,7 +13,7 @@ export class PaymentRepository {
       include: {
         auction: {
           select: {
-            id: true, finalPrice: true, status: true,
+            id: true, finalPrice: true, status: true, endTime: true, actualEndTime: true,
             item: { select: { id: true, title: true, media: { select: { cdnUrl: true } } } },
           },
         },
@@ -29,7 +29,7 @@ export class PaymentRepository {
       include: {
         auction: {
           select: {
-            id: true, finalPrice: true, status: true,
+            id: true, finalPrice: true, status: true, endTime: true, actualEndTime: true,
             item: { select: { id: true, title: true, media: { select: { cdnUrl: true } } } },
           },
         },

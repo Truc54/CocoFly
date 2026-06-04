@@ -249,6 +249,7 @@ async function handleEndAuction(data: AuctionJobPayload): Promise<void> {
         sellerAmount: new Decimal(finalPrice - platformFee),
         paymentMethod: 'banking',
         status: 'pending',
+        paymentDeadline: new Date(Date.now() + 48 * 60 * 60 * 1000),
       },
     });
 

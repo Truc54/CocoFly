@@ -35,6 +35,7 @@ interface OrderItem {
   myBid?: string;
   isPaid?: boolean;
   paymentStatus?: string;
+  paymentDeadline?: string | null;
   deliveryCountdown?: string;
   paymentId?: string;
   hasReviewed?: boolean;
@@ -228,10 +229,18 @@ function WonAuctionsContent() {
         ) : orders.length > 0 ? (
           <div className="space-y-3">
             {orders.map((order, idx) => {
+              const isExpired = order.paymentStatus === "failed" || 
+                (order.paymentDeadline ? new Date() > new Date(order.paymentDeadline) : new Date() > new Date(new Date(order.date).getTime() + 48 * 60 * 60 * 1000));
               return (
                 <div
                   key={order.id}
-                  onClick={() => router.push(`/auction/${order.id}`)}
+                  onClick={() => {
+                    if (order.status === "won" && !order.isPaid && order.paymentStatus !== "refunded" && isExpired) {
+                      router.push(`/checkout/${order.id}`);
+                    } else {
+                      router.push(`/auction/${order.id}`);
+                    }
+                  }}
                   className="group flex flex-col sm:flex-row items-start gap-4 rounded-xl border-2 border-slate-200 bg-white p-4 hover:-translate-y-1 hover:shadow-[4px_4px_0px_#E2B9A1] transition-all cursor-pointer relative"
                 >
                   {/* Image */}
@@ -256,7 +265,7 @@ function WonAuctionsContent() {
                             order.paymentStatus === "refunded" ? (
                               <button
                                 onClick={(e) => e.stopPropagation()}
-                                className="inline-flex items-center px-4 py-1.5 text-xs font-bold rounded-lg bg-red-50 text-red-600 border-2 border-red-100 cursor-default"
+                                className="inline-flex items-center px-4 py-1.5 text-xs font-bold rounded-lg bg-emerald-50 text-emerald-600 border-2 border-emerald-100 cursor-default"
                               >
                                 Đã hoàn tiền
                               </button>
@@ -266,6 +275,13 @@ function WonAuctionsContent() {
                                 className="inline-flex items-center px-4 py-1.5 text-xs font-bold rounded-lg bg-emerald-50 text-emerald-600 border-2 border-emerald-100 cursor-default"
                               >
                                 Đã thanh toán
+                              </button>
+                            ) : isExpired ? (
+                              <button
+                                onClick={(e) => e.stopPropagation()}
+                                className="inline-flex items-center px-4 py-1.5 text-xs font-bold rounded-lg bg-slate-100 text-slate-500 border-2 border-slate-200 cursor-default"
+                              >
+                                Hết hạn thanh toán
                               </button>
                             ) : (
                               <button

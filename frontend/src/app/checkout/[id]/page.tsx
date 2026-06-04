@@ -129,6 +129,39 @@ export default function CheckoutPage() {
     );
   }
 
+  const isExpired = payment && (
+    payment.status === 'failed' ||
+    (payment.paymentDeadline && new Date() > new Date(payment.paymentDeadline)) ||
+    (!payment.paymentDeadline && 
+      (payment.auction?.endTime 
+        ? new Date() > new Date(new Date(payment.auction.endTime).getTime() + 48 * 60 * 60 * 1000)
+        : payment.createdAt && new Date() > new Date(new Date(payment.createdAt).getTime() + 48 * 60 * 60 * 1000)
+      )
+    )
+  );
+
+  if (isExpired) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 py-12">
+        <div className="text-center p-8 bg-white border-2 border-slate-200 rounded-2xl shadow-[6px_6px_0px_#E2B9A1] max-w-md mx-auto">
+          <div className="w-16 h-16 rounded-full bg-red-50 border-2 border-red-200 flex items-center justify-center mx-auto mb-6">
+            <AlertCircle className="w-8 h-8 text-red-500 animate-pulse" />
+          </div>
+          <h2 className="text-2xl font-extrabold text-slate-800 mb-2">Thanh toán đã hết hạn</h2>
+          <p className="text-slate-500 text-sm leading-relaxed mb-8">
+            Thời hạn thanh toán 48 giờ cho sản phẩm này đã kết thúc. Giao dịch đã bị đóng và bạn không thể thực hiện thanh toán.
+          </p>
+          <button
+            onClick={() => router.back()}
+            className="w-full py-3 bg-[#E25C24] hover:bg-[#c94d1b] text-white font-bold rounded-xl transition-all shadow-[3px_3px_0px_#E2B9A1] hover:-translate-y-0.5"
+          >
+            Quay lại
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">

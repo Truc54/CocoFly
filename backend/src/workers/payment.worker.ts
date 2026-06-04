@@ -137,6 +137,7 @@ async function handlePaymentTimeout(data: PaymentTimeoutPayload): Promise<void> 
         sellerAmount: new Decimal(Number(runnerUp.amount) * 0.95),
         paymentMethod: 'banking',
         status: 'pending',
+        paymentDeadline: new Date(Date.now() + 48 * 60 * 60 * 1000),
       },
     });
 
