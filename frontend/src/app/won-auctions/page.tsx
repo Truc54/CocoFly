@@ -34,6 +34,7 @@ interface OrderItem {
   timeLeft?: string;
   myBid?: string;
   isPaid?: boolean;
+  paymentStatus?: string;
   deliveryCountdown?: string;
   paymentId?: string;
   hasReviewed?: boolean;
@@ -252,7 +253,14 @@ function WonAuctionsContent() {
                       {(order.status === "won" || order.status === "received" || order.status === "delivering") && (
                         <div className="flex flex-col items-end gap-2 flex-shrink-0">
                           {order.status === "won" && (
-                            order.isPaid ? (
+                            order.paymentStatus === "refunded" ? (
+                              <button
+                                onClick={(e) => e.stopPropagation()}
+                                className="inline-flex items-center px-4 py-1.5 text-xs font-bold rounded-lg bg-red-50 text-red-600 border-2 border-red-100 cursor-default"
+                              >
+                                Đã hoàn tiền
+                              </button>
+                            ) : order.isPaid ? (
                               <button
                                 onClick={(e) => e.stopPropagation()}
                                 className="inline-flex items-center px-4 py-1.5 text-xs font-bold rounded-lg bg-emerald-50 text-emerald-600 border-2 border-emerald-100 cursor-default"

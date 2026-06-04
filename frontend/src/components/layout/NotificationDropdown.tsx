@@ -182,7 +182,7 @@ export default function NotificationDropdown() {
     } else if (n.type === "auction_won" || n.type === "payment_due") {
       if (n.auctionId) router.push(`/checkout/${n.auctionId}`);
     } else if (n.type === "payment_confirmed") {
-      router.push(`/account/purchases`); // Adjust if you have a specific page
+      router.push(`/won-auctions?tab=won`);
     } else {
       router.push(`/notifications`);
     }

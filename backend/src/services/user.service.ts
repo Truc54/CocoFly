@@ -143,6 +143,7 @@ export class UserService {
         deliveryCountdown,
         myBid: myMaxBid ? formatCurrency(myMaxBid) : undefined,
         isPaid: latestPayment?.status === 'paid' || latestPayment?.status === 'escrow_released',
+        paymentStatus: latestPayment?.status,
         paymentId: latestPayment?.id,
         hasReviewed: auction.reviews && auction.reviews.length > 0,
       };
