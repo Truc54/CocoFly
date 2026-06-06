@@ -148,8 +148,11 @@ export default function UserHoverCard({ userId, children }: UserHoverCardProps) 
                 </Link>
                 <button
                   type="button"
-                  disabled
-                  className="flex-1 bg-white hover:bg-slate-50 dark:bg-slate-700 dark:hover:bg-slate-600 text-blue-600 dark:text-blue-300 font-bold py-2 border-2 border-blue-600 dark:border-blue-400 shadow-[2px_2px_0px_#bfdbfe] hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_#bfdbfe] transition-all rounded-xl text-center text-xs flex items-center justify-center gap-1 opacity-80 cursor-not-allowed"
+                  onClick={() => {
+                    setOpen(false);
+                    window.dispatchEvent(new CustomEvent("open-dm", { detail: { targetUserId: userId } }));
+                  }}
+                  className="flex-1 bg-white hover:bg-slate-50 dark:bg-slate-700 dark:hover:bg-slate-600 text-blue-600 dark:text-blue-300 font-bold py-2 border-2 border-blue-600 dark:border-blue-400 shadow-[2px_2px_0px_#bfdbfe] hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_#bfdbfe] transition-all rounded-xl text-center text-xs flex items-center justify-center gap-1 cursor-pointer"
                 >
                   <MessageSquare className="w-3.5 h-3.5" />
                   Nhắn tin

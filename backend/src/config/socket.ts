@@ -9,10 +9,13 @@ import redis from './redis';
 let io: Server | null = null;
 const tokenService = new TokenService();
 import { NotificationService } from '../services/notification.service';
+import { MessageService } from '../services/message.service';
+import prisma from './prisma';
 
 const biddingService = new BiddingService();
 const chatService = new ChatService();
 const notificationService = new NotificationService();
+const messageService = new MessageService();
 
 export function getIO(): Server {
   if (!io) throw new Error('Socket.IO not initialized');
@@ -302,6 +305,151 @@ export function initSocket(server: HttpServer): Server {
       } catch (err: any) {
         socket.emit('chat:error', { message: 'Lỗi thả tim' });
       }
+    });
+
+    // ── Direct Message Events ──────────────────────────────────────────────
+    socket.on('dm:send', async (data: { conversationId: string; content?: string; parentId?: string; media?: any[] }) => {
+      try {
+        const message = await messageService.sendMessage({
+          conversationId: data.conversationId,
+          senderId: userId,
+          content: data.content,
+          parentId: data.parentId,
+          media: data.media
+        });
+
+        // Find receiver to emit message and updated unread count
+        const participants = await prisma.conversationParticipant.findMany({
+          where: { conversationId: data.conversationId },
+          select: { userId: true }
+        });
+        const receiverId = participants.find(p => p.userId !== userId)?.userId;
+
+        socket.emit('dm:message', message);
+        if (receiverId) {
+          io!.to(`user:${receiverId}`).emit('dm:message', message);
+
+          const unreadCount = await messageService.getUnreadCount(receiverId);
+          io!.to(`user:${receiverId}`).emit('dm:unread_update', { count: unreadCount });
+        }
+      } catch (err: any) {
+        socket.emit('dm:error', { message: err.message || 'Lỗi gửi tin nhắn' });
+      }
+    });
+
+    socket.on('dm:recall', async (data: { messageId: string }) => {
+      try {
+        const result = await messageService.recallMessage(data.messageId, userId);
+
+        const participants = await prisma.conversationParticipant.findMany({
+          where: { conversationId: result.conversationId },
+          select: { userId: true }
+        });
+
+        participants.forEach((p) => {
+          io!.to(`user:${p.userId}`).emit('dm:message_recalled', {
+            messageId: result.id,
+            conversationId: result.conversationId
+          });
+        });
+      } catch (err: any) {
+        socket.emit('dm:error', { message: err.message || 'Lỗi thu hồi tin nhắn' });
+      }
+    });
+
+    socket.on('dm:react', async (data: { messageId: string; emoji: string }) => {
+      try {
+        const result = await messageService.toggleReaction(data.messageId, userId, data.emoji);
+
+        const participants = await prisma.conversationParticipant.findMany({
+          where: { conversationId: result.conversationId },
+          select: { userId: true }
+        });
+
+        // Send reaction updates specifically for each participant to handle 'reacted' field accurately
+        socket.emit('dm:reaction_updated', {
+          messageId: result.messageId,
+          conversationId: result.conversationId,
+          reactions: result.reactions
+        });
+
+        const otherParticipant = participants.find(p => p.userId !== userId);
+        if (otherParticipant) {
+          const allReactions = await prisma.messageReaction.findMany({
+            where: { messageId: data.messageId }
+          });
+          const reactionGroupsMap: Record<string, { emoji: string; count: number; reacted: boolean }> = {};
+          allReactions.forEach((r) => {
+            if (!reactionGroupsMap[r.emoji]) {
+              reactionGroupsMap[r.emoji] = { emoji: r.emoji, count: 0, reacted: false };
+            }
+            reactionGroupsMap[r.emoji].count += 1;
+            if (r.userId === otherParticipant.userId) {
+              reactionGroupsMap[r.emoji].reacted = true;
+            }
+          });
+          io!.to(`user:${otherParticipant.userId}`).emit('dm:reaction_updated', {
+            messageId: result.messageId,
+            conversationId: result.conversationId,
+            reactions: Object.values(reactionGroupsMap)
+          });
+        }
+      } catch (err: any) {
+        socket.emit('dm:error', { message: err.message || 'Lỗi thả react' });
+      }
+    });
+
+    socket.on('dm:read', async (data: { conversationId: string }) => {
+      try {
+        const result = await messageService.markAsRead(data.conversationId, userId);
+
+        const unreadCount = await messageService.getUnreadCount(userId);
+        socket.emit('dm:unread_update', { count: unreadCount });
+
+        const participants = await prisma.conversationParticipant.findMany({
+          where: { conversationId: data.conversationId },
+          select: { userId: true }
+        });
+        const otherParticipant = participants.find(p => p.userId !== userId);
+        if (otherParticipant) {
+          io!.to(`user:${otherParticipant.userId}`).emit('dm:read_receipt', {
+            conversationId: data.conversationId,
+            readAt: result.readAt
+          });
+        }
+      } catch (err) {}
+    });
+
+    socket.on('dm:typing', async (data: { conversationId: string }) => {
+      try {
+        const participants = await prisma.conversationParticipant.findMany({
+          where: { conversationId: data.conversationId },
+          select: { userId: true }
+        });
+        const otherParticipant = participants.find(p => p.userId !== userId);
+        if (otherParticipant) {
+          io!.to(`user:${otherParticipant.userId}`).emit('dm:user_typing', {
+            conversationId: data.conversationId,
+            userId
+          });
+        }
+      } catch (err) {}
+    });
+
+    socket.on('dm:stop_typing', async (data: { conversationId: string }) => {
+      try {
+        const participants = await prisma.conversationParticipant.findMany({
+          where: { conversationId: data.conversationId },
+          select: { userId: true }
+        });
+        const otherParticipant = participants.find(p => p.userId !== userId);
+        if (otherParticipant) {
+          io!.to(`user:${otherParticipant.userId}`).emit('dm:user_stop_typing', {
+            conversationId: data.conversationId,
+            userId
+          });
+        }
+      } catch (err) {}
     });
 
     socket.on('disconnecting', async () => {
