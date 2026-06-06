@@ -294,14 +294,13 @@ export class UserRepository {
 
   // ── Related Auctions (seller or bidder/winner) ──────────────────────────────
 
-  async getRelatedAuctions(userId: string, page: number, limit: number) {
-    const skip = (page - 1) * limit;
-
+  async getRelatedAuctions(userId: string, skip: number, limit: number, excludeIds?: string[]) {
     const where: Prisma.AuctionWhereInput = {
       OR: [
         { sellerId: userId },
         { winnerId: userId }
-      ]
+      ],
+      ...(excludeIds && excludeIds.length > 0 ? { id: { notIn: excludeIds } } : {})
     };
 
     const [auctions, total] = await Promise.all([

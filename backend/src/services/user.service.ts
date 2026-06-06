@@ -268,7 +268,28 @@ export class UserService {
   // ── Related Auctions ──────────────────────────────────────────────────────
 
   async getMyRelatedAuctions(userId: string, page: number = 1, limit: number = 8) {
-    const { auctions, total } = await this.userRepository.getRelatedAuctions(userId, page, limit);
+    // 1. Fetch pinned auctions
+    const pinnedRows = await this.userRepository.getPinnedAuctions(userId);
+    const pinnedAuctions = pinnedRows.map(pr => pr.auction);
+    const pinnedIds = pinnedAuctions.map(a => a.id);
+    const pinnedCount = pinnedIds.length;
+
+    let auctions: any[] = [];
+    let unpinnedTotal = 0;
+
+    if (page === 1) {
+      const remainingLimit = Math.max(0, limit - pinnedCount);
+      const res = await this.userRepository.getRelatedAuctions(userId, 0, remainingLimit, pinnedIds);
+      auctions = [...pinnedAuctions, ...res.auctions].slice(0, limit);
+      unpinnedTotal = res.total;
+    } else {
+      const skip = (page - 1) * limit - pinnedCount;
+      const res = await this.userRepository.getRelatedAuctions(userId, skip, limit, pinnedIds);
+      auctions = res.auctions;
+      unpinnedTotal = res.total;
+    }
+
+    const total = unpinnedTotal + pinnedCount;
 
     const formatCurrency = (amount: any) => {
       if (!amount) return '0 đ';
@@ -277,7 +298,7 @@ export class UserService {
 
     const data = auctions.map(auction => {
       const thumbnail = auction.item.media[0];
-      const isPinned = auction.pinnedByUsers.length > 0;
+      const isPinned = pinnedIds.includes(auction.id);
 
       let role: string = '';
       if (auction.sellerId === userId) {
