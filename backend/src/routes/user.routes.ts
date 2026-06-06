@@ -83,3 +83,21 @@ userRoutes.get(
   userController.getMyTransactions.bind(userController),
 );
 
+// GET /api/users/:id/profile
+userRoutes.get(
+  '/:id/profile',
+  userController.getUserProfile.bind(userController),
+);
+
+// GET /api/users/:id/related-auctions
+userRoutes.get(
+  '/:id/related-auctions',
+  userController.getUserRelatedAuctions.bind(userController),
+);
+
+// GET /api/users/:id/reviews
+userRoutes.get(
+  '/:id/reviews',
+  userController.getUserReviews.bind(userController),
+);
+

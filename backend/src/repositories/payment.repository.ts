@@ -13,7 +13,7 @@ export class PaymentRepository {
       include: {
         auction: {
           select: {
-            id: true, finalPrice: true, status: true,
+            id: true, finalPrice: true, status: true, endTime: true, actualEndTime: true,
             item: { select: { id: true, title: true, media: { select: { cdnUrl: true } } } },
           },
         },
@@ -25,11 +25,11 @@ export class PaymentRepository {
 
   async findByAuctionId(auctionId: string) {
     return prisma.payment.findFirst({
-      where: { auctionId, status: { not: 'failed' } },
+      where: { auctionId },
       include: {
         auction: {
           select: {
-            id: true, finalPrice: true, status: true,
+            id: true, finalPrice: true, status: true, endTime: true, actualEndTime: true,
             item: { select: { id: true, title: true, media: { select: { cdnUrl: true } } } },
           },
         },

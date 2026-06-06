@@ -160,7 +160,7 @@ export default function NotificationsPage() {
     } else if (n.type === "auction_won" || n.type === "payment_due") {
       if (n.auctionId) router.push(`/checkout/${n.auctionId}`);
     } else if (n.type === "payment_confirmed") {
-      router.push(`/account/purchases`);
+      router.push(`/won-auctions?tab=won`);
     }
   };
 

@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useLiveChat } from "@/lib/hooks/useLiveChat";
 import type { BidEntry } from "@/lib/types/auction";
 import BidHistoryList from "./BidHistoryList";
+import UserHoverCard from "@/components/shared/UserHoverCard";
 
 function timeAgo(iso: string) {
   const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
@@ -126,18 +127,22 @@ export default function LiveChatPanel({
                   </div>
                 ) : (
                   <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full border border-slate-200 bg-slate-100 flex items-center justify-center shrink-0 overflow-hidden">
-                      {msg.senderAvatar ? (
-                        <img src={msg.senderAvatar} alt="avatar" className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="material-symbols-outlined text-[18px] text-slate-400">person</span>
-                      )}
-                    </div>
+                    <UserHoverCard userId={msg.senderId || ""}>
+                      <div className="w-8 h-8 rounded-full border border-slate-200 bg-slate-100 flex items-center justify-center shrink-0 overflow-hidden">
+                        {msg.senderAvatar ? (
+                          <img src={msg.senderAvatar} alt="avatar" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="material-symbols-outlined text-[18px] text-slate-400">person</span>
+                        )}
+                      </div>
+                    </UserHoverCard>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-slate-800 dark:text-white">
-                          {msg.senderName}
-                        </span>
+                        <UserHoverCard userId={msg.senderId || ""}>
+                          <span className="text-xs font-bold text-slate-800 dark:text-white">
+                            {msg.senderName}
+                          </span>
+                        </UserHoverCard>
                         {sellerId && msg.senderId === sellerId && (
                           <span className="bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 text-[9px] font-extrabold px-1.5 py-0.5 border border-orange-200 dark:border-orange-900/60 rounded uppercase tracking-wider">
                             Chủ phòng

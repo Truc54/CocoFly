@@ -518,6 +518,7 @@ export class BiddingService {
           sellerAmount: new Decimal(finalPrice - platformFee),
           paymentMethod: 'banking',
           status: 'pending',
+          paymentDeadline: new Date(Date.now() + 48 * 60 * 60 * 1000),
         },
       });
 

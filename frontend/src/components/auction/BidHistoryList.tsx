@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { auctionApi } from "@/lib/api";
 import type { BidEntry } from "@/lib/types/auction";
+import UserHoverCard from "@/components/shared/UserHoverCard";
 
 function formatVND(n: number) {
   return n.toLocaleString("vi-VN");
@@ -74,18 +75,22 @@ export default function BidHistoryList({ auctionId, bids, totalBids }: BidHistor
         const isAuto = (bid as any).isAutoBid;
         return (
           <div key={bid.id} className="flex items-start gap-3 animate-fade-in">
-            <div className={`w-8 h-8 rounded-full border flex items-center justify-center shrink-0 overflow-hidden ${isAuto ? 'bg-blue-100 text-blue-600 border-blue-200' : 'bg-orange-100 text-orange-600 border-orange-200'}`}>
-              {bid.bidder.avatarUrl ? (
-                <img src={bid.bidder.avatarUrl} alt="avatar" className="w-full h-full object-cover" />
-              ) : (
-                <span className="material-symbols-outlined text-[18px]">{isAuto ? 'smart_toy' : 'gavel'}</span>
-              )}
-            </div>
+            <UserHoverCard userId={bid.bidder.id}>
+              <div className={`w-8 h-8 rounded-full border flex items-center justify-center shrink-0 overflow-hidden ${isAuto ? 'bg-blue-100 text-blue-600 border-blue-200' : 'bg-orange-100 text-orange-600 border-orange-200'}`}>
+                {bid.bidder.avatarUrl ? (
+                  <img src={bid.bidder.avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="material-symbols-outlined text-[18px]">{isAuto ? 'smart_toy' : 'gavel'}</span>
+                )}
+              </div>
+            </UserHoverCard>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-slate-800 dark:text-white">
-                  {bid.bidder.fullName || "Người dùng ẩn danh"}
-                </span>
+                <UserHoverCard userId={bid.bidder.id}>
+                  <span className="text-sm font-bold text-slate-800 dark:text-white">
+                    {bid.bidder.fullName || "Người dùng ẩn danh"}
+                  </span>
+                </UserHoverCard>
                 <span className="text-[10px] text-slate-400 font-medium">{timeAgo(bid.createdAt as any)}</span>
                 {isAuto && (
                   <span className="text-[8px] leading-tight bg-blue-100 text-blue-700 px-1.5 py-0 font-bold rounded-full border border-blue-200">
