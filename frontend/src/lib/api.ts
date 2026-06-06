@@ -153,6 +153,12 @@ export const userApi = {
     fetchApi(`/api/users/me/reviews?page=${page}&limit=${limit}`),
   getTransactions: (page: number = 1, limit: number = 10) => 
     fetchApi(`/api/users/me/transactions?page=${page}&limit=${limit}`),
+  getUserProfile: (id: string) => 
+    fetchApi(`/api/users/${id}/profile`),
+  getUserRelatedAuctions: (id: string, page: number = 1, limit: number = 8) =>
+    fetchApi(`/api/users/${id}/related-auctions?page=${page}&limit=${limit}`),
+  getUserReviews: (id: string, page: number = 1, limit: number = 10) =>
+    fetchApi(`/api/users/${id}/reviews?page=${page}&limit=${limit}`),
 };
 
 export const mediaApi = {

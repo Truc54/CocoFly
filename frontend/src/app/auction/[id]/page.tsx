@@ -11,6 +11,7 @@ import AuctionDetailSkeleton from "@/components/auction/AuctionDetailSkeleton";
 import BiddingPanel from "@/components/auction/BiddingPanel";
 import LiveChatPanel from "@/components/auction/LiveChatPanel";
 import AuctionEndedOverlay from "@/components/auction/AuctionEndedOverlay";
+import UserHoverCard from "@/components/shared/UserHoverCard";
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 
@@ -266,15 +267,19 @@ function AuctionDetailContent({
           {/* Seller Info */}
           {auction.seller && !isHost && (
             <div className="flex items-center gap-4 p-4 border-2 border-slate-200 shadow-[4px_4px_0px_#cbd5e1] bg-white dark:bg-slate-800 dark:border-slate-700">
-              <div className="w-12 h-12 rounded-full bg-slate-200 border-2 border-slate-800 flex items-center justify-center text-xl font-bold shrink-0 text-slate-800 overflow-hidden">
-                {auction.seller.avatarUrl ? (
-                  <Image src={auction.seller.avatarUrl} alt={auction.seller.fullName} width={48} height={48} className="object-cover w-full h-full" unoptimized />
-                ) : (
-                  auction.seller.fullName.charAt(0)
-                )}
-              </div>
+              <UserHoverCard userId={auction.seller.id}>
+                <div className="w-12 h-12 rounded-full bg-slate-200 border-2 border-slate-800 flex items-center justify-center text-xl font-bold shrink-0 text-slate-800 overflow-hidden">
+                  {auction.seller.avatarUrl ? (
+                    <Image src={auction.seller.avatarUrl} alt={auction.seller.fullName} width={48} height={48} className="object-cover w-full h-full" unoptimized />
+                  ) : (
+                    auction.seller.fullName.charAt(0)
+                  )}
+                </div>
+              </UserHoverCard>
               <div className="flex-1">
-                <h3 className="font-bold text-slate-800 dark:text-white">{auction.seller.fullName}</h3>
+                <UserHoverCard userId={auction.seller.id}>
+                  <h3 className="font-bold text-slate-800 dark:text-white">{auction.seller.fullName}</h3>
+                </UserHoverCard>
                 <div className="flex items-center gap-1 text-sm text-slate-500 mt-1">
                   <span className="material-symbols-outlined text-yellow-500 text-[16px]">star</span>
                   <span className="font-bold">{auction.seller.rating.toFixed(1)}</span>

@@ -381,5 +381,32 @@ export class UserService {
       },
     };
   }
+
+  async getUserProfile(userId: string) {
+    const user = await this.userRepository.getProfileData(userId);
+    if (!user) throw new AppError('Người dùng không tồn tại', 404);
+
+    const pinnedCount = await this.userRepository.countPinnedAuctions(userId);
+
+    return {
+      id: user.id,
+      fullName: user.fullName,
+      avatarUrl: user.avatarUrl,
+      bio: user.bio,
+      rating: Number(user.rating),
+      totalReviews: user._count.reviewsReceived,
+      role: user.role,
+      joinDate: user.createdAt.toISOString(),
+      pinnedCount,
+    };
+  }
+
+  async getUserRelatedAuctions(userId: string, page: number = 1, limit: number = 8) {
+    return this.getMyRelatedAuctions(userId, page, limit);
+  }
+
+  async getUserReviews(userId: string, page: number = 1, limit: number = 10) {
+    return this.getMyReviews(userId, page, limit);
+  }
 }
 
