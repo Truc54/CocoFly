@@ -261,3 +261,33 @@ export const paymentApi = {
   confirmDelivery: (paymentId: string) =>
     fetchApi(`/api/payments/${paymentId}/confirm-delivery`, { method: 'PATCH' }),
 };
+
+export const messageApi = {
+  getConversations: (cursor?: string, limit: number = 20) => {
+    const qs = new URLSearchParams();
+    if (cursor) qs.set('cursor', cursor);
+    qs.set('limit', limit.toString());
+    return fetchApi(`/api/messages/conversations?${qs.toString()}`);
+  },
+  getOrCreateConversation: (targetUserId: string) => {
+    return fetchApi('/api/messages/conversations', {
+      method: 'POST',
+      body: JSON.stringify({ targetUserId }),
+    });
+  },
+  getMessages: (conversationId: string, cursor?: string, limit: number = 50) => {
+    const qs = new URLSearchParams();
+    if (cursor) qs.set('cursor', cursor);
+    qs.set('limit', limit.toString());
+    return fetchApi(`/api/messages/conversations/${conversationId}?${qs.toString()}`);
+  },
+  markAsRead: (conversationId: string) => {
+    return fetchApi(`/api/messages/conversations/${conversationId}/read`, {
+      method: 'PATCH',
+    });
+  },
+  getUnreadCount: async (): Promise<number> => {
+    const res = await fetchApi('/api/messages/unread-count');
+    return res?.count || 0;
+  },
+};

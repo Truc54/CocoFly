@@ -80,6 +80,9 @@ model User {
   resolvedDisputes Dispute[]        @relation("DisputeResolver") // New relation
   chatMessageLikes ChatMessageLike[]
   pinnedAuctions   PinnedAuction[]
+  conversationParticipants ConversationParticipant[]
+  directMessagesSent      DirectMessage[]          @relation("DirectMessageSender")
+  messageReactions        MessageReaction[]
 
   @@map("users")
 }
@@ -604,3 +607,94 @@ model LeaderboardCache {
   @@unique([periodType, periodStart, rank])
   @@map("leaderboard_cache")
 }
+
+// ============================================================================
+// DIRECT MESSAGING (1-1)
+// ============================================================================
+
+model Conversation {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  participants ConversationParticipant[]
+  messages     DirectMessage[]
+
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  conversationId String   @map("conversation_id") @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  lastReadAt     DateTime @default(now()) @map("last_read_at") @db.Timestamptz()
+  isMuted        Boolean  @default(false) @map("is_muted")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([conversationId, userId])
+  @@index([userId, conversationId])
+  @@map("conversation_participants")
+}
+
+model DirectMessage {
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  conversationId String        @map("conversation_id") @db.Uuid
+  senderId       String        @map("sender_id") @db.Uuid
+  parentId       String?       @map("parent_id") @db.Uuid
+  content        String?       @db.Text
+  status         MessageStatus @default(sent)
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz()
+  recalledAt     DateTime?     @map("recalled_at") @db.Timestamptz()
+
+  conversation Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User             @relation("DirectMessageSender", fields: [senderId], references: [id], onDelete: Restrict)
+  parent       DirectMessage?   @relation("DMReplies", fields: [parentId], references: [id], onDelete: SetNull)
+  replies      DirectMessage[]  @relation("DMReplies")
+  media        MessageMedia[]
+  reactions    MessageReaction[]
+
+  @@index([conversationId, createdAt(sort: Desc)])
+  @@map("direct_messages")
+}
+
+model MessageMedia {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  messageId    String    @map("message_id") @db.Uuid
+  type         MediaType
+  cdnUrl       String    @map("cdn_url")
+  storageKey   String    @map("storage_key")
+  originalName String?   @map("original_name") @db.VarChar(255)
+  mimeType     String?   @map("mime_type") @db.VarChar(100)
+  fileSize     BigInt?   @map("file_size")
+  width        Int?
+  height       Int?
+  duration     Int?
+  thumbnailUrl String?   @map("thumbnail_url")
+  sortOrder    Int       @default(0) @map("sort_order")
+
+  message DirectMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@map("message_media")
+}
+
+model MessageReaction {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  messageId String   @map("message_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  emoji     String   @db.VarChar(10)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  message DirectMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId]) // Mỗi user chỉ 1 reaction per message
+  @@map("message_reactions")
+}
+
+enum MessageStatus {
+  sent
+  recalled
+}
+

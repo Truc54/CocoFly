@@ -11,6 +11,7 @@ import { userRoutes } from './routes/user.routes';
 import { mediaRoutes } from './routes/media.routes';
 import { paymentRoutes } from './routes/payment.routes';
 import { notificationRoutes } from './routes/notification.routes';
+import { messageRoutes } from './routes/message.routes';
 import { errorHandler } from './middlewares/errorHandler';
 
 const app = express();
@@ -42,6 +43,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/media', mediaRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/messages', messageRoutes);
 
 // Global Error Handler (must be last)
 app.use(errorHandler);

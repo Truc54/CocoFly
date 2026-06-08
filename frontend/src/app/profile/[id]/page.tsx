@@ -283,11 +283,11 @@ export default function PublicProfilePage({ params }: { params: Promise<{ id: st
                   </div>
                 </div>
 
-                {/* Message Button (disabled for now) */}
+                {/* Message Button */}
                 <div className="flex items-center gap-3 mt-4">
                   <button
-                    disabled
-                    className="inline-flex items-center gap-2 px-5 py-2 text-sm font-bold rounded-xl border-2 border-blue-600 bg-white text-blue-600 shadow-[2px_2px_0px_#bfdbfe] opacity-80 cursor-not-allowed transition-all"
+                    onClick={() => window.dispatchEvent(new CustomEvent("open-dm", { detail: { targetUserId: id } }))}
+                    className="inline-flex items-center gap-2 px-5 py-2 text-sm font-bold rounded-xl border-2 border-blue-600 bg-white text-blue-600 shadow-[2px_2px_0px_#bfdbfe] hover:scale-105 active:scale-95 transition-all cursor-pointer"
                   >
                     <MessageSquare className="w-4 h-4" />
                     Nhắn tin

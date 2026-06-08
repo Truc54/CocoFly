@@ -285,7 +285,10 @@ function AuctionDetailContent({
                   <span className="font-bold">{auction.seller.rating.toFixed(1)}</span>
                 </div>
               </div>
-              <button className="px-4 py-2 bg-white border-2 border-blue-600 text-blue-600 font-bold flex items-center gap-2 hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_#bfdbfe] hover:bg-blue-600 hover:text-white transition-all cursor-pointer">
+              <button
+                onClick={() => window.dispatchEvent(new CustomEvent("open-dm", { detail: { targetUserId: auction.seller?.id } }))}
+                className="px-4 py-2 bg-white border-2 border-blue-600 text-blue-600 font-bold flex items-center gap-2 hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_#bfdbfe] hover:bg-blue-600 hover:text-white transition-all cursor-pointer"
+              >
                 <span className="material-symbols-outlined text-[20px]">chat</span>
                 Nhắn tin
               </button>

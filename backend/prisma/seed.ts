@@ -45,7 +45,7 @@ async function main() {
 
   // 2. Reset autoincrement sequence to max existing id
   await prisma.$executeRawUnsafe(
-    `SELECT setval(pg_get_serial_sequence('categories', 'id'), (SELECT COALESCE(MAX(id), 0) FROM categories));`
+    `SELECT setval(pg_get_serial_sequence('categories', 'id'), (SELECT COALESCE(MAX(id), 1) FROM categories));`
   );
 
   // 3. Create new categories (skip if slug already exists)

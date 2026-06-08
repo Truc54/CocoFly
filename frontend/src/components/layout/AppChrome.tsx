@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 
 import HeaderNew from "@/components/layout/HeaderNew";
 import FooterNew from "@/components/layout/FooterNew";
+import FloatingChatButton from "@/components/message/FloatingChatButton";
 
 type AppChromeProps = {
   children: React.ReactNode;
@@ -29,6 +30,7 @@ export default function AppChrome({ children }: AppChromeProps) {
       {!isAuthPage && <HeaderNew />}
       <main className={isAuthPage ? "min-h-dvh" : "grow"}>{children}</main>
       {!isAuthPage && <FooterNew />}
+      {!isAuthPage && <FloatingChatButton />}
     </>
   );
 }
