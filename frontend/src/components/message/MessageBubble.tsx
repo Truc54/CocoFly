@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Reply, Undo, Smile, Maximize2, X, Play } from "lucide-react";
+import { Reply, Undo, Smile, Maximize2, Play } from "lucide-react";
 import type { DirectMessage } from "@/lib/types/message";
 import { authStorage } from "@/lib/auth-storage";
 import { format } from "date-fns";
@@ -14,6 +14,7 @@ interface MessageBubbleProps {
   onReply: (msg: DirectMessage) => void;
   onRecall: (id: string) => void;
   onReact: (id: string, emoji: string) => void;
+  onZoomMedia: (cdnUrl: string) => void;
 }
 
 export default function MessageBubble({
@@ -23,11 +24,11 @@ export default function MessageBubble({
   onReply,
   onRecall,
   onReact,
+  onZoomMedia,
 }: MessageBubbleProps) {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [showActions, setShowActions] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [zoomedMedia, setZoomedMedia] = useState<string | null>(null);
   const [showRecallConfirm, setShowRecallConfirm] = useState(false);
   const actionsRef = useRef<HTMLDivElement>(null);
 
@@ -39,6 +40,9 @@ export default function MessageBubble({
 
   const isMe = message.senderId === currentUserId;
   const isRecalled = message.status === "recalled";
+  const hasMedia = message.media && message.media.length > 0;
+  const hasText = !!message.content;
+  const isMediaOnly = hasMedia && !hasText;
 
   const getFormattedTime = (dateStr: string) => {
     try {
@@ -98,7 +102,7 @@ export default function MessageBubble({
       )}
 
       {/* Main Message Row */}
-      <div className={`flex items-center gap-2 max-w-[85%] ${isMe ? "flex-row-reverse" : "flex-row"}`}>
+      <div className={`flex items-center gap-2 max-w-[85%] ${isMe ? "flex-row-reverse" : "flex-row"} relative`}>
         {/* Chat Bubble */}
         <div className="flex flex-col relative group/bubble">
           {/* Custom Date & Time Tooltip on Hover */}
@@ -124,12 +128,14 @@ export default function MessageBubble({
 
           {/* Core Content */}
           <div
-            className={`py-2 px-3.5 shadow-sm text-xs ${
+            className={`text-xs ${
               isRecalled
-                ? "bg-slate-100 dark:bg-slate-850 text-slate-400 italic border border-slate-200/50 dark:border-slate-800 rounded-2xl"
+                ? "py-2 px-3.5 bg-slate-100 dark:bg-slate-850 text-slate-400 italic border border-slate-200/50 dark:border-slate-800 rounded-2xl shadow-sm"
+                : isMediaOnly
+                ? "p-0 bg-transparent shadow-none"
                 : isMe
-                ? "bg-primary text-white rounded-2xl rounded-tr-sm"
-                : "bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 rounded-2xl rounded-tl-sm border border-slate-100 dark:border-slate-800"
+                ? "py-2 px-3.5 bg-primary text-white rounded-2xl rounded-tr-sm shadow-sm"
+                : "py-2 px-3.5 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 rounded-2xl rounded-tl-sm border border-slate-100 dark:border-slate-800 shadow-sm"
             }`}
           >
             {isRecalled ? (
@@ -142,7 +148,7 @@ export default function MessageBubble({
                     {message.media.map((m) => (
                       <div
                         key={m.id}
-                        onClick={() => setZoomedMedia(m.cdnUrl)}
+                        onClick={() => onZoomMedia(m.cdnUrl)}
                         className="relative rounded-lg overflow-hidden border border-slate-100/55 dark:border-slate-800 bg-slate-100 shrink-0 cursor-pointer max-w-[180px] max-h-[140px] flex items-center justify-center group/media"
                       >
                         {m.type === "image" ? (
@@ -179,7 +185,9 @@ export default function MessageBubble({
         {showActions && !isRecalled && (
           <div
             ref={actionsRef}
-            className={`flex items-center gap-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-md rounded-full px-2 py-1 z-10 animate-in fade-in duration-200`}
+            className={`absolute ${
+              isMe ? "right-full mr-2" : "left-full ml-2"
+            } flex items-center gap-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-md rounded-full px-2 py-1 z-50 animate-in fade-in duration-200`}
           >
             {/* Emoji Quick Picker Trigger */}
             <div className="relative group/tooltip">
@@ -253,13 +261,12 @@ export default function MessageBubble({
 
       {/* Emoji Reactions Bar */}
       {message.reactions && message.reactions.length > 0 && !isRecalled && (
-        <div className={`flex flex-wrap gap-1 mt-0.5 ${isMe ? "justify-end mr-2" : "justify-start ml-2"}`}>
+        <div className={`flex flex-wrap gap-1.5 mt-0.5 ${isMe ? "justify-end mr-2" : "justify-start ml-2"}`}>
           {message.reactions.map((r, idx) => (
             <button
               key={idx}
               onClick={() => onReact(message.id, r.emoji)}
               className={`inline-flex items-center justify-center transition-all cursor-pointer bg-transparent border-0 p-0 text-[14px] hover:scale-125 select-none`}
-              title={r.reacted ? "Bỏ bày tỏ cảm xúc" : "Bày tỏ cảm xúc"}
             >
               {r.emoji}
             </button>
@@ -268,26 +275,6 @@ export default function MessageBubble({
       )}
 
 
-
-      {/* Lightbox / Media Viewer Modal */}
-      {zoomedMedia && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[99999] flex items-center justify-center p-4">
-          <button
-            onClick={() => setZoomedMedia(null)}
-            className="absolute top-6 right-6 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors cursor-pointer"
-          >
-            <X className="w-6 h-6" />
-          </button>
-          
-          <div className="max-w-4xl max-h-[85vh] flex items-center justify-center rounded-2xl overflow-hidden shadow-2xl border border-white/10">
-            {zoomedMedia.includes("/video/upload") || zoomedMedia.endsWith(".mp4") ? (
-              <video src={zoomedMedia} controls autoPlay className="max-w-full max-h-[85vh]" />
-            ) : (
-              <img src={zoomedMedia} alt="Zoomed Media" className="max-w-full max-h-[85vh] object-contain" />
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Recall Confirmation Popup Modal */}
       {showRecallConfirm && (

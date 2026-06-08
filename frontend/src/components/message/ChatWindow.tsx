@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { ChevronLeft, X, Send, Image as ImageIcon, Loader2, Play } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Send, Image as ImageIcon, Loader2, Play } from "lucide-react";
 import type { Conversation, DirectMessage } from "@/lib/types/message";
 import { mediaApi } from "@/lib/api";
 import { format } from "date-fns";
@@ -52,6 +52,13 @@ export default function ChatWindow({
   const [attachedFiles, setAttachedFiles] = useState<any[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   
+  // Drag and drop states
+  const [isDragging, setIsDragging] = useState(false);
+  const dragCounter = useRef(0);
+  
+  // Image lightbox state
+  const [zoomedMediaIndex, setZoomedMediaIndex] = useState<number | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -74,13 +81,94 @@ export default function ChatWindow({
     }, 2000);
   };
 
-  // Upload to Cloudinary handler
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+  // Extract all media items in chronological order (oldest first)
+  const allMediaItems = React.useMemo(() => {
+    return [...messages]
+      .reverse()
+      .filter((m) => m.status !== "recalled" && m.media && m.media.length > 0)
+      .flatMap((m) => m.media || []);
+  }, [messages]);
 
+  // Scroll lock effect when zoomed media index changes
+  useEffect(() => {
+    if (zoomedMediaIndex !== null) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [zoomedMediaIndex]);
+
+  // Keyboard navigation for image lightbox
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (zoomedMediaIndex === null) return;
+      if (e.key === "ArrowLeft") {
+        setZoomedMediaIndex((prev) =>
+          prev !== null && prev > 0 ? prev - 1 : allMediaItems.length - 1
+        );
+      } else if (e.key === "ArrowRight") {
+        setZoomedMediaIndex((prev) =>
+          prev !== null && prev < allMediaItems.length - 1 ? prev + 1 : 0
+        );
+      } else if (e.key === "Escape") {
+        setZoomedMediaIndex(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [zoomedMediaIndex, allMediaItems]);
+
+  const handleZoomMedia = (cdnUrl: string) => {
+    const index = allMediaItems.findIndex((m) => m.cdnUrl === cdnUrl);
+    if (index !== -1) {
+      setZoomedMediaIndex(index);
+    }
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current++;
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current--;
+    if (dragCounter.current === 0) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    dragCounter.current = 0;
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      await uploadFiles(files);
+    }
+  };
+
+  // Shared file upload helper
+  const uploadFiles = async (files: FileList) => {
     if (attachedFiles.length + files.length > 5) {
-      alert("Tối đa chỉ được chọn 5 file đính kèm!");
+      alert("Tối đa chỉ được chọn 5 tệp đính kèm!");
       return;
     }
 
@@ -94,7 +182,7 @@ export default function ChatWindow({
         const isVideo = file.type.startsWith("video/");
         
         if (!isImage && !isVideo) {
-          alert(`File ${file.name} không được hỗ trợ. Chỉ hỗ trợ ảnh/video.`);
+          alert(`Tệp ${file.name} không được hỗ trợ. Chỉ hỗ trợ ảnh/video.`);
           continue;
         }
 
@@ -132,8 +220,15 @@ export default function ChatWindow({
       alert("Tải tệp lên thất bại. Vui lòng thử lại!");
     } finally {
       setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
     }
+  };
+
+  // Upload to Cloudinary handler
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    await uploadFiles(files);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleSend = () => {
@@ -165,7 +260,25 @@ export default function ChatWindow({
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950">
+    <div
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+      className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 relative"
+    >
+      {/* Drag and Drop Overlay */}
+      {isDragging && (
+        <div className="absolute inset-0 bg-primary-main/20 dark:bg-primary-main/30 backdrop-blur-sm border-2 border-dashed border-primary-main z-50 flex flex-col items-center justify-center pointer-events-none animate-fade-in">
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-xl flex flex-col items-center gap-3 scale-100 transform transition-transform duration-200">
+            <ImageIcon className="w-12 h-12 text-primary-main animate-bounce" />
+            <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
+              Thả ảnh hoặc video vào đây để gửi
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2.5 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 shadow-sm shrink-0">
         <div className="flex items-center gap-2 min-w-0">
@@ -179,7 +292,7 @@ export default function ChatWindow({
           {showDialogButton && onShowDialog && (
             <button
               onClick={onShowDialog}
-              className="hidden md:flex items-center justify-center p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-850 transition-colors cursor-pointer"
+              className="hidden md:flex items-center justify-center p-1.5 rounded-lg text-slate-400 hover:text-slate-650 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-850 transition-colors cursor-pointer"
               title="Hiện danh sách"
             >
               <span className="material-symbols-outlined text-xs">right_panel_open</span>
@@ -208,7 +321,7 @@ export default function ChatWindow({
 
         <button
           onClick={onClose}
-          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-650 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
@@ -273,9 +386,32 @@ export default function ChatWindow({
             }
           };
 
+          // Split messages containing both text and media into virtual messages
+          const processedMessages: DirectMessage[] = [];
           for (let i = 0; i < messages.length; i++) {
             const msg = messages[i];
-            const prevMsg = i < messages.length - 1 ? messages[i + 1] : null; // older message
+            if (msg.content && msg.media && msg.media.length > 0 && msg.status !== "recalled") {
+              // Create a media-only virtual message (rendered lower/newer)
+              const mediaMsg: DirectMessage = {
+                ...msg,
+                content: "", // no text
+              };
+              // Create a text-only virtual message (rendered higher/older)
+              const textMsg: DirectMessage = {
+                ...msg,
+                id: `${msg.id}-text`,
+                media: [], // no media
+              };
+              processedMessages.push(mediaMsg);
+              processedMessages.push(textMsg);
+            } else {
+              processedMessages.push(msg);
+            }
+          }
+
+          for (let i = 0; i < processedMessages.length; i++) {
+            const msg = processedMessages[i];
+            const prevMsg = i < processedMessages.length - 1 ? processedMessages[i + 1] : null; // older message
             const isTimeGap = !prevMsg || (new Date(msg.createdAt).getTime() - new Date(prevMsg.createdAt).getTime() > 5 * 60 * 1000);
             const isSameSender = prevMsg ? prevMsg.senderId === msg.senderId : false;
             const showSenderName = !isSameSender || isTimeGap;
@@ -290,6 +426,7 @@ export default function ChatWindow({
                 onReply={setReplyingMessage}
                 onRecall={onRecallMessage}
                 onReact={onToggleReaction}
+                onZoomMedia={handleZoomMedia}
               />
             );
 
@@ -397,6 +534,78 @@ export default function ChatWindow({
           <Send className="w-4 h-4" />
         </button>
       </div>
+
+      {/* Lightbox / Media Viewer Modal */}
+      {zoomedMediaIndex !== null && allMediaItems[zoomedMediaIndex] && (() => {
+        const currentMedia = allMediaItems[zoomedMediaIndex];
+        const isVideo = currentMedia.cdnUrl.includes("/video/upload") || currentMedia.cdnUrl.endsWith(".mp4");
+        
+        return (
+          <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-[99999] flex flex-col items-center justify-between p-4 overflow-hidden select-none">
+            {/* Close Button */}
+            <button
+              onClick={() => setZoomedMediaIndex(null)}
+              className="absolute top-6 right-6 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white hover:scale-105 transition-all cursor-pointer z-[100000]"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            
+            {/* Navigation Left Arrow */}
+            <button
+              onClick={() => setZoomedMediaIndex((prev) => prev !== null && prev > 0 ? prev - 1 : allMediaItems.length - 1)}
+              className="absolute left-6 top-1/2 -translate-y-1/2 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white hover:scale-105 transition-all cursor-pointer z-[100000]"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+
+            {/* Navigation Right Arrow */}
+            <button
+              onClick={() => setZoomedMediaIndex((prev) => prev !== null && prev < allMediaItems.length - 1 ? prev + 1 : 0)}
+              className="absolute right-6 top-1/2 -translate-y-1/2 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white hover:scale-105 transition-all cursor-pointer z-[100000]"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </button>
+
+            {/* Main Content Area */}
+            <div className="flex-1 flex items-center justify-center max-w-4xl max-h-[70vh] w-full mt-12 mb-4">
+              <div className="max-w-full max-h-full rounded-2xl overflow-hidden shadow-2xl border border-white/10 flex items-center justify-center">
+                {isVideo ? (
+                  <video src={currentMedia.cdnUrl} controls autoPlay className="max-w-full max-h-[70vh] object-contain" />
+                ) : (
+                  <img src={currentMedia.cdnUrl} alt="Zoomed Media" className="max-w-full max-h-[70vh] object-contain" />
+                )}
+              </div>
+            </div>
+
+            {/* Bottom History/Thumbnails Gallery */}
+            <div className="w-full max-w-3xl p-3 flex gap-2 overflow-x-auto py-1 px-2 scrollbar-none justify-center z-[100000] mb-4">
+              {allMediaItems.map((media, idx) => {
+                const isActive = idx === zoomedMediaIndex;
+                const isThumbVideo = media.cdnUrl.includes("/video/upload") || media.cdnUrl.endsWith(".mp4");
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => setZoomedMediaIndex(idx)}
+                    className={`relative w-12 h-12 rounded-lg overflow-hidden border-2 shrink-0 cursor-pointer transition-all duration-150 ${
+                      isActive
+                        ? "border-primary-main scale-110 shadow-md"
+                        : "border-white/10 hover:border-white/30 opacity-70 hover:opacity-100"
+                    }`}
+                  >
+                    {isThumbVideo ? (
+                      <div className="w-full h-full bg-black flex items-center justify-center">
+                        <Play className="w-4 h-4 text-white" />
+                      </div>
+                    ) : (
+                      <img src={media.cdnUrl} alt="thumbnail" className="w-full h-full object-cover animate-fade-in" />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
