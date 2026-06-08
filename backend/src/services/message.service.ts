@@ -2,6 +2,23 @@ import prisma from '../config/prisma';
 import redis from '../config/redis';
 import cloudinary from '../config/cloudinary.config';
 
+function getMediaPreviewText(media: any[]): string {
+  if (!media || media.length === 0) return '';
+  const imageCount = media.filter(m => m.type === 'image' || m.type === 'IMAGE').length;
+  const videoCount = media.filter(m => m.type === 'video' || m.type === 'VIDEO').length;
+  
+  if (imageCount > 0 && videoCount > 0) {
+    return `Đã gửi ${imageCount} ảnh và ${videoCount} video`;
+  }
+  if (imageCount > 0) {
+    return `Đã gửi ${imageCount} ảnh`;
+  }
+  if (videoCount > 0) {
+    return `Đã gửi ${videoCount} video`;
+  }
+  return 'Đã gửi tệp đính kèm';
+}
+
 export class MessageService {
   /**
    * Finds or creates a 1-1 conversation between userA and userB.
@@ -108,7 +125,8 @@ export class MessageService {
               include: {
                 sender: {
                   select: { fullName: true }
-                }
+                },
+                media: true
               }
             }
           }
@@ -151,7 +169,9 @@ export class MessageService {
               },
           lastMessage: lastMsg
             ? {
-                content: lastMsg.status === 'recalled' ? 'Tin nhắn đã bị thu hồi' : lastMsg.content,
+                content: lastMsg.status === 'recalled' 
+                  ? 'Tin nhắn đã bị thu hồi' 
+                  : (lastMsg.content || getMediaPreviewText(lastMsg.media)),
                 senderName: lastMsg.senderId === userId ? 'Bạn' : (lastMsg.sender?.fullName || 'Người dùng'),
                 createdAt: lastMsg.createdAt.toISOString(),
                 status: lastMsg.status
@@ -217,11 +237,11 @@ export class MessageService {
       throw new Error('Bạn không thuộc cuộc trò chuyện này');
     }
 
-    // Rate Limiting (1 message per 1s per user)
+    // Rate Limiting (1 message per 0.1s per user)
     const rateLimitKey = `dm_rate:${senderId}`;
-    const isRateLimited = await redis.set(rateLimitKey, '1', 'EX', 1, 'NX');
+    const isRateLimited = await redis.set(rateLimitKey, '1', 'PX', 100, 'NX');
     if (!isRateLimited) {
-      throw new Error('Vui lòng đợi 1 giây trước khi gửi tin nhắn tiếp theo');
+      throw new Error('Vui lòng đợi 0.1 giây trước khi gửi tin nhắn tiếp theo');
     }
 
     // Validate parent message if replying
@@ -273,7 +293,8 @@ export class MessageService {
             include: {
               sender: {
                 select: { fullName: true }
-              }
+              },
+              media: true
             }
           }
         }

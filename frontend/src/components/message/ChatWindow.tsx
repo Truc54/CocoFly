@@ -218,7 +218,7 @@ export default function ChatWindow({
       <div
         ref={messagesContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-4 space-y-1 min-h-0 flex flex-col-reverse"
+        className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-1 min-h-0 flex flex-col-reverse"
       >
         <div ref={messagesEndRef} />
 
@@ -247,15 +247,27 @@ export default function ChatWindow({
             try {
               const date = new Date(dateStr);
               const now = new Date();
+              const diffTime = Math.abs(now.getTime() - date.getTime());
+              const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+              
+              const timeStr = format(date, "HH:mm");
+              
               if (date.toDateString() === now.toDateString()) {
-                return `Hôm nay ${format(date, "HH:mm")}`;
+                return timeStr;
               }
+              
               const yesterday = new Date(now);
               yesterday.setDate(now.getDate() - 1);
               if (date.toDateString() === yesterday.toDateString()) {
-                return `Hôm qua ${format(date, "HH:mm")}`;
+                return `${timeStr} Hôm qua`;
               }
-              return format(date, "HH:mm, dd/MM/yyyy", { locale: vi });
+              
+              if (diffDays < 7) {
+                const dayNames = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+                return `${timeStr} ${dayNames[date.getDay()]}`;
+              }
+              
+              return `${timeStr}, ${format(date, "dd/MM/yyyy")}`;
             } catch {
               return "";
             }

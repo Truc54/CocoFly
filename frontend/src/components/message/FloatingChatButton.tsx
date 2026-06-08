@@ -10,6 +10,7 @@ export default function FloatingChatButton() {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [preloadedConversation, setPreloadedConversation] = useState<any | null>(null);
   const { unreadCount } = useUnreadDM();
 
   // Listen to auth changes to show/hide button
@@ -40,13 +41,34 @@ export default function FloatingChatButton() {
         }
 
         setIsLoggedIn(true);
-        setIsOpen(true);
 
         const { messageApi } = await import("@/lib/api");
         const conversation = await messageApi.getOrCreateConversation(targetUserId);
 
         if (conversation && conversation.id) {
+          const currentUser = authStorage.getUser() as any;
+          const otherParticipant = conversation.participants.find((p: any) => p.userId === targetUserId) || 
+                                   conversation.participants.find((p: any) => p.userId !== currentUser?.id);
+          
+          const formattedConversation = {
+            id: conversation.id,
+            participant: otherParticipant ? {
+              id: otherParticipant.user.id,
+              fullName: otherParticipant.user.fullName || "Người dùng CocoFly",
+              avatarUrl: otherParticipant.user.avatarUrl
+            } : {
+              id: targetUserId,
+              fullName: "Người dùng",
+              avatarUrl: null
+            },
+            lastMessage: null,
+            unreadCount: 0,
+            isMuted: false
+          };
+
+          setPreloadedConversation(formattedConversation);
           setActiveConversationId(conversation.id);
+          setIsOpen(true);
         }
       } catch (err) {
         console.error("Failed to open DM from event:", err);
@@ -77,7 +99,6 @@ export default function FloatingChatButton() {
           return;
         }
         setIsOpen(false);
-        setActiveConversationId(null);
       }
     };
 
@@ -95,9 +116,9 @@ export default function FloatingChatButton() {
         <ChatWidget
           activeConversationId={activeConversationId}
           setActiveConversationId={setActiveConversationId}
+          preloadedConversation={preloadedConversation}
           onClose={() => {
             setIsOpen(false);
-            setActiveConversationId(null);
           }}
         />
       ) : (

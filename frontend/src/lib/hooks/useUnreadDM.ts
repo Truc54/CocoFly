@@ -4,18 +4,13 @@ import { useState, useEffect, useCallback } from "react";
 import { getSocket, connectSocket } from "../socket";
 import { messageApi } from "../api";
 import { authStorage } from "../auth-storage";
+import { playChatSound } from "../sounds";
 
 export function useUnreadDM() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   const playNotificationSound = useCallback(() => {
-    try {
-      const audio = new Audio("/sounds/dm-notification.mp3");
-      audio.volume = 0.5;
-      audio.play().catch((err) => console.log("Audio play blocked by browser:", err));
-    } catch (err) {
-      console.error("Failed to play sound:", err);
-    }
+    playChatSound("receive");
   }, []);
 
   useEffect(() => {

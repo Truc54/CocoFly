@@ -9,6 +9,7 @@ import { vi } from "date-fns/locale";
 
 interface ConversationListProps {
   conversations: Conversation[];
+  activeConversationId?: string | null;
   isLoading: boolean;
   hasMore: boolean;
   onLoadMore: () => void;
@@ -20,6 +21,7 @@ interface ConversationListProps {
 
 export default function ConversationList({
   conversations,
+  activeConversationId,
   isLoading,
   hasMore,
   onLoadMore,
@@ -54,23 +56,6 @@ export default function ConversationList({
           <span>Tin nhắn</span>
         </h3>
         <div className="flex items-center gap-1">
-          {onHideDialog && (
-            <button
-              onClick={onHideDialog}
-              className="hidden md:flex items-center justify-center p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-850 transition-colors cursor-pointer"
-              title="Ẩn danh sách"
-            >
-              <span className="material-symbols-outlined text-xs">left_panel_close</span>
-            </button>
-          )}
-          {showCloseButton && (
-            <button
-              onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          )}
         </div>
       </div>
 
@@ -94,11 +79,16 @@ export default function ConversationList({
           <>
             {filteredConversations.map((c) => {
               const hasUnread = c.unreadCount > 0;
+              const isActive = c.id === activeConversationId;
               return (
                 <button
                   key={c.id}
                   onClick={() => onSelectConversation(c.id)}
-                  className="w-full px-4 py-3.5 flex items-start gap-3 hover:bg-slate-50 dark:hover:bg-slate-850/45 text-left transition-colors cursor-pointer"
+                  className={`w-full px-4 py-3.5 flex items-start gap-3 text-left transition-colors cursor-pointer ${
+                    isActive 
+                      ? "bg-slate-100 dark:bg-slate-800" 
+                      : "hover:bg-slate-50 dark:hover:bg-slate-850/45"
+                  }`}
                 >
                   {/* Avatar */}
                   <div className="relative shrink-0 mt-0.5">

@@ -51,7 +51,7 @@ export class MessageController {
       const userId = (req as any).user?.userId;
       if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
-      const conversationId = req.params.id;
+      const conversationId = req.params.id as string;
       const cursor = req.query.cursor as string | undefined;
       const limit = Math.max(1, Math.min(Number(req.query.limit) || 50, 100));
 
@@ -85,7 +85,7 @@ export class MessageController {
       const userId = (req as any).user?.userId;
       if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
-      const conversationId = req.params.id;
+      const conversationId = req.params.id as string;
       const result = await service.markAsRead(conversationId, userId);
       return res.json(result);
     } catch (err) {

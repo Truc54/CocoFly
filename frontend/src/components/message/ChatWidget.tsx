@@ -9,12 +9,14 @@ import ChatWindow from "./ChatWindow";
 interface ChatWidgetProps {
   activeConversationId: string | null;
   setActiveConversationId: (id: string | null) => void;
+  preloadedConversation?: any | null;
   onClose: () => void;
 }
 
 export default function ChatWidget({
   activeConversationId,
   setActiveConversationId,
+  preloadedConversation,
   onClose,
 }: ChatWidgetProps) {
   const [isListCollapsed, setIsListCollapsed] = useState(false);
@@ -37,7 +39,7 @@ export default function ChatWidget({
     refreshConversations
   } = useDirectMessage(activeConversationId);
 
-  const activeConversation = conversations.find((c) => c.id === activeConversationId);
+  const activeConversation = conversations.find((c) => c.id === activeConversationId) || preloadedConversation;
 
   return (
     <div className="md:w-[840px] md:h-[560px] w-[360px] h-[520px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-100px)] bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-600 rounded-xl shadow-[3px_3px_0px_#E2B9A1] dark:shadow-[3px_3px_0px_#4c2d1b] flex flex-row overflow-hidden animate-in zoom-in-95 duration-200 origin-bottom-right">
@@ -50,6 +52,7 @@ export default function ChatWidget({
       >
         <ConversationList
           conversations={conversations}
+          activeConversationId={activeConversationId}
           isLoading={isLoadingConversations}
           hasMore={hasMoreConversations}
           onLoadMore={loadMoreConversations}

@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { getSocket, connectSocket } from "../socket";
 import { messageApi } from "../api";
+import { authStorage } from "../auth-storage";
+import { playChatSound } from "../sounds";
 import type { Conversation, DirectMessage, ReactionGroup } from "../types/message";
 
 export function useDirectMessage(activeConversationId: string | null) {
@@ -190,6 +192,13 @@ export function useDirectMessage(activeConversationId: string | null) {
     }
 
     const onMessage = (msg: DirectMessage) => {
+      const currentUser = authStorage.getUser() as any;
+      const isMyMsg = currentUser && msg.senderId === currentUser.id;
+
+      if (isMyMsg) {
+        playChatSound("send");
+      }
+
       // 1. If message is for the currently open conversation, append it
       if (activeConversationIdRef.current === msg.conversationId) {
         setMessages((prev) => {
@@ -217,8 +226,10 @@ export function useDirectMessage(activeConversationId: string | null) {
         const updatedConv: Conversation = {
           ...conv,
           lastMessage: {
-            content: msg.status === "recalled" ? "Tin nhắn đã bị thu hồi" : msg.content,
-            senderName: isActive && msg.senderId !== socket?.id ? msg.senderName : (msg.content ? (msg.senderId === socket?.id ? "Bạn" : msg.senderName) : "Hình ảnh/Video"),
+            content: msg.status === "recalled" 
+              ? "Tin nhắn đã bị thu hồi" 
+              : (msg.content || getMediaPreviewText(msg.media)),
+            senderName: isMyMsg ? "Bạn" : msg.senderName,
             createdAt: msg.createdAt,
             status: msg.status
           },
@@ -324,4 +335,21 @@ export function useDirectMessage(activeConversationId: string | null) {
     loadMoreMessages: () => activeConversationId && loadMessages(activeConversationId, true),
     refreshConversations: () => loadConversations()
   };
+}
+
+function getMediaPreviewText(media: any[]): string {
+  if (!media || media.length === 0) return '';
+  const imageCount = media.filter(m => m.type === 'image' || m.type === 'IMAGE').length;
+  const videoCount = media.filter(m => m.type === 'video' || m.type === 'VIDEO').length;
+  
+  if (imageCount > 0 && videoCount > 0) {
+    return `Đã gửi ${imageCount} ảnh và ${videoCount} video`;
+  }
+  if (imageCount > 0) {
+    return `Đã gửi ${imageCount} ảnh`;
+  }
+  if (videoCount > 0) {
+    return `Đã gửi ${videoCount} video`;
+  }
+  return 'Đã gửi tệp đính kèm';
 }

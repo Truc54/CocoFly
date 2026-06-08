@@ -48,6 +48,14 @@ export default function MessageBubble({
     }
   };
 
+  const getFullFormattedDate = (dateStr: string) => {
+    try {
+      return format(new Date(dateStr), "HH:mm d 'Tháng' M, yyyy", { locale: vi });
+    } catch {
+      return "";
+    }
+  };
+
   const handleEmojiClick = (emoji: string) => {
     onReact(message.id, emoji);
     setShowEmojiPicker(false);
@@ -62,13 +70,13 @@ export default function MessageBubble({
         setShowActions(false);
       }
     };
-    if (showActions) {
+    if (showActions || showEmojiPicker) {
       document.addEventListener("mousedown", handleClickOutside);
     }
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [showActions]);
+  }, [showActions, showEmojiPicker]);
 
   const quickEmojis = ["😀", "❤️", "👍", "😢", "😡", "🔥"];
 
@@ -77,8 +85,9 @@ export default function MessageBubble({
       className={`flex flex-col ${isMe ? "items-end" : "items-start"} relative group w-full ${isCompact ? "mt-0.5" : "mt-3"}`}
       onMouseEnter={() => !isRecalled && setShowActions(true)}
       onMouseLeave={() => {
-        setShowActions(false);
-        setShowEmojiPicker(false);
+        if (!showEmojiPicker) {
+          setShowActions(false);
+        }
       }}
     >
       {/* Sender name for received messages */}
@@ -91,7 +100,18 @@ export default function MessageBubble({
       {/* Main Message Row */}
       <div className={`flex items-center gap-2 max-w-[85%] ${isMe ? "flex-row-reverse" : "flex-row"}`}>
         {/* Chat Bubble */}
-        <div className="flex flex-col relative">
+        <div className="flex flex-col relative group/bubble">
+          {/* Custom Date & Time Tooltip on Hover */}
+          {!isRecalled && (
+            <div className={`absolute bottom-full mb-1.5 opacity-0 pointer-events-none transition-opacity duration-150 bg-slate-900/90 dark:bg-slate-950/90 backdrop-blur-sm text-white text-[11px] font-bold px-3 py-1.5 rounded-xl shadow-lg border border-white/10 z-[9999] whitespace-nowrap ${
+              showEmojiPicker ? "hidden" : "group-hover/bubble:opacity-100"
+            } ${
+              isMe ? "right-2" : "left-2"
+            }`}>
+              {getFullFormattedDate(message.createdAt)}
+            </div>
+          )}
+
           {/* Reply Context Header */}
           {message.parentId && !isRecalled && (
             <div className={`text-[10px] px-3 py-1 bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-t-xl border-b border-slate-100 dark:border-slate-700/50 mb-[-4px] select-none ${isMe ? "rounded-l-xl" : "rounded-r-xl"}`}>
@@ -169,7 +189,9 @@ export default function MessageBubble({
               >
                 <Smile className="w-3.5 h-3.5" />
               </button>
-              <div className="absolute bottom-full mb-2.5 left-1/2 -translate-x-1/2 opacity-0 pointer-events-none group-hover/tooltip:opacity-100 transition-opacity duration-150 bg-slate-850 dark:bg-slate-700 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full whitespace-nowrap shadow-md z-[110]">
+              <div className={`absolute bottom-full mb-2.5 left-1/2 -translate-x-1/2 opacity-0 pointer-events-none transition-opacity duration-150 bg-slate-900/90 dark:bg-slate-950/90 backdrop-blur-sm text-white text-[11px] font-bold px-3 py-1.5 rounded-xl whitespace-nowrap shadow-lg border border-white/10 z-[110] ${
+                showEmojiPicker ? "hidden" : "group-hover/tooltip:opacity-100"
+              }`}>
                 Bày tỏ cảm xúc
               </div>
 
@@ -199,7 +221,9 @@ export default function MessageBubble({
               >
                 <Reply className="w-3.5 h-3.5" />
               </button>
-              <div className="absolute bottom-full mb-2.5 left-1/2 -translate-x-1/2 opacity-0 pointer-events-none group-hover/tooltip:opacity-100 transition-opacity duration-150 bg-slate-850 dark:bg-slate-700 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full whitespace-nowrap shadow-md z-[110]">
+              <div className={`absolute bottom-full mb-2.5 left-1/2 -translate-x-1/2 opacity-0 pointer-events-none transition-opacity duration-150 bg-slate-900/90 dark:bg-slate-950/90 backdrop-blur-sm text-white text-[11px] font-bold px-3 py-1.5 rounded-xl whitespace-nowrap shadow-lg border border-white/10 z-[110] ${
+                showEmojiPicker ? "hidden" : "group-hover/tooltip:opacity-100"
+              }`}>
                 Phản hồi
               </div>
             </div>
@@ -216,7 +240,9 @@ export default function MessageBubble({
                 >
                   <Undo className="w-3.5 h-3.5" />
                 </button>
-                <div className="absolute bottom-full mb-2.5 left-1/2 -translate-x-1/2 opacity-0 pointer-events-none group-hover/tooltip:opacity-100 transition-opacity duration-150 bg-slate-850 dark:bg-slate-700 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full whitespace-nowrap shadow-md z-[110]">
+                <div className={`absolute bottom-full mb-2.5 left-1/2 -translate-x-1/2 opacity-0 pointer-events-none transition-opacity duration-150 bg-slate-900/90 dark:bg-slate-950/90 backdrop-blur-sm text-white text-[11px] font-bold px-3 py-1.5 rounded-xl whitespace-nowrap shadow-lg border border-white/10 z-[110] ${
+                  showEmojiPicker ? "hidden" : "group-hover/tooltip:opacity-100"
+                }`}>
                   Thu hồi
                 </div>
               </div>
@@ -241,12 +267,7 @@ export default function MessageBubble({
         </div>
       )}
 
-      {/* Message Timestamp */}
-      {!isRecalled && (
-        <span className={`text-[10px] text-slate-400/80 mt-0.5 select-none ${isMe ? "mr-2" : "ml-2"}`}>
-          {getFormattedTime(message.createdAt)}
-        </span>
-      )}
+
 
       {/* Lightbox / Media Viewer Modal */}
       {zoomedMedia && (
