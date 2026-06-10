@@ -12,6 +12,7 @@ import { mediaRoutes } from './routes/media.routes';
 import { paymentRoutes } from './routes/payment.routes';
 import { notificationRoutes } from './routes/notification.routes';
 import { messageRoutes } from './routes/message.routes';
+import { adminRoutes } from './routes/admin.routes';
 import { errorHandler } from './middlewares/errorHandler';
 
 const app = express();
@@ -37,6 +38,7 @@ app.set('trust proxy', 1);
 // ── Routes ──
 app.use('/auth', authRoutes);
 app.use('/auth', oauthRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api/auctions', auctionRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/users', userRoutes);

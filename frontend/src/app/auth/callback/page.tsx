@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { authStorage } from "@/lib/auth-storage";
 
-export default function AuthCallback() {
+function AuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -46,5 +46,20 @@ export default function AuthCallback() {
         <p className="text-sm font-semibold text-slate-500 animate-pulse">Đang xử lý đăng nhập...</p>
       </div>
     </div>
+  );
+}
+
+export default function AuthCallback() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center bg-white dark:bg-background-dark">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 rounded-full border-4 border-[#8f5c38] border-t-transparent animate-spin"></div>
+          <p className="text-sm font-semibold text-slate-500 animate-pulse">Đang tải...</p>
+        </div>
+      </div>
+    }>
+      <AuthCallbackContent />
+    </Suspense>
   );
 }
