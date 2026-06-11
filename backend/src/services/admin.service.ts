@@ -1,5 +1,6 @@
 import prisma from '../config/prisma';
 import redis from '../config/redis';
+import { Decimal } from '@prisma/client/runtime/library';
 
 export class AdminService {
   // ── Dashboard: Stats with 5-minute Redis Cache ─────────────────────────────────────
@@ -322,5 +323,537 @@ export class AdminService {
     await redis.set(cacheKey, JSON.stringify(result), 'EX', 60);
 
     return result;
+  }
+
+  // ── Phase 2: User Management ──────────────────────────────────────────────────────
+  async getUsers(params: { page?: number; limit?: number; search?: string; role?: string; status?: string }) {
+    const page = Number(params.page) || 1;
+    const limit = Number(params.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (params.search) {
+      where.OR = [
+        { email: { contains: params.search, mode: 'insensitive' } },
+        { fullName: { contains: params.search, mode: 'insensitive' } },
+      ];
+    }
+    if (params.role) {
+      where.role = params.role;
+    }
+    if (params.status) {
+      where.accountStatus = params.status;
+    }
+
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          email: true,
+          fullName: true,
+          avatarUrl: true,
+          role: true,
+          accountStatus: true,
+          nonPaymentStrikes: true,
+          rating: true,
+          balance: true,
+          createdAt: true,
+        },
+      }),
+      prisma.user.count({ where }),
+    ]);
+
+    return {
+      users,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  async getUserById(id: string) {
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        phone: true,
+        avatarUrl: true,
+        role: true,
+        accountStatus: true,
+        nonPaymentStrikes: true,
+        rating: true,
+        createdAt: true,
+        sellerAuctions: {
+          take: 10,
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            startingPrice: true,
+            currentPrice: true,
+            status: true,
+            createdAt: true,
+            item: {
+              select: { title: true },
+            },
+          },
+        },
+        wonAuctions: {
+          take: 10,
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            startingPrice: true,
+            currentPrice: true,
+            status: true,
+            createdAt: true,
+            item: {
+              select: { title: true },
+            },
+          },
+        },
+        bids: {
+          take: 10,
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            amount: true,
+            createdAt: true,
+            auction: {
+              select: {
+                id: true,
+                item: { select: { title: true } },
+              },
+            },
+          },
+        },
+        buyerPayments: {
+          take: 10,
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            amount: true,
+            status: true,
+            createdAt: true,
+            auction: {
+              select: {
+                id: true,
+                item: { select: { title: true } },
+              },
+            },
+          },
+        },
+        sellerPayments: {
+          take: 10,
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            amount: true,
+            status: true,
+            createdAt: true,
+            auction: {
+              select: {
+                id: true,
+                item: { select: { title: true } },
+              },
+            },
+          },
+        },
+        reviewsReceived: {
+          take: 10,
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            rating: true,
+            comment: true,
+            createdAt: true,
+            author: { select: { fullName: true } },
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new Error('Không tìm thấy người dùng');
+    }
+
+    return user;
+  }
+
+  async banUser(actorId: string, targetId: string, reason: string) {
+    if (actorId === targetId) {
+      throw new Error('Bạn không thể tự khóa tài khoản của chính mình');
+    }
+
+    const targetUser = await prisma.user.findUnique({ where: { id: targetId } });
+    if (!targetUser) {
+      throw new Error('Không tìm thấy người dùng');
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: targetId },
+      data: {
+        accountStatus: 'banned',
+        banReason: reason,
+      },
+    });
+
+    // Write Audit Log
+    await prisma.auditLog.create({
+      data: {
+        actionType: 'BAN_USER',
+        actorId,
+        targetId,
+        reason,
+        metadata: {
+          email: targetUser.email,
+          fullName: targetUser.fullName,
+        },
+      },
+    });
+
+    return updatedUser;
+  }
+
+  async unbanUser(actorId: string, targetId: string) {
+    const targetUser = await prisma.user.findUnique({ where: { id: targetId } });
+    if (!targetUser) {
+      throw new Error('Không tìm thấy người dùng');
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: targetId },
+      data: {
+        accountStatus: 'active',
+        banReason: null,
+      },
+    });
+
+    // Write Audit Log
+    await prisma.auditLog.create({
+      data: {
+        actionType: 'UNBAN_USER',
+        actorId,
+        targetId,
+        reason: 'Admin kích hoạt lại tài khoản',
+        metadata: {
+          email: targetUser.email,
+          fullName: targetUser.fullName,
+        },
+      },
+    });
+
+    return updatedUser;
+  }
+
+  async changeUserRole(actorId: string, targetId: string, role: 'buyer' | 'seller' | 'admin') {
+    if (actorId === targetId) {
+      throw new Error('Bạn không thể tự thay đổi vai trò của chính mình');
+    }
+
+    const targetUser = await prisma.user.findUnique({ where: { id: targetId } });
+    if (!targetUser) {
+      throw new Error('Không tìm thấy người dùng');
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: targetId },
+      data: { role },
+    });
+
+    // Write Audit Log
+    await prisma.auditLog.create({
+      data: {
+        actionType: 'CHANGE_ROLE',
+        actorId,
+        targetId,
+        reason: `Thay đổi vai trò từ ${targetUser.role} sang ${role}`,
+        metadata: {
+          oldRole: targetUser.role,
+          newRole: role,
+        },
+      },
+    });
+
+    return updatedUser;
+  }
+
+  async resetUserStrikes(actorId: string, targetId: string) {
+    const targetUser = await prisma.user.findUnique({ where: { id: targetId } });
+    if (!targetUser) {
+      throw new Error('Không tìm thấy người dùng');
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: targetId },
+      data: { nonPaymentStrikes: 0 },
+    });
+
+    // Write Audit Log
+    await prisma.auditLog.create({
+      data: {
+        actionType: 'RESET_STRIKES',
+        actorId,
+        targetId,
+        reason: 'Reset số gậy vi phạm thanh toán về 0',
+        metadata: {
+          oldStrikes: targetUser.nonPaymentStrikes,
+          newStrikes: 0,
+        },
+      },
+    });
+
+    return updatedUser;
+  }
+
+  // ── Phase 2: Auction Management ──────────────────────────────────────────────────
+  async getAuctions(params: { page?: number; limit?: number; status?: string; search?: string }) {
+    const page = Number(params.page) || 1;
+    const limit = Number(params.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (params.status) {
+      where.status = params.status;
+    }
+    if (params.search) {
+      where.OR = [
+        {
+          item: {
+            title: { contains: params.search, mode: 'insensitive' },
+          },
+        },
+        {
+          seller: {
+            fullName: { contains: params.search, mode: 'insensitive' },
+          },
+        },
+      ];
+    }
+
+    const [auctions, total] = await Promise.all([
+      prisma.auction.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          seller: {
+            select: { id: true, fullName: true, email: true },
+          },
+          item: {
+            select: {
+              title: true,
+              media: {
+                take: 1,
+                select: { cdnUrl: true },
+              },
+            },
+          },
+        },
+      }),
+      prisma.auction.count({ where }),
+    ]);
+
+    return {
+      auctions,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  async getAuctionById(id: string) {
+    const auction = await prisma.auction.findUnique({
+      where: { id },
+      include: {
+        seller: {
+          select: { id: true, fullName: true, email: true },
+        },
+        item: {
+          include: {
+            category: { select: { name: true } },
+            media: {
+              select: { id: true, cdnUrl: true, type: true },
+            },
+          },
+        },
+        bids: {
+          orderBy: { amount: 'desc' },
+          include: {
+            bidder: {
+              select: { id: true, fullName: true, email: true },
+            },
+          },
+        },
+        winner: {
+          select: { id: true, fullName: true, email: true },
+        },
+      },
+    });
+
+    if (!auction) {
+      throw new Error('Không tìm thấy phiên đấu giá');
+    }
+
+    return auction;
+  }
+
+  async forceEndAuction(actorId: string, auctionId: string) {
+    const auction = await prisma.auction.findUnique({
+      where: { id: auctionId },
+      select: { status: true, sellerId: true, itemId: true },
+    });
+
+    if (!auction) {
+      throw new Error('Không tìm thấy phiên đấu giá');
+    }
+
+    if (auction.status !== 'active') {
+      throw new Error('Chỉ có thể kết thúc phiên đấu giá đang hoạt động');
+    }
+
+    // Find highest valid bid
+    const highestBid = await prisma.bid.findFirst({
+      where: { auctionId, isValid: true },
+      orderBy: [{ amount: 'desc' }, { createdAt: 'asc' }],
+    });
+
+    const now = new Date();
+
+    if (highestBid) {
+      const finalPrice = Number(highestBid.amount);
+
+      await prisma.auction.update({
+        where: { id: auctionId },
+        data: {
+          status: 'ended',
+          winnerId: highestBid.bidderId,
+          winningBidId: highestBid.id,
+          finalPrice: new Decimal(finalPrice),
+          actualEndTime: now,
+        },
+      });
+
+      // Create Payment record (pending, 48h timeout)
+      const platformFee = finalPrice * 0.05;
+      await prisma.payment.create({
+        data: {
+          auctionId,
+          buyerId: highestBid.bidderId,
+          sellerId: auction.sellerId,
+          amount: new Decimal(finalPrice),
+          platformFee: new Decimal(platformFee),
+          sellerAmount: new Decimal(finalPrice - platformFee),
+          paymentMethod: 'banking',
+          status: 'pending',
+          paymentDeadline: new Date(Date.now() + 48 * 60 * 60 * 1000),
+        },
+      });
+
+      try {
+        const { schedulePaymentTimeout } = require('../queues/payment.queue');
+        await schedulePaymentTimeout(auctionId, highestBid.bidderId);
+      } catch (e) {
+        console.warn('Could not schedule payment timeout:', e);
+      }
+    } else {
+      // End auction failed
+      await prisma.auction.update({
+        where: { id: auctionId },
+        data: {
+          status: 'failed',
+          actualEndTime: now,
+        },
+      });
+
+      await prisma.item.update({
+        where: { id: auction.itemId },
+        data: { status: 'active' },
+      });
+    }
+
+    // Close chat room
+    await prisma.chatRoom.updateMany({
+      where: { auctionId },
+      data: { isActive: false },
+    });
+
+    // Write Audit Log
+    await prisma.auditLog.create({
+      data: {
+        actionType: 'FORCE_END_AUCTION',
+        actorId,
+        targetId: auctionId,
+        reason: 'Admin buộc kết thúc phiên đấu giá sớm',
+        metadata: {
+          sellerId: auction.sellerId,
+          hasWinner: !!highestBid,
+          winnerId: highestBid?.bidderId || null,
+          price: highestBid ? Number(highestBid.amount) : null,
+        },
+      },
+    });
+
+    return { success: true };
+  }
+
+  async cancelAuction(actorId: string, auctionId: string) {
+    const auction = await prisma.auction.findUnique({
+      where: { id: auctionId },
+      select: { status: true, sellerId: true, itemId: true },
+    });
+
+    if (!auction) {
+      throw new Error('Không tìm thấy phiên đấu giá');
+    }
+
+    if (auction.status !== 'scheduled' && auction.status !== 'active') {
+      throw new Error('Chỉ có thể hủy phiên đấu giá chưa bắt đầu hoặc đang hoạt động');
+    }
+
+    const now = new Date();
+
+    await prisma.auction.update({
+      where: { id: auctionId },
+      data: {
+        status: 'cancelled',
+        actualEndTime: now,
+      },
+    });
+
+    await prisma.item.update({
+      where: { id: auction.itemId },
+      data: { status: 'active' },
+    });
+
+    // Close chat room
+    await prisma.chatRoom.updateMany({
+      where: { auctionId },
+      data: { isActive: false },
+    });
+
+    // Write Audit Log
+    await prisma.auditLog.create({
+      data: {
+        actionType: 'CANCEL_AUCTION',
+        actorId,
+        targetId: auctionId,
+        reason: 'Admin hủy phiên đấu giá',
+        metadata: {
+          sellerId: auction.sellerId,
+          oldStatus: auction.status,
+        },
+      },
+    });
+
+    return { success: true };
   }
 }

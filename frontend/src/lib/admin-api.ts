@@ -38,13 +38,11 @@ export const adminApi = {
       }),
   },
   auctions: {
-    list: (params: { page?: number; limit?: number; status?: string; type?: string; sellerId?: string; search?: string }) => {
+    list: (params: { page?: number; limit?: number; status?: string; search?: string }) => {
       const query = new URLSearchParams();
       if (params.page) query.append("page", params.page.toString());
       if (params.limit) query.append("limit", params.limit.toString());
       if (params.status) query.append("status", params.status);
-      if (params.type) query.append("type", params.type);
-      if (params.sellerId) query.append("sellerId", params.sellerId);
       if (params.search) query.append("search", params.search);
       return fetchApi(`/api/admin/auctions?${query.toString()}`);
     },
