@@ -177,4 +177,79 @@ export class AdminController {
       res.status(500).json({ success: false, message: error.message });
     }
   }
+
+  // ── Phase 3: Payment Management Endpoints ──────────────────────────────────────────
+  async getPayments(req: Request, res: Response): Promise<void> {
+    try {
+      const { page, limit, status, method, search } = req.query;
+      const result = await this.adminService.getPayments({
+        page: page ? Number(page) : undefined,
+        limit: limit ? Number(limit) : undefined,
+        status: status as string,
+        method: method as string,
+        search: search as string,
+      });
+      res.status(200).json({ success: true, data: result });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  async refundPayment(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params.id as string;
+      const { reason } = req.body;
+      const actorId = (req as any).user?.userId;
+      if (!actorId) {
+        res.status(401).json({ success: false, message: 'Chưa xác thực' });
+        return;
+      }
+      const result = await this.adminService.refundPayment(actorId, id, reason);
+      res.status(200).json({ success: true, message: 'Đã hoàn tiền thành công', data: result });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  // ── Phase 3: Dispute Resolution Endpoints ─────────────────────────────────────────
+  async getDisputes(req: Request, res: Response): Promise<void> {
+    try {
+      const { page, limit, status, search } = req.query;
+      const result = await this.adminService.getDisputes({
+        page: page ? Number(page) : undefined,
+        limit: limit ? Number(limit) : undefined,
+        status: status as string,
+        search: search as string,
+      });
+      res.status(200).json({ success: true, data: result });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  async getDisputeById(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params.id as string;
+      const dispute = await this.adminService.getDisputeById(id);
+      res.status(200).json({ success: true, data: dispute });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  async resolveDispute(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params.id as string;
+      const { refundBuyer, strikeSeller, strikeBuyer, note } = req.body;
+      const actorId = (req as any).user?.userId;
+      if (!actorId) {
+        res.status(401).json({ success: false, message: 'Chưa xác thực' });
+        return;
+      }
+      const result = await this.adminService.resolveDispute(actorId, id, { refundBuyer, strikeSeller, strikeBuyer, note });
+      res.status(200).json({ success: true, message: 'Đã phân xử tranh chấp thành công', data: result });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
 }

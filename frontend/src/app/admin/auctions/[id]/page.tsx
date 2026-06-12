@@ -27,6 +27,7 @@ interface Bid {
     id: string;
     fullName: string | null;
     email: string;
+    avatarUrl?: string | null;
   };
 }
 
@@ -48,6 +49,7 @@ interface AuctionDetail {
     id: string;
     fullName: string | null;
     email: string;
+    avatarUrl?: string | null;
   };
   item: {
     title: string;
@@ -63,6 +65,7 @@ interface AuctionDetail {
     id: string;
     fullName: string | null;
     email: string;
+    avatarUrl?: string | null;
   } | null;
 }
 
@@ -103,7 +106,7 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
     fetchAuctionDetail();
   }, [auctionId]);
 
-  const executeAction = async () => {
+  const handleAction = async () => {
     if (!auction || !actionType) return;
     try {
       setSubmitting(true);
@@ -115,52 +118,46 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
       await fetchAuctionDetail();
       setActionType(null);
     } catch (error: any) {
-      alert(error?.message || "Đã xảy ra lỗi");
+      alert(error?.message || "Đã xảy ra lỗi khi thực hiện thao tác");
     } finally {
       setSubmitting(false);
     }
   };
-
-  // Shill Bidding Analysis: Flag IPs that have bids from multiple distinct bidder accounts
-  const getShillBiddingAlerts = () => {
-    if (!auction || !auction.bids) return [];
-    
-    const ipToBidders: Record<string, Set<string>> = {};
-    auction.bids.forEach((bid) => {
-      if (bid.ipAddress) {
-        if (!ipToBidders[bid.ipAddress]) {
-          ipToBidders[bid.ipAddress] = new Set();
-        }
-        ipToBidders[bid.ipAddress].add(bid.bidder.id);
-      }
-    });
-
-    const flaggedIPs: { ip: string; count: number }[] = [];
-    Object.keys(ipToBidders).forEach((ip) => {
-      if (ipToBidders[ip].size > 1) {
-        flaggedIPs.push({ ip, count: ipToBidders[ip].size });
-      }
-    });
-
-    return flaggedIPs;
-  };
-
-  const shillAlerts = getShillBiddingAlerts();
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
         return <span className="px-2.5 py-1 text-xs font-bold bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100 uppercase">Đang diễn ra</span>;
       case "ended":
-        return <span className="px-2.5 py-1 text-xs font-bold bg-blue-50 text-blue-600 rounded-full border border-blue-100 uppercase">Đã kết thúc</span>;
-      case "scheduled":
-        return <span className="px-2.5 py-1 text-xs font-bold bg-slate-50 text-slate-500 rounded-full border border-slate-200 uppercase">Đang lên lịch</span>;
+        return <span className="px-2.5 py-1 text-xs font-bold bg-slate-50 text-slate-500 rounded-full border border-slate-200 uppercase">Đã kết thúc</span>;
       case "cancelled":
-        return <span className="px-2.5 py-1 text-xs font-bold bg-amber-50 text-amber-600 rounded-full border border-amber-100 uppercase">Đã hủy</span>;
+        return <span className="px-2.5 py-1 text-xs font-bold bg-red-50 text-red-600 rounded-full border border-red-100 uppercase">Đã hủy</span>;
       case "failed":
+        return <span className="px-2.5 py-1 text-xs font-bold bg-amber-50 text-amber-600 rounded-full border border-amber-100 uppercase">Thất bại</span>;
+      case "scheduled":
       default:
-        return <span className="px-2.5 py-1 text-xs font-bold bg-red-50 text-red-600 rounded-full border border-red-100 uppercase">Thất bại</span>;
+        return <span className="px-2.5 py-1 text-xs font-bold bg-blue-50 text-blue-600 rounded-full border border-blue-100 uppercase">Lên lịch</span>;
     }
+  };
+
+  const getShillBiddingAlerts = () => {
+    if (!auction || !auction.bids) return [];
+    // Group bidders by IP
+    const ipMap: Record<string, Set<string>> = {};
+    auction.bids.forEach((bid) => {
+      if (bid.ipAddress) {
+        if (!ipMap[bid.ipAddress]) ipMap[bid.ipAddress] = new Set();
+        ipMap[bid.ipAddress].add(bid.bidder.id);
+      }
+    });
+
+    const alerts: { ip: string; count: number }[] = [];
+    Object.keys(ipMap).forEach((ip) => {
+      if (ipMap[ip].size > 1) {
+        alerts.push({ ip, count: ipMap[ip].size });
+      }
+    });
+    return alerts;
   };
 
   if (loading) {
@@ -173,6 +170,8 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
   }
 
   if (!auction) return null;
+
+  const shillAlerts = getShillBiddingAlerts();
 
   return (
     <div className="space-y-6">
@@ -187,7 +186,7 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
           </Link>
           <div>
             <p className="text-xs font-bold text-[#8f5c38] tracking-wider uppercase">Quản lý đấu giá</p>
-            <h2 className="text-xl font-bold text-slate-900 tracking-tight">Chi tiết phiên</h2>
+            <h2 className="text-xl font-bold text-slate-900 tracking-tight">Chi tiết phiên #{auction.id.substring(0, 8)}</h2>
           </div>
         </div>
 
@@ -196,105 +195,88 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
         </div>
       </div>
 
-      {/* Shill Bidding Warning Alert */}
-      {shillAlerts.length > 0 && (
-        <div className="bg-red-50 border border-red-100 rounded-2xl p-4 flex items-start gap-3.5 text-red-700">
-          <AlertTriangle className="w-5.5 h-5.5 text-red-500 flex-shrink-0 mt-0.5" />
-          <div className="space-y-1">
-            <h4 className="text-sm font-bold text-red-950">Phát hiện nghi vấn Shill Bidding!</h4>
-            <p className="text-xs leading-relaxed text-red-700">
-              Có <strong>{shillAlerts.length}</strong> địa chỉ IP được chia sẻ bởi nhiều tài khoản đặt giá khác nhau:
+      {/* Shill Bidding Warning Banner */}
+      {shillAlerts.length > 0 && auction.status === "active" && (
+        <div className="bg-red-50 border-2 border-red-100 rounded-2xl p-4 flex gap-3 text-red-800">
+          <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <h4 className="text-xs font-bold uppercase tracking-wider">Cảnh báo Shill Bidding!</h4>
+            <p className="text-[11px] font-medium leading-relaxed text-red-700 mt-1">
+              Phát hiện {shillAlerts.length} địa chỉ IP dùng chung bởi nhiều tài khoản đặt thầu khác nhau:
             </p>
-            <ul className="list-disc list-inside text-xs mt-1.5 space-y-1.5">
-              {shillAlerts.map((alert, idx) => (
-                <li key={idx} className="font-mono">
-                  IP: <span className="font-bold">{alert.ip}</span> được dùng bởi <span className="font-bold">{alert.count} tài khoản khác nhau</span>
-                </li>
+            <ul className="list-disc pl-4 mt-1 text-[10px] font-mono font-bold text-red-600 space-y-0.5">
+              {shillAlerts.map((alert, i) => (
+                <li key={i}>IP {alert.ip}: {alert.count} tài khoản trùng IP.</li>
               ))}
             </ul>
           </div>
         </div>
       )}
 
+      {/* Main Grid Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        {/* Left Columns: Item Info & Configs */}
+        {/* Left Columns: Media & Auction Bids */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Item Info Card */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden p-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Media Gallery */}
-              <div className="space-y-3">
-                <div className="w-full aspect-square rounded-xl overflow-hidden border border-slate-100 bg-slate-50 flex items-center justify-center">
-                  {activeImage ? (
-                    <img src={activeImage} alt={auction.item.title} className="w-full h-full object-cover" />
-                  ) : (
-                    <Gavel className="w-12 h-12 text-slate-300" />
-                  )}
-                </div>
-                {auction.item.media && auction.item.media.length > 1 && (
-                  <div className="flex gap-2 overflow-x-auto py-1">
-                    {auction.item.media.map((img) => (
-                      <button
-                        key={img.id}
-                        onClick={() => setActiveImage(img.cdnUrl)}
-                        className={`w-12 h-12 rounded-lg overflow-hidden border flex-shrink-0 cursor-pointer transition-all ${
-                          activeImage === img.cdnUrl ? "border-[#8f5c38] ring-2 ring-[#8f5c38]/10" : "border-slate-200"
-                        }`}
-                      >
-                        <img src={img.cdnUrl} alt="Thumbnail" className="w-full h-full object-cover" />
-                      </button>
-                    ))}
+          {/* Item Detail Card */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 flex flex-col md:flex-row gap-6">
+            {/* Image Gallery */}
+            <div className="w-full md:w-64 space-y-3 flex-shrink-0">
+              <div className="relative aspect-square w-full rounded-xl overflow-hidden border border-slate-100 bg-slate-50">
+                {activeImage ? (
+                  <img src={activeImage} alt="Product" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-slate-300">
+                    <Gavel className="w-12 h-12" />
                   </div>
                 )}
               </div>
-
-              {/* Title & Desc */}
-              <div className="md:col-span-2 space-y-4">
-                <div className="space-y-1">
-                  <span className="px-2.5 py-0.5 text-[10px] font-bold bg-[#8f5c38]/10 text-[#8f5c38] rounded-full border border-[#8f5c38]/20 uppercase">
-                    {auction.item.category.name}
-                  </span>
-                  <h3 className="text-lg font-bold text-slate-900 leading-snug">{auction.item.title}</h3>
+              {auction.item.media && auction.item.media.length > 1 && (
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {auction.item.media.map((img) => (
+                    <button
+                      key={img.id}
+                      onClick={() => setActiveImage(img.cdnUrl)}
+                      className={`relative w-12 h-12 rounded-lg overflow-hidden border-2 flex-shrink-0 cursor-pointer ${
+                        activeImage === img.cdnUrl ? "border-[#8f5c38]" : "border-slate-100"
+                      }`}
+                    >
+                      <img src={img.cdnUrl} alt="Thumbnail" className="w-full h-full object-cover" />
+                    </button>
+                  ))}
                 </div>
+              )}
+            </div>
 
-                <div className="grid grid-cols-2 gap-4 text-xs">
-                  <div className="bg-slate-50/50 p-2.5 rounded-xl border border-slate-100">
-                    <p className="text-slate-400 font-bold uppercase tracking-wider">Tình trạng</p>
-                    <p className="font-semibold text-slate-800 mt-0.5 capitalize">{auction.item.condition}</p>
-                  </div>
-                  <div className="bg-slate-50/50 p-2.5 rounded-xl border border-slate-100">
-                    <p className="text-slate-400 font-bold uppercase tracking-wider">Thương hiệu</p>
-                    <p className="font-semibold text-slate-800 mt-0.5">{auction.item.brand || "—"}</p>
-                  </div>
-                </div>
+            {/* Information */}
+            <div className="flex-1 space-y-4">
+              <div>
+                <span className="text-[10px] font-extrabold bg-[#8f5c38]/10 text-[#8f5c38] px-2 py-0.5 rounded-md uppercase tracking-wider">{auction.item.category.name}</span>
+                <h3 className="text-lg font-bold text-slate-900 leading-snug mt-1.5">{auction.item.title}</h3>
+                <p className="text-xs text-slate-400 mt-1 font-semibold">Tình trạng: <span className="text-slate-700 capitalize">{auction.item.condition}</span> · Thương hiệu: <span className="text-slate-700">{auction.item.brand || "—"}</span></p>
+              </div>
 
-                <div className="space-y-1">
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Mô tả sản phẩm:</span>
-                  <p className="text-sm text-slate-500 leading-relaxed max-h-40 overflow-y-auto pr-2">
-                    {auction.item.description || "Không có mô tả sản phẩm."}
-                  </p>
-                </div>
+              <div className="space-y-1.5 text-xs text-slate-500 font-medium">
+                <p className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Mô tả chi tiết:</p>
+                <p className="bg-slate-50/50 p-3 rounded-xl border border-slate-100 leading-relaxed max-h-36 overflow-y-auto font-sans">{auction.item.description || "Không có mô tả sản phẩm."}</p>
               </div>
             </div>
           </div>
 
-          {/* Bid History Table */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
-              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                <Gavel className="w-4 h-4" /> Lịch sử đặt giá ({auction.bids.length} lượt)
-              </h4>
-            </div>
+          {/* Bids History Card */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-4">
+            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 border-b border-slate-50 pb-3">
+              <Clock className="w-4 h-4 text-[#8f5c38]" /> Lịch sử đặt thầu ({auction.bids.length} lượt)
+            </h4>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+            <div className="overflow-x-auto border border-slate-100 rounded-xl">
+              <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="border-b border-slate-100 bg-slate-50/20 text-slate-500 text-xs font-bold uppercase tracking-wider">
-                    <th className="px-6 py-3">Người đặt</th>
-                    <th className="px-6 py-3 text-right">Giá đặt</th>
+                  <tr className="border-b border-slate-100 bg-slate-50/50 text-slate-500 font-bold uppercase tracking-wider">
+                    <th className="px-6 py-3">Người đặt thầu</th>
+                    <th className="px-6 py-3 text-right">Mức giá</th>
                     <th className="px-6 py-3 text-center">Thời gian</th>
-                    <th className="px-6 py-3 text-center">Auto Bid</th>
-                    <th className="px-6 py-3 text-center">Địa chỉ IP</th>
+                    <th className="px-6 py-3 text-center">Hình thức</th>
+                    <th className="px-6 py-3 text-center">IP Address</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-700 text-sm">
@@ -312,9 +294,20 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
                       return (
                         <tr key={bid.id} className={`hover:bg-slate-50/50 transition-colors ${isSharedIP ? "bg-red-50/20" : ""}`}>
                           <td className="px-6 py-3.5">
-                            <div className="space-y-0.5">
-                              <p className="font-bold text-slate-900 leading-none">{bid.bidder.fullName || "Khách"}</p>
-                              <p className="text-xs text-slate-400 leading-none mt-1">{bid.bidder.email}</p>
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-100 border border-slate-200 flex items-center justify-center flex-shrink-0">
+                                {bid.bidder.avatarUrl ? (
+                                  <img src={bid.bidder.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                                ) : (
+                                  <span className="text-[10px] font-bold text-slate-400 font-mono">
+                                    {(bid.bidder.fullName || bid.bidder.email).substring(0, 2).toUpperCase()}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="space-y-0.5 min-w-0">
+                                <p className="font-bold text-slate-900 leading-none truncate">{bid.bidder.fullName || "Khách"}</p>
+                                <p className="text-xs text-slate-400 leading-none mt-1 truncate">{bid.bidder.email}</p>
+                              </div>
                             </div>
                           </td>
                           <td className="px-6 py-3.5 text-right font-mono font-bold text-slate-900">
@@ -355,9 +348,13 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
               <User className="w-4 h-4" /> Người bán
             </h4>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center font-mono font-bold text-slate-400">
-                {(auction.seller.fullName || auction.seller.email).substring(0, 2).toUpperCase()}
-              </div>
+              {auction.seller.avatarUrl ? (
+                <img src={auction.seller.avatarUrl} alt="Avatar" className="w-10 h-10 rounded-full object-cover border border-slate-200" />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center font-mono font-bold text-slate-400">
+                  {(auction.seller.fullName || auction.seller.email).substring(0, 2).toUpperCase()}
+                </div>
+              )}
               <div className="space-y-0.5">
                 <Link
                   href={`/admin/users/${auction.seller.id}`}
@@ -390,78 +387,74 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
                     <span className="font-extrabold text-orange-600 font-mono text-base">{Number(auction.currentPrice).toLocaleString()}₫</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-400 font-semibold flex items-center gap-1.5"><DollarSign className="w-4 h-4 text-slate-400" /> Giá mua đứt:</span>
-                    <span className={`font-bold font-mono ${auction.buyoutPrice ? "text-orange-600" : "text-slate-500"}`}>
-                      {auction.buyoutPrice ? `${Number(auction.buyoutPrice).toLocaleString()}₫` : "Không có"}
-                    </span>
+                    <span className="text-slate-400 font-semibold flex items-center gap-1.5"><Clock className="w-4 h-4 text-slate-400" /> Kết thúc lúc:</span>
+                    <span className="font-bold text-slate-700">{new Date(auction.endTime).toLocaleTimeString("vi-VN")} {new Date(auction.endTime).toLocaleDateString("vi-VN")}</span>
                   </div>
                 </>
-              )}
-
-              {(auction.status === "scheduled" || auction.status === "failed" || auction.status === "cancelled") && (
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-400 font-semibold flex items-center gap-1.5"><DollarSign className="w-4 h-4 text-slate-400" /> Giá mua đứt:</span>
-                  <span className={`font-bold font-mono ${auction.buyoutPrice ? "text-orange-600" : "text-slate-500"}`}>
-                    {auction.buyoutPrice ? `${Number(auction.buyoutPrice).toLocaleString()}₫` : "Không có"}
-                  </span>
-                </div>
               )}
 
               {auction.status === "ended" && (
                 <>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-400 font-semibold flex items-center gap-1.5"><DollarSign className="w-4 h-4 text-slate-400" /> Giá chốt cuối cùng:</span>
-                    <span className="font-extrabold text-orange-600 font-mono text-base">{Number(auction.currentPrice).toLocaleString()}₫</span>
+                    <span className="text-slate-400 font-semibold flex items-center gap-1.5"><DollarSign className="w-4 h-4 text-slate-400" /> Giá thắng cuộc:</span>
+                    <span className="font-extrabold text-green-600 font-mono text-base">{Number(auction.currentPrice).toLocaleString()}₫</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-400 font-semibold flex items-center gap-1.5"><User className="w-4 h-4 text-sky-500" /> Người thắng cuộc:</span>
-                    {auction.winner ? (
-                      <Link href={`/admin/users/${auction.winner.id}`} className="font-bold text-[#8f5c38] block leading-tight">
-                        {auction.winner.fullName || "Chưa đặt tên"}
-                      </Link>
-                    ) : (
-                      <span className="font-semibold text-slate-400">Không có</span>
-                    )}
+                    <span className="text-slate-400 font-semibold flex items-center gap-1.5"><User className="w-4 h-4 text-slate-400" /> Người thắng:</span>
+                    <span className="font-bold text-slate-800">
+                      {auction.winner ? (
+                        <Link href={`/admin/users/${auction.winner.id}`} className="text-[#8f5c38]">
+                          {auction.winner.fullName || auction.winner.email}
+                        </Link>
+                      ) : (
+                        "Chưa có"
+                      )}
+                    </span>
                   </div>
-                  {auction.winner && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-400 font-semibold flex items-center gap-1.5"><Mail className="w-4 h-4 text-slate-400" /> Email:</span>
-                      <span className="font-semibold text-slate-800">{auction.winner.email}</span>
-                    </div>
-                  )}
                 </>
               )}
 
-              <div className="flex items-center justify-between">
-                <span className="text-slate-400 font-semibold flex items-center gap-1.5"><Calendar className="w-4 h-4" /> Bắt đầu:</span>
-                <span className="font-semibold text-slate-800">
-                  {new Date(auction.scheduledStart).toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "numeric", month: "numeric", year: "numeric" })}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-400 font-semibold flex items-center gap-1.5"><Clock className="w-4 h-4" /> Kết thúc:</span>
-                <span className="font-semibold text-slate-800">
-                  {new Date(auction.endTime).toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "numeric", month: "numeric", year: "numeric" })}
-                </span>
-              </div>
+              {auction.status === "cancelled" && (
+                <div className="p-3 bg-red-50 text-red-700 rounded-xl text-xs font-semibold leading-relaxed">
+                  Phiên đấu giá này đã bị hủy bỏ bởi ban quản trị và không có giao dịch được thực hiện.
+                </div>
+              )}
             </div>
+
+            {/* Action Buttons for Admin */}
+            {auction.status === "active" && (
+              <div className="space-y-3 pt-4 border-t border-slate-100">
+                <button
+                  onClick={() => setActionType("force-end")}
+                  disabled={submitting}
+                  className="w-full py-2.5 bg-[#8f5c38]/10 hover:bg-[#8f5c38]/20 text-[#8f5c38] font-bold text-xs rounded-xl transition-all cursor-pointer shadow-xs flex items-center justify-center gap-1.5"
+                >
+                  Buộc kết thúc sớm
+                </button>
+                <button
+                  onClick={() => setActionType("cancel")}
+                  disabled={submitting}
+                  className="w-full py-2.5 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs rounded-xl transition-all cursor-pointer shadow-xs flex items-center justify-center gap-1.5"
+                >
+                  Hủy phiên đấu giá
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Action Dialogs */}
+      {/* Confirmation Dialogs */}
       {actionType === "force-end" && (
         <AdminConfirmDialog
           isOpen={true}
           onClose={() => setActionType(null)}
-          onConfirm={executeAction}
+          onConfirm={handleAction}
           isLoading={submitting}
           variant="warning"
-          title="Buộc kết thúc sớm phiên đấu giá"
-          description={`Bạn đang chuẩn bị kết thúc sớm phiên đấu giá này. Người đặt giá cao nhất tại thời điểm hiện tại (${
-            auction.bids[0] ? `${Number(auction.bids[0].amount).toLocaleString()}₫ bởi ${auction.bids[0].bidder.fullName}` : "chưa có ai đặt"
-          }) sẽ thắng phiên.`}
-          confirmText="Xác nhận Kết thúc"
+          title="Buộc kết thúc phiên đấu giá"
+          description="Hành động này sẽ buộc phiên đấu giá kết thúc ngay lập tức. Người đặt giá cao nhất hợp lệ (nếu có) sẽ thắng phiên đấu giá này. Bạn có chắc chắn muốn thực hiện?"
+          confirmText="Xác nhận kết thúc"
         />
       )}
 
@@ -469,12 +462,12 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
         <AdminConfirmDialog
           isOpen={true}
           onClose={() => setActionType(null)}
-          onConfirm={executeAction}
+          onConfirm={handleAction}
           isLoading={submitting}
           variant="danger"
           title="Hủy phiên đấu giá"
-          description="Bạn có chắc chắn muốn hủy phiên đấu giá này? Sản phẩm liên quan sẽ được đưa về trạng thái hoạt động để đăng lại."
-          confirmText="Xác nhận Hủy"
+          description="Hành động này sẽ hủy hoàn toàn phiên đấu giá đang diễn ra. Tất cả các lượt đặt giá sẽ bị hủy bỏ và phiên đấu giá sẽ đóng lại. Bạn có chắc chắn muốn thực hiện?"
+          confirmText="Xác nhận hủy"
         />
       )}
     </div>

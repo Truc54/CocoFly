@@ -57,37 +57,38 @@ export const adminApi = {
       }),
   },
   payments: {
-    list: (params: { page?: number; limit?: number; status?: string; method?: string }) => {
+    list: (params: { page?: number; limit?: number; status?: string; method?: string; search?: string }) => {
       const query = new URLSearchParams();
       if (params.page) query.append("page", params.page.toString());
       if (params.limit) query.append("limit", params.limit.toString());
       if (params.status) query.append("status", params.status);
       if (params.method) query.append("method", params.method);
+      if (params.search) query.append("search", params.search);
       return fetchApi(`/api/admin/payments?${query.toString()}`);
     },
-    refund: (id: string, amount: number, reason: string) =>
+    refund: (id: string, reason: string) =>
       fetchApi(`/api/admin/payments/${id}/refund`, {
         method: "POST",
-        body: JSON.stringify({ amount, reason }),
+        body: JSON.stringify({ reason }),
       }),
   },
   disputes: {
-    list: (params: { page?: number; limit?: number; status?: string }) => {
+    list: (params: { page?: number; limit?: number; status?: string; search?: string }) => {
       const query = new URLSearchParams();
       if (params.page) query.append("page", params.page.toString());
       if (params.limit) query.append("limit", params.limit.toString());
       if (params.status) query.append("status", params.status);
+      if (params.search) query.append("search", params.search);
       return fetchApi(`/api/admin/disputes?${query.toString()}`);
     },
     getById: (id: string) => fetchApi(`/api/admin/disputes/${id}`),
-    review: (id: string) =>
-      fetchApi(`/api/admin/disputes/${id}/review`, {
-        method: "PATCH",
-      }),
-    resolve: (id: string, resolution: "buyer" | "seller", note: string) =>
+    resolve: (
+      id: string,
+      payload: { refundBuyer: boolean; strikeSeller: boolean; strikeBuyer: boolean; note: string }
+    ) =>
       fetchApi(`/api/admin/disputes/${id}/resolve`, {
         method: "PATCH",
-        body: JSON.stringify({ resolution, note }),
+        body: JSON.stringify(payload),
       }),
   },
   categories: {

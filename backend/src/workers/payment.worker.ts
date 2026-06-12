@@ -245,14 +245,22 @@ async function handleShippingTimeout(data: ShippingTimeoutPayload): Promise<void
   }
 
   // Auto-refund buyer
-  await prisma.payment.update({
-    where: { id: paymentId },
-    data: {
-      status: 'refunded',
-      refundedAt: new Date(),
-      note: 'Tự động hoàn tiền: Seller không gửi hàng trong 5 ngày',
-    },
-  });
+  await prisma.$transaction([
+    prisma.payment.update({
+      where: { id: paymentId },
+      data: {
+        status: 'refunded',
+        refundedAt: new Date(),
+        note: 'Tự động hoàn tiền: Seller không gửi hàng trong 5 ngày',
+      },
+    }),
+    prisma.user.update({
+      where: { id: payment.buyerId },
+      data: {
+        balance: { increment: payment.amount }
+      }
+    })
+  ]);
 
   // Notify buyer
   await notificationService.send({

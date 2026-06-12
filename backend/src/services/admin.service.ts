@@ -74,14 +74,14 @@ export class AdminService {
 
     // 4. Pending disputes and growth
     const pendingDisputes = await prisma.dispute.count({
-      where: { status: { in: ['opened', 'under_review'] } },
+      where: { status: 'pending' },
     });
     const disputesThisMonth = await prisma.dispute.count({
-      where: { status: { in: ['opened', 'under_review'] }, createdAt: { gte: startOfThisMonth } },
+      where: { status: 'pending', createdAt: { gte: startOfThisMonth } },
     });
     const disputesLastMonth = await prisma.dispute.count({
       where: {
-        status: { in: ['opened', 'under_review'] },
+        status: 'pending',
         createdAt: { gte: startOfLastMonth, lt: startOfThisMonth },
       },
     });
@@ -645,7 +645,7 @@ export class AdminService {
         orderBy: { createdAt: 'desc' },
         include: {
           seller: {
-            select: { id: true, fullName: true, email: true },
+            select: { id: true, fullName: true, email: true, avatarUrl: true },
           },
           item: {
             select: {
@@ -675,7 +675,7 @@ export class AdminService {
       where: { id },
       include: {
         seller: {
-          select: { id: true, fullName: true, email: true },
+          select: { id: true, fullName: true, email: true, avatarUrl: true },
         },
         item: {
           include: {
@@ -689,12 +689,12 @@ export class AdminService {
           orderBy: { amount: 'desc' },
           include: {
             bidder: {
-              select: { id: true, fullName: true, email: true },
+              select: { id: true, fullName: true, email: true, avatarUrl: true },
             },
           },
         },
         winner: {
-          select: { id: true, fullName: true, email: true },
+          select: { id: true, fullName: true, email: true, avatarUrl: true },
         },
       },
     });
@@ -853,6 +853,396 @@ export class AdminService {
         },
       },
     });
+
+    return { success: true };
+  }
+
+  // ── Phase 3: Payment Management Services ───────────────────────────────────────────
+  async getPayments(params: { page?: number; limit?: number; status?: string; method?: string; search?: string }) {
+    const page = params.page || 1;
+    const limit = params.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (params.status) {
+      where.status = params.status as any;
+    }
+    if (params.method) {
+      where.paymentMethod = params.method as any;
+    }
+    if (params.search) {
+      where.OR = [
+        { buyer: { fullName: { contains: params.search, mode: 'insensitive' } } },
+        { buyer: { email: { contains: params.search, mode: 'insensitive' } } },
+        { seller: { fullName: { contains: params.search, mode: 'insensitive' } } },
+        { seller: { email: { contains: params.search, mode: 'insensitive' } } },
+        { auction: { item: { title: { contains: params.search, mode: 'insensitive' } } } },
+      ];
+    }
+
+    const [payments, total] = await Promise.all([
+      prisma.payment.findMany({
+        where,
+        include: {
+          buyer: { select: { id: true, fullName: true, email: true } },
+          seller: { select: { id: true, fullName: true, email: true } },
+          auction: {
+            include: {
+              item: { select: { id: true, title: true } },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.payment.count({ where }),
+    ]);
+
+    return {
+      payments,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  async refundPayment(actorId: string, paymentId: string, reason: string) {
+    const payment = await prisma.payment.findUnique({
+      where: { id: paymentId },
+      include: {
+        auction: {
+          include: {
+            item: { select: { title: true } },
+          },
+        },
+      },
+    });
+
+    if (!payment) {
+      throw new Error('Không tìm thấy giao dịch thanh toán');
+    }
+
+    if (payment.status !== 'paid') {
+      throw new Error('Chỉ có thể hoàn tiền cho các giao dịch đã thanh toán');
+    }
+
+    const now = new Date();
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Update payment status to refunded
+      await tx.payment.update({
+        where: { id: paymentId },
+        data: {
+          status: 'refunded',
+          refundedAt: now,
+        },
+      });
+
+      // 2. Increment buyer's balance by payment.amount (exactly the original principal amount)
+      await tx.user.update({
+        where: { id: payment.buyerId },
+        data: {
+          balance: { increment: payment.amount },
+        },
+      });
+
+      // 3. Write Audit Log
+      await tx.auditLog.create({
+        data: {
+          actionType: 'REFUND_PAYMENT',
+          actorId,
+          targetId: paymentId,
+          reason,
+          metadata: {
+            amount: Number(payment.amount),
+            auctionId: payment.auctionId,
+            buyerId: payment.buyerId,
+            sellerId: payment.sellerId,
+          },
+        },
+      });
+    });
+
+    // Send notification to buyer
+    try {
+      const { NotificationService } = require('./notification.service');
+      const notificationService = new NotificationService();
+      await notificationService.send({
+        userId: payment.buyerId,
+        type: 'system',
+        title: 'Hoàn tiền giao dịch',
+        message: `Giao dịch thanh toán số tiền ${Number(payment.amount).toLocaleString()}₫ cho phiên đấu giá "${payment.auction.item.title}" đã được hoàn trả. Lý do: ${reason}`,
+        auctionId: payment.auctionId,
+      });
+    } catch (e) {
+      console.warn('Could not send refund notification:', e);
+    }
+
+    return { success: true };
+  }
+
+  // ── Phase 3: Dispute Resolution Services ──────────────────────────────────────────
+  async getDisputes(params: { page?: number; limit?: number; status?: string; search?: string }) {
+    const page = params.page || 1;
+    const limit = params.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (params.status) {
+      where.status = params.status as any;
+    }
+    if (params.search) {
+      where.OR = [
+        {
+          payment: {
+            auction: {
+              item: {
+                title: { contains: params.search, mode: 'insensitive' },
+              },
+            },
+          },
+        },
+        {
+          openedBy: {
+            fullName: { contains: params.search, mode: 'insensitive' },
+          },
+        },
+      ];
+    }
+
+    const [disputes, total] = await Promise.all([
+      prisma.dispute.findMany({
+        where,
+        include: {
+          openedBy: { select: { id: true, fullName: true, email: true, avatarUrl: true } },
+          payment: {
+            include: {
+              auction: {
+                include: {
+                  item: { select: { id: true, title: true } },
+                },
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.dispute.count({ where }),
+    ]);
+
+    return {
+      disputes,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  async getDisputeById(id: string) {
+    const dispute = await prisma.dispute.findUnique({
+      where: { id },
+      include: {
+        openedBy: { select: { id: true, fullName: true, email: true, rating: true, createdAt: true, nonPaymentStrikes: true, avatarUrl: true } },
+        resolvedBy: { select: { id: true, fullName: true, email: true, avatarUrl: true } },
+        payment: {
+          include: {
+            auction: {
+              include: {
+                item: {
+                  include: {
+                    media: { select: { id: true, cdnUrl: true, type: true } },
+                  },
+                },
+                seller: { select: { id: true, fullName: true, email: true, rating: true, nonPaymentStrikes: true, avatarUrl: true } },
+                bids: {
+                  orderBy: { createdAt: 'desc' },
+                  include: { bidder: { select: { id: true, fullName: true, email: true, avatarUrl: true } } },
+                },
+              },
+            },
+            buyer: { select: { id: true, fullName: true, email: true, rating: true, avatarUrl: true } },
+            seller: { select: { id: true, fullName: true, email: true, rating: true, nonPaymentStrikes: true, avatarUrl: true } },
+          },
+        },
+      },
+    });
+
+    if (!dispute) {
+      throw new Error('Không tìm thấy thông tin tranh chấp');
+    }
+
+    return dispute;
+  }
+
+  async resolveDispute(
+    actorId: string,
+    id: string,
+    options: { refundBuyer: boolean; strikeSeller: boolean; strikeBuyer: boolean; note: string }
+  ) {
+    const dispute = await prisma.dispute.findUnique({
+      where: { id },
+      include: {
+        payment: {
+          include: {
+            auction: {
+              include: {
+                item: { select: { title: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!dispute) {
+      throw new Error('Không tìm thấy thông tin tranh chấp');
+    }
+
+    if (dispute.status !== 'pending') {
+      throw new Error('Chỉ có thể phân xử tranh chấp chưa được giải quyết');
+    }
+
+    const MAX_NON_PAYMENT_STRIKES = 3;
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Update dispute details to resolved
+      await tx.dispute.update({
+        where: { id },
+        data: {
+          status: 'resolved',
+          resolutionNote: options.note,
+          resolvedById: actorId,
+          updatedAt: new Date(),
+        },
+      });
+
+      // 2. Handle refund or release
+      if (options.refundBuyer) {
+        // Refund payment
+        if (dispute.payment.status === 'paid') {
+          await tx.payment.update({
+            where: { id: dispute.paymentId },
+            data: {
+              status: 'refunded',
+              refundedAt: new Date(),
+            },
+          });
+          // Decrement seller's balance by payment.amount
+          await tx.user.update({
+            where: { id: dispute.payment.sellerId },
+            data: {
+              balance: { decrement: dispute.payment.amount },
+            },
+          });
+          // Increment buyer's balance by payment.amount
+          await tx.user.update({
+            where: { id: dispute.payment.buyerId },
+            data: {
+              balance: { increment: dispute.payment.amount },
+            },
+          });
+        }
+      } else {
+        // Release escrow to seller
+        if (dispute.payment.status === 'paid') {
+          await tx.payment.update({
+            where: { id: dispute.paymentId },
+            data: {
+              status: 'escrow_released',
+            },
+          });
+        }
+      }
+
+      // 3. Handle strikes for seller
+      if (options.strikeSeller) {
+        const updatedSeller = await tx.user.update({
+          where: { id: dispute.payment.sellerId },
+          data: { nonPaymentStrikes: { increment: 1 } },
+          select: { nonPaymentStrikes: true },
+        });
+
+        if (updatedSeller.nonPaymentStrikes >= MAX_NON_PAYMENT_STRIKES) {
+          await tx.user.update({
+            where: { id: dispute.payment.sellerId },
+            data: {
+              accountStatus: 'suspended',
+              banReason: `Nhận quá ${MAX_NON_PAYMENT_STRIKES} gậy vi phạm từ phân xử tranh chấp`,
+            },
+          });
+        }
+      }
+
+      // 4. Handle strikes for buyer (complainant)
+      if (options.strikeBuyer) {
+        const updatedBuyer = await tx.user.update({
+          where: { id: dispute.openedById },
+          data: { nonPaymentStrikes: { increment: 1 } },
+          select: { nonPaymentStrikes: true },
+        });
+
+        if (updatedBuyer.nonPaymentStrikes >= MAX_NON_PAYMENT_STRIKES) {
+          await tx.user.update({
+            where: { id: dispute.openedById },
+            data: {
+              accountStatus: 'suspended',
+              banReason: `Nhận quá ${MAX_NON_PAYMENT_STRIKES} gậy vi phạm từ phân xử tranh chấp`,
+            },
+          });
+        }
+      }
+
+      // 5. Write Audit Log
+      await tx.auditLog.create({
+        data: {
+          actionType: 'RESOLVE_DISPUTE',
+          actorId,
+          targetId: id,
+          reason: `Giải quyết tranh chấp: ${options.refundBuyer ? '[Hoàn tiền người mua]' : '[Không hoàn tiền]'} ${options.strikeSeller ? '[Phạt gậy người bán]' : ''} ${options.strikeBuyer ? '[Phạt gậy người mua]' : ''}. Ghi chú: ${options.note}`,
+          metadata: {
+            refundBuyer: options.refundBuyer,
+            strikeSeller: options.strikeSeller,
+            strikeBuyer: options.strikeBuyer,
+            paymentId: dispute.paymentId,
+            paymentStatusBefore: dispute.payment.status,
+          },
+        },
+      });
+    });
+
+    // Send notifications to buyer and seller
+    try {
+      const { NotificationService } = require('./notification.service');
+      const notificationService = new NotificationService();
+      const title = 'Kết quả giải quyết tranh chấp';
+      
+      const buyerMsg = `Tranh chấp liên quan đến sản phẩm "${dispute.payment.auction.item.title}" đã được phân xử. Kết quả: ${options.refundBuyer ? 'Bạn thắng cuộc và số tiền đã được hoàn trả.' : 'Yêu cầu của bạn bị bác bỏ, giao dịch hoàn thành cho người bán.'}${options.strikeBuyer ? ' Bạn nhận 1 gậy vi phạm vì khiếu nại không hợp lệ.' : ''} Ghi chú của admin: ${options.note}`;
+      const sellerMsg = `Tranh chấp liên quan đến sản phẩm "${dispute.payment.auction.item.title}" đã được phân xử. Kết quả: ${options.refundBuyer ? 'Giao dịch bị hoàn tiền cho người mua.' : 'Giao dịch hoàn thành và số tiền đã được giải ngân cho bạn.'}${options.strikeSeller ? ' Bạn nhận 1 gậy vi phạm vì vi phạm quy định đấu giá.' : ''} Ghi chú của admin: ${options.note}`;
+
+      await Promise.all([
+        notificationService.send({
+          userId: dispute.payment.buyerId,
+          type: 'dispute_resolved',
+          title,
+          message: buyerMsg,
+          auctionId: dispute.payment.auctionId,
+        }),
+        notificationService.send({
+          userId: dispute.payment.sellerId,
+          type: 'dispute_resolved',
+          title,
+          message: sellerMsg,
+          auctionId: dispute.payment.auctionId,
+        }),
+      ]);
+    } catch (e) {
+      console.warn('Could not send dispute resolution notifications:', e);
+    }
 
     return { success: true };
   }

@@ -3,7 +3,12 @@ import { AdminController } from '../controllers/admin.controller';
 import { authGuard } from '../middlewares/authGuard';
 import { requireAdmin } from '../middlewares/requireAdmin';
 import { validate } from '../middlewares/validate';
-import { banUserSchema, changeRoleSchema } from '../validators/admin.validator';
+import {
+  banUserSchema,
+  changeRoleSchema,
+  refundPaymentSchema,
+  resolveDisputeSchema,
+} from '../validators/admin.validator';
 
 const adminController = new AdminController();
 export const adminRoutes = Router();
@@ -29,3 +34,12 @@ adminRoutes.get('/auctions', adminController.getAuctions.bind(adminController));
 adminRoutes.get('/auctions/:id', adminController.getAuctionById.bind(adminController));
 adminRoutes.post('/auctions/:id/force-end', adminController.forceEnd.bind(adminController));
 adminRoutes.post('/auctions/:id/cancel', adminController.cancel.bind(adminController));
+
+// ── Phase 3: Payment Management ──
+adminRoutes.get('/payments', adminController.getPayments.bind(adminController));
+adminRoutes.post('/payments/:id/refund', validate(refundPaymentSchema), adminController.refundPayment.bind(adminController));
+
+// ── Phase 3: Dispute Resolution ──
+adminRoutes.get('/disputes', adminController.getDisputes.bind(adminController));
+adminRoutes.get('/disputes/:id', adminController.getDisputeById.bind(adminController));
+adminRoutes.patch('/disputes/:id/resolve', validate(resolveDisputeSchema), adminController.resolveDispute.bind(adminController));

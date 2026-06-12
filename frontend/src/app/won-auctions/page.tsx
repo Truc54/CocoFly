@@ -39,6 +39,7 @@ interface OrderItem {
   deliveryCountdown?: string;
   paymentId?: string;
   hasReviewed?: boolean;
+  dispute?: { id: string; status: string; reason: string } | null;
 }
 
 const TABS: { key: OrderTab; label: string; icon: React.ReactNode }[] = [
@@ -116,6 +117,12 @@ function WonAuctionsContent() {
   const [reviewLoading, setReviewLoading] = useState(false);
   const [reviewSuccess, setReviewSuccess] = useState(false);
 
+  // Dispute states
+  const [disputeTarget, setDisputeTarget] = useState<string | null>(null);
+  const [disputeReason, setDisputeReason] = useState("");
+  const [disputeLoading, setDisputeLoading] = useState(false);
+  const [disputeSuccess, setDisputeSuccess] = useState(false);
+
   useEffect(() => {
     if (deliverySuccess) {
       const timer = setTimeout(() => setDeliverySuccess(false), 4000);
@@ -129,6 +136,13 @@ function WonAuctionsContent() {
       return () => clearTimeout(timer);
     }
   }, [reviewSuccess]);
+
+  useEffect(() => {
+    if (disputeSuccess) {
+      const timer = setTimeout(() => setDisputeSuccess(false), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [disputeSuccess]);
 
   const endTimes = useMemo(() => (activeTab === "bidding" ? orders.map(o => o.date) : []), [orders, activeTab]);
   const timeLefts = useCountdown(endTimes);
@@ -185,6 +199,26 @@ function WonAuctionsContent() {
       alert(err.message || "Có lỗi xảy ra khi gửi đánh giá");
     } finally {
       setReviewLoading(false);
+    }
+  };
+
+  const handleDispute = async () => {
+    if (!disputeTarget || !disputeReason.trim()) return;
+    if (disputeReason.trim().length < 10) {
+      alert("Lý do khiếu nại phải dài ít nhất 10 ký tự");
+      return;
+    }
+    setDisputeLoading(true);
+    try {
+      await paymentApi.openDispute(disputeTarget, disputeReason);
+      setDisputeSuccess(true);
+      setDisputeTarget(null);
+      setDisputeReason("");
+      fetchAuctions();
+    } catch (err: any) {
+      alert(err.message || "Có lỗi xảy ra khi gửi khiếu nại");
+    } finally {
+      setDisputeLoading(false);
     }
   };
 
@@ -296,40 +330,117 @@ function WonAuctionsContent() {
                             )
                           )}
                           {order.status === "delivering" && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (order.paymentId) {
-                                  setDeliveryConfirmTarget(order.paymentId);
-                                } else {
-                                  alert("Không tìm thấy thông tin thanh toán");
-                                }
-                              }}
-                              className="inline-flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-lg border-2 border-blue-500 bg-blue-500 text-white shadow-[2px_2px_0px_#2563eb] hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_#2563eb] transition-all w-[150px]"
-                            >
-                              <Package className="w-3.5 h-3.5" /> Đã nhận
-                            </button>
-                          )}
-                          {order.status === "received" && (
-                            order.hasReviewed ? (
-                              <button
-                                onClick={(e) => e.stopPropagation()}
-                                disabled
-                                className="inline-flex items-center justify-center px-4 py-1.5 text-xs font-bold rounded-lg border-2 border-orange-200 bg-orange-50 text-[#E25C24] cursor-default min-w-[120px]"
-                              >
-                                Đã đánh giá
-                              </button>
-                            ) : (
-                              <button
+                            order.dispute ? (
+                              <span
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setReviewTarget(order.id);
+                                  router.push(`/disputes/${order.dispute?.id}`);
                                 }}
-                                className="inline-flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-lg border-2 border-[#E25C24] bg-[#E25C24] text-white shadow-[2px_2px_0px_#E2B9A1] hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_#E2B9A1] transition-all min-w-[120px]"
+                                className={`inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg border-2 min-w-[120px] text-center cursor-pointer hover:scale-105 active:scale-95 transition-all
+                                ${order.dispute.status === 'opened' || order.dispute.status === 'under_review'
+                                  ? 'bg-amber-50 border-amber-200 text-amber-600'
+                                  : order.dispute.status === 'resolved_buyer'
+                                    ? 'bg-emerald-50 border-emerald-200 text-emerald-600'
+                                    : 'bg-slate-50 border-slate-200 text-slate-500'
+                                }`}
+                                title={order.dispute.reason}
                               >
-                                <MessageSquare className="w-3.5 h-3.5" /> Đánh giá
-                              </button>
+                                {order.dispute.status === 'opened' && 'Đang khiếu nại'}
+                                {order.dispute.status === 'under_review' && 'Đang xem xét'}
+                                {order.dispute.status === 'resolved_buyer' && 'Khiếu nại thành công'}
+                                {order.dispute.status === 'resolved_seller' && 'Khiếu nại thất bại'}
+                              </span>
+                            ) : (
+                              <div className="flex flex-col gap-2">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (order.paymentId) {
+                                      setDeliveryConfirmTarget(order.paymentId);
+                                    } else {
+                                      alert("Không tìm thấy thông tin thanh toán");
+                                    }
+                                  }}
+                                  className="inline-flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-lg border-2 border-blue-500 bg-blue-500 text-white shadow-[2px_2px_0px_#2563eb] hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_#2563eb] transition-all min-w-[120px]"
+                                >
+                                  <Package className="w-3.5 h-3.5" /> Đã nhận
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (order.paymentId) {
+                                      setDisputeTarget(order.paymentId);
+                                    } else {
+                                      alert("Không tìm thấy thông tin thanh toán");
+                                    }
+                                  }}
+                                  className="inline-flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-lg border-2 border-red-500 bg-white text-red-500 hover:bg-red-50 transition-all min-w-[120px]"
+                                >
+                                  Khiếu nại
+                                </button>
+                              </div>
                             )
+                          )}
+                          {order.status === "received" && (
+                            <div className="flex flex-col gap-2">
+                              {/* Review button or reviewed indicator */}
+                              {order.hasReviewed ? (
+                                <button
+                                  onClick={(e) => e.stopPropagation()}
+                                  disabled
+                                  className="inline-flex items-center justify-center px-4 py-1.5 text-xs font-bold rounded-lg border-2 border-orange-200 bg-orange-50 text-[#E25C24] cursor-default min-w-[120px]"
+                                >
+                                  Đã đánh giá
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setReviewTarget(order.id);
+                                  }}
+                                  className="inline-flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-lg border-2 border-[#E25C24] bg-[#E25C24] text-white shadow-[2px_2px_0px_#E2B9A1] hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_#E2B9A1] transition-all min-w-[120px]"
+                                >
+                                  <MessageSquare className="w-3.5 h-3.5" /> Đánh giá
+                                </button>
+                              )}
+
+                              {/* Dispute status badge or Open dispute button */}
+                              {order.dispute ? (
+                                <span
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    router.push(`/disputes/${order.dispute?.id}`);
+                                  }}
+                                  className={`inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg border-2 min-w-[120px] text-center cursor-pointer hover:scale-105 active:scale-95 transition-all
+                                    ${order.dispute.status === 'opened' || order.dispute.status === 'under_review'
+                                      ? 'bg-amber-50 border-amber-200 text-amber-600'
+                                      : order.dispute.status === 'resolved_buyer'
+                                        ? 'bg-emerald-50 border-emerald-200 text-emerald-600'
+                                        : 'bg-slate-50 border-slate-200 text-slate-500'
+                                    }`}
+                                  title={order.dispute.reason}
+                                >
+                                  {order.dispute.status === 'opened' && 'Đang khiếu nại'}
+                                  {order.dispute.status === 'under_review' && 'Đang xem xét'}
+                                  {order.dispute.status === 'resolved_buyer' && 'Khiếu nại thành công'}
+                                  {order.dispute.status === 'resolved_seller' && 'Khiếu nại thất bại'}
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (order.paymentId) {
+                                      setDisputeTarget(order.paymentId);
+                                    } else {
+                                      alert("Không tìm thấy thông tin thanh toán");
+                                    }
+                                  }}
+                                  className="inline-flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-lg border-2 border-red-500 bg-white text-red-500 hover:bg-red-50 transition-all min-w-[120px]"
+                                >
+                                  Khiếu nại
+                                </button>
+                              )}
+                            </div>
                           )}
                         </div>
                       )}
@@ -550,6 +661,75 @@ function WonAuctionsContent() {
                   className="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-[#E25C24] hover:bg-[#c94d1b] rounded-lg transition-colors shadow-[2px_2px_0px_#E2B9A1] hover:shadow-[3px_3px_0px_#E2B9A1] disabled:opacity-50 disabled:shadow-none disabled:translate-y-0.5"
                 >
                   {reviewLoading ? "Đang gửi..." : "Gửi đánh giá"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Dispute Success Toast Notification */}
+        {disputeSuccess && (
+          <div className="fixed top-24 right-6 z-[200] animate-slide-in-right">
+            <div className="flex items-center gap-3 bg-white border-2 border-green-300 px-5 py-3.5 rounded-xl shadow-[4px_4px_0px_#86efac] min-w-[280px]">
+              <div className="w-8 h-8 rounded-full bg-green-100 border-2 border-green-300 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-green-600 text-lg">check</span>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-bold text-slate-800">Thành công!</p>
+                <p className="text-xs text-slate-500 mt-0.5">Gửi yêu cầu khiếu nại thành công</p>
+              </div>
+              <button onClick={() => setDisputeSuccess(false)} className="text-slate-400 hover:text-slate-600 transition-colors shrink-0">
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Dispute Dialog */}
+        {disputeTarget && (
+          <div 
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-in fade-in duration-200"
+            onClick={() => {
+              setDisputeTarget(null);
+              setDisputeReason("");
+            }}
+          >
+            <div 
+              className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 relative animate-in zoom-in-95 duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-2xl font-bold text-slate-800 mb-2">Gửi khiếu nại đơn hàng</h3>
+              <p className="text-sm text-slate-500 mb-4">
+                Vui lòng cung cấp lý do khiếu nại chi tiết (sản phẩm không đúng mô tả, hư hỏng hoặc không nhận được hàng). Ban quản trị sẽ xác minh để giải quyết tranh chấp.
+              </p>
+
+              <div className="mb-6">
+                <label className="block text-sm font-bold text-slate-700 mb-2">Lý do khiếu nại <span className="text-red-500">*</span></label>
+                <textarea
+                  value={disputeReason}
+                  onChange={(e) => setDisputeReason(e.target.value)}
+                  placeholder="Sản phẩm nhận được bị nứt vỡ ở mặt kính, không hoạt động..."
+                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-slate-200 focus:ring-0 outline-none transition-colors text-sm min-h-[120px] resize-none"
+                />
+              </div>
+
+              <div className="flex items-center gap-3 w-full">
+                <button
+                  onClick={() => {
+                    setDisputeTarget(null);
+                    setDisputeReason("");
+                  }}
+                  disabled={disputeLoading}
+                  className="flex-1 px-4 py-2.5 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleDispute}
+                  disabled={disputeLoading || disputeReason.trim().length < 10}
+                  className="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors shadow-[2px_2px_0px_#fca5a5] hover:shadow-[3px_3px_0px_#fca5a5] disabled:opacity-50 disabled:shadow-none disabled:translate-y-0.5"
+                >
+                  {disputeLoading ? "Đang gửi..." : "Gửi khiếu nại"}
                 </button>
               </div>
             </div>

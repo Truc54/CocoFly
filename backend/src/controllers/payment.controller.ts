@@ -191,4 +191,62 @@ export class PaymentController {
       res.status(statusCode).json({ success: false, message: error.message });
     }
   }
+
+  // POST /api/payments/:id/dispute — Buyer opens a dispute
+  async openDispute(req: Request, res: Response): Promise<void> {
+    try {
+      const paymentId = req.params.id as string;
+      const { reason } = req.body;
+      const userId = (req as any).user?.userId;
+
+      await this.paymentService.openDispute(paymentId, userId, reason);
+      res.status(201).json({ success: true, message: 'Gửi khiếu nại thành công' });
+    } catch (error: any) {
+      const statusCode = error.statusCode || 400;
+      res.status(statusCode).json({ success: false, message: error.message });
+    }
+  }
+
+  // GET /api/payments/dispute/:id — Get dispute details (buyer/seller)
+  async getDisputeById(req: Request, res: Response): Promise<void> {
+    try {
+      const disputeId = req.params.id as string;
+      const userId = (req as any).user?.userId;
+
+      const dispute = await this.paymentService.getDisputeById(disputeId, userId);
+      res.status(200).json({ success: true, data: dispute });
+    } catch (error: any) {
+      const statusCode = error.statusCode || 400;
+      res.status(statusCode).json({ success: false, message: error.message });
+    }
+  }
+
+  // POST /api/payments/dispute/:id/respond — Seller responds/appeals dispute
+  async respondDispute(req: Request, res: Response): Promise<void> {
+    try {
+      const disputeId = req.params.id as string;
+      const { response } = req.body;
+      const userId = (req as any).user?.userId;
+
+      const dispute = await this.paymentService.respondDispute(disputeId, userId, response);
+      res.status(200).json({ success: true, message: 'Gửi phản hồi khiếu nại thành công', data: dispute });
+    } catch (error: any) {
+      const statusCode = error.statusCode || 400;
+      res.status(statusCode).json({ success: false, message: error.message });
+    }
+  }
+
+  // GET /api/payments/dispute/by-auction/:auctionId — Get dispute details by auction ID
+  async getDisputeByAuction(req: Request, res: Response): Promise<void> {
+    try {
+      const auctionId = req.params.auctionId as string;
+      const userId = (req as any).user?.userId;
+
+      const dispute = await this.paymentService.getDisputeByAuction(auctionId, userId);
+      res.status(200).json({ success: true, data: dispute });
+    } catch (error: any) {
+      const statusCode = error.statusCode || 400;
+      res.status(statusCode).json({ success: false, message: error.message });
+    }
+  }
 }

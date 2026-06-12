@@ -147,6 +147,11 @@ export class UserService {
         paymentDeadline: latestPayment?.paymentDeadline ? latestPayment.paymentDeadline.toISOString() : null,
         paymentId: latestPayment?.id,
         hasReviewed: auction.reviews && auction.reviews.length > 0,
+        dispute: latestPayment?.disputes && latestPayment.disputes.length > 0 ? {
+          id: latestPayment.disputes[0].id,
+          status: latestPayment.disputes[0].status,
+          reason: latestPayment.disputes[0].reason,
+        } : null,
       };
     });
     const currentTabTotal = tab ? counts[tab as keyof typeof counts] || 0 : Object.values(counts).reduce((a, b) => a + b, 0);
