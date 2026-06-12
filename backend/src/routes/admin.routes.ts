@@ -8,6 +8,9 @@ import {
   changeRoleSchema,
   refundPaymentSchema,
   resolveDisputeSchema,
+  createCategorySchema,
+  updateCategorySchema,
+  updateConfigSchema,
 } from '../validators/admin.validator';
 
 const adminController = new AdminController();
@@ -43,3 +46,16 @@ adminRoutes.post('/payments/:id/refund', validate(refundPaymentSchema), adminCon
 adminRoutes.get('/disputes', adminController.getDisputes.bind(adminController));
 adminRoutes.get('/disputes/:id', adminController.getDisputeById.bind(adminController));
 adminRoutes.patch('/disputes/:id/resolve', validate(resolveDisputeSchema), adminController.resolveDispute.bind(adminController));
+
+// ── Phase 4: Category Management ──
+adminRoutes.get('/categories', adminController.getAllCategories.bind(adminController));
+adminRoutes.post('/categories', validate(createCategorySchema), adminController.createCategory.bind(adminController));
+adminRoutes.put('/categories/:id', validate(updateCategorySchema), adminController.updateCategory.bind(adminController));
+adminRoutes.delete('/categories/:id', adminController.deleteCategory.bind(adminController));
+
+// ── Phase 4: System Configuration ──
+adminRoutes.get('/config', adminController.getConfigs.bind(adminController));
+adminRoutes.put('/config/:key', validate(updateConfigSchema), adminController.updateConfig.bind(adminController));
+
+// ── Phase 4: Audit Logs ──
+adminRoutes.get('/audit-logs', adminController.getAuditLogs.bind(adminController));

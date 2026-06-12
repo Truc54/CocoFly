@@ -252,4 +252,87 @@ export class AdminController {
       res.status(500).json({ success: false, message: error.message });
     }
   }
+
+  // ── Phase 4: Category Management Handlers ───────────────────────────────────────────
+  async getAllCategories(req: Request, res: Response): Promise<void> {
+    try {
+      const categories = await this.adminService.getAllCategories();
+      res.status(200).json({ success: true, data: categories });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  async createCategory(req: Request, res: Response): Promise<void> {
+    try {
+      const category = await this.adminService.createCategory(req.body);
+      res.status(201).json({ success: true, message: 'Tạo danh mục thành công', data: category });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  async updateCategory(req: Request, res: Response): Promise<void> {
+    try {
+      const id = Number(req.params.id);
+      if (isNaN(id)) {
+        res.status(400).json({ success: false, message: 'ID danh mục không hợp lệ' });
+        return;
+      }
+      const category = await this.adminService.updateCategory(id, req.body);
+      res.status(200).json({ success: true, message: 'Cập nhật danh mục thành công', data: category });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  async deleteCategory(req: Request, res: Response): Promise<void> {
+    try {
+      const id = Number(req.params.id);
+      if (isNaN(id)) {
+        res.status(400).json({ success: false, message: 'ID danh mục không hợp lệ' });
+        return;
+      }
+      await this.adminService.deleteCategory(id);
+      res.status(200).json({ success: true, message: 'Xóa danh mục thành công' });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  // ── Phase 4: System Configuration Handlers ─────────────────────────────────────────
+  async getConfigs(req: Request, res: Response): Promise<void> {
+    try {
+      const configs = await this.adminService.getConfigs();
+      res.status(200).json({ success: true, data: configs });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  async updateConfig(req: Request, res: Response): Promise<void> {
+    try {
+      const key = req.params.key;
+      const { value } = req.body;
+      const config = await this.adminService.updateConfig(key as string, value as string);
+      res.status(200).json({ success: true, message: 'Cập nhật cấu hình thành công', data: config });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  // ── Phase 4: Audit Logs Handlers ───────────────────────────────────────────────────
+  async getAuditLogs(req: Request, res: Response): Promise<void> {
+    try {
+      const page = req.query.page ? Number(req.query.page) : undefined;
+      const limit = req.query.limit ? Number(req.query.limit) : undefined;
+      const actionType = req.query.actionType as string | undefined;
+      const actorId = req.query.actorId as string | undefined;
+
+      const result = await this.adminService.getAuditLogs({ page, limit, actionType, actorId });
+      res.status(200).json({ success: true, data: result });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
 }

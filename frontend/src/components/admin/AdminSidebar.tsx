@@ -17,7 +17,6 @@ import {
   LogOut,
 } from "lucide-react";
 import { authStorage } from "@/lib/auth-storage";
-import { useEffect, useState } from "react";
 
 interface AdminSidebarProps {
   isCollapsed: boolean;
@@ -27,14 +26,6 @@ interface AdminSidebarProps {
 export default function AdminSidebar({ isCollapsed, setIsCollapsed }: AdminSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const [adminName, setAdminName] = useState("Admin");
-
-  useEffect(() => {
-    const user = authStorage.getUser() as any;
-    if (user) {
-      setAdminName(user.fullName || "CocoFly Admin");
-    }
-  }, []);
 
   const menuItems = [
     { icon: LayoutDashboard, label: "Dashboard", href: "/admin" },
@@ -74,9 +65,7 @@ export default function AdminSidebar({ isCollapsed, setIsCollapsed }: AdminSideb
               <span className="brand-text text-lg font-bold text-[#8f5c38] tracking-wider">
                 COCOFLY
               </span>
-              <span className="text-[9px] font-mono font-bold bg-slate-50 text-slate-500 px-1.5 py-0.5 border border-slate-200 rounded-sm">
-                ADM
-              </span>
+
             </Link>
             <button
               onClick={() => setIsCollapsed(!isCollapsed)}

@@ -1246,4 +1246,124 @@ export class AdminService {
 
     return { success: true };
   }
+
+  // ── Phase 4: Category Management Services ──────────────────────────────────────────
+  async getAllCategories() {
+    return prisma.category.findMany({
+      orderBy: [
+        { sortOrder: 'asc' },
+        { createdAt: 'desc' }
+      ]
+    });
+  }
+
+  async createCategory(data: any) {
+    const existing = await prisma.category.findUnique({
+      where: { slug: data.slug }
+    });
+    if (existing) {
+      throw new Error('Slug danh mục đã tồn tại');
+    }
+    return prisma.category.create({ data });
+  }
+
+  async updateCategory(id: number, data: any) {
+    const category = await prisma.category.findUnique({ where: { id } });
+    if (!category) {
+      throw new Error('Không tìm thấy danh mục');
+    }
+
+    if (data.slug && data.slug !== category.slug) {
+      const existing = await prisma.category.findUnique({
+        where: { slug: data.slug }
+      });
+      if (existing) {
+        throw new Error('Slug danh mục đã tồn tại');
+      }
+    }
+
+    return prisma.category.update({
+      where: { id },
+      data
+    });
+  }
+
+  async deleteCategory(id: number) {
+    const category = await prisma.category.findUnique({ where: { id } });
+    if (!category) {
+      throw new Error('Không tìm thấy danh mục');
+    }
+
+    const itemCount = await prisma.item.count({
+      where: { categoryId: id }
+    });
+    if (itemCount > 0) {
+      throw new Error('Không thể xóa danh mục này vì đang có sản phẩm liên kết');
+    }
+
+    return prisma.category.delete({
+      where: { id }
+    });
+  }
+
+  // ── Phase 4: System Configuration Services ─────────────────────────────────────────
+  async getConfigs() {
+    return prisma.systemConfig.findMany({
+      orderBy: { key: 'asc' }
+    });
+  }
+
+  async updateConfig(key: string, value: string) {
+    const config = await prisma.systemConfig.findUnique({ where: { key } });
+    if (!config) {
+      throw new Error('Không tìm thấy khóa cấu hình');
+    }
+    return prisma.systemConfig.update({
+      where: { key },
+      data: { value }
+    });
+  }
+
+  // ── Phase 4: Audit Logs Services ───────────────────────────────────────────────────
+  async getAuditLogs(params: { page?: number; limit?: number; actionType?: string; actorId?: string }) {
+    const page = Number(params.page) || 1;
+    const limit = Number(params.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (params.actionType) {
+      where.actionType = params.actionType;
+    }
+    if (params.actorId) {
+      where.actorId = params.actorId;
+    }
+
+    const [logs, total] = await Promise.all([
+      prisma.auditLog.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          actor: {
+            select: {
+              id: true,
+              fullName: true,
+              email: true,
+              avatarUrl: true
+            }
+          }
+        }
+      }),
+      prisma.auditLog.count({ where })
+    ]);
+
+    return {
+      logs,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    };
+  }
 }

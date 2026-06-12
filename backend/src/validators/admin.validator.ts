@@ -29,3 +29,45 @@ export const resolveDisputeSchema = z.object({
     .min(1, 'Ghi chú phân xử không được để trống')
     .max(1000, 'Ghi chú phân xử không được vượt quá 1000 ký tự'),
 });
+
+export const createCategorySchema = z.object({
+  name: z
+    .string({ message: 'Tên danh mục là bắt buộc' })
+    .min(1, 'Tên danh mục không được để trống')
+    .max(100, 'Tên danh mục không được vượt quá 100 ký tự'),
+  slug: z
+    .string({ message: 'Slug danh mục là bắt buộc' })
+    .min(1, 'Slug không được để trống')
+    .max(100, 'Slug không được vượt quá 100 ký tự')
+    .regex(/^[a-z0-9-]+$/, 'Slug chỉ chứa chữ thường, số và dấu gạch ngang'),
+  description: z.string().max(500, 'Mô tả không được vượt quá 500 ký tự').optional().nullable(),
+  parentId: z.number().optional().nullable(),
+  sortOrder: z.number().int().optional().default(0),
+  iconUrl: z.string().max(100, 'Icon URL không được vượt quá 100 ký tự').optional().nullable(),
+});
+
+export const updateCategorySchema = z.object({
+  name: z
+    .string()
+    .min(1, 'Tên danh mục không được để trống')
+    .max(100, 'Tên danh mục không được vượt quá 100 ký tự')
+    .optional(),
+  slug: z
+    .string()
+    .min(1, 'Slug không được để trống')
+    .max(100, 'Slug không được vượt quá 100 ký tự')
+    .regex(/^[a-z0-9-]+$/, 'Slug chỉ chứa chữ thường, số và dấu gạch ngang')
+    .optional(),
+  description: z.string().max(500, 'Mô tả không được vượt quá 500 ký tự').optional().nullable(),
+  parentId: z.number().optional().nullable(),
+  sortOrder: z.number().int().optional(),
+  iconUrl: z.string().max(100, 'Icon URL không được vượt quá 100 ký tự').optional().nullable(),
+  isActive: z.boolean().optional(),
+});
+
+export const updateConfigSchema = z.object({
+  value: z
+    .string({ message: 'Giá trị cấu hình là bắt buộc' })
+    .min(1, 'Giá trị cấu hình không được để trống')
+    .max(2000, 'Giá trị cấu hình không được vượt quá 2000 ký tự'),
+});
