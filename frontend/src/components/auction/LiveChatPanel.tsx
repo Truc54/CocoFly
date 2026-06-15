@@ -66,7 +66,7 @@ export default function LiveChatPanel({
   const chatMessages = messages.filter(msg => msg.type !== "bid_alert");
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-none border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] flex flex-col h-[550px]">
+    <div className="bg-white dark:bg-slate-800 rounded-xl border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] flex flex-col h-[550px]">
       {/* Header */}
       <div className="p-4 border-b-2 border-slate-200 dark:border-slate-700 flex items-center justify-between shrink-0 bg-slate-50 dark:bg-slate-800">
         <div className="flex items-center gap-4">
@@ -305,7 +305,7 @@ export default function LiveChatPanel({
                   }
                 }}
                 maxLength={500}
-                className="flex-1 max-h-[120px] py-2 px-3 bg-white border-none rounded-none text-sm outline-none placeholder:text-slate-400 focus:ring-0 shadow-sm resize-none hide-scrollbar overflow-y-auto leading-normal"
+                className="flex-1 max-h-[120px] py-2 px-3 bg-white border-none rounded-xl text-sm outline-none placeholder:text-slate-400 focus:ring-0 shadow-sm resize-none hide-scrollbar overflow-y-auto leading-normal"
               />
               <button 
                 onClick={(e) => {

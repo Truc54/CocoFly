@@ -816,7 +816,7 @@ export default function CreateAuctionPage() {
           <div className="flex justify-between items-center mt-8 pt-6 border-t border-slate-200 dark:border-slate-800">
             <Button
               onClick={step === 0 ? () => router.back() : handleBack}
-              className="h-12 px-6 rounded-none border-2 border-slate-300 bg-white text-base font-bold text-slate-700 shadow-[3px_3px_0px_#cbd5e1] transition-all hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#cbd5e1] dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300 dark:shadow-[3px_3px_0px_#334155]"
+              className="h-12 px-6 rounded-xl border-2 border-slate-300 bg-white text-base font-bold text-slate-700 shadow-[3px_3px_0px_#cbd5e1] transition-all hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#cbd5e1] dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300 dark:shadow-[3px_3px_0px_#334155]"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               {step === 0 ? "Hủy" : "Quay lại"}
@@ -825,7 +825,7 @@ export default function CreateAuctionPage() {
             {step < 3 ? (
               <Button
                 onClick={handleNext}
-                className="group h-12 px-8 rounded-none border-2 border-primary-main bg-primary-main text-base font-bold text-white shadow-[3px_3px_0px_#E2B9A1] transition-all hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#E2B9A1]"
+                className="group h-12 px-8 rounded-xl border-2 border-primary-main bg-primary-main text-base font-bold text-white shadow-[3px_3px_0px_#E2B9A1] transition-all hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#E2B9A1]"
               >
                 Tiếp theo
                 <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
@@ -834,7 +834,7 @@ export default function CreateAuctionPage() {
               <Button
                 onClick={handleSubmit}
                 disabled={isSubmitting}
-                className="group h-12 px-8 rounded-none border-2 border-emerald-600 bg-emerald-600 text-base font-bold text-white shadow-[3px_3px_0px_#059669] transition-all hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#059669] disabled:opacity-70"
+                className="group h-12 px-8 rounded-xl border-2 border-emerald-600 bg-emerald-600 text-base font-bold text-white shadow-[3px_3px_0px_#059669] transition-all hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#059669] disabled:opacity-70"
               >
                 {isSubmitting ? (
                   <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Đang tạo...</>

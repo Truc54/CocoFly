@@ -83,7 +83,7 @@ export function AuctionCard({ auction, variant, countdown, index = 0 }: AuctionC
   return (
     <Link
       href={`/auction/${auction.id}`}
-      className="group bg-white dark:bg-slate-800/60 rounded-none overflow-hidden border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] hover:-translate-y-1 hover:shadow-[6px_6px_0px_#E2B9A1] transition-all duration-300"
+      className="group bg-white dark:bg-slate-800/60 rounded-xl overflow-hidden border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] hover:-translate-y-1 hover:shadow-[6px_6px_0px_#E2B9A1] transition-all duration-300"
       style={{ animationDelay: `${index * 60}ms` }}
     >
       {/* Image */}
@@ -225,7 +225,7 @@ export default function AuctionRow({
         </div>
         <Link
           href={viewAllHref}
-          className="group inline-flex items-center gap-1.5 rounded-none border-2 border-primary-main bg-white px-3 py-1.5 text-xs font-bold text-primary-main shadow-[3px_3px_0px_#E2B9A1] transition-all hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#E2B9A1] dark:bg-slate-900"
+          className="group inline-flex items-center gap-1.5 rounded-xl border-2 border-primary-main bg-white px-3 py-1.5 text-xs font-bold text-primary-main shadow-[3px_3px_0px_#E2B9A1] transition-all hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#E2B9A1] dark:bg-slate-900"
         >
           Xem tất cả
           <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
@@ -238,7 +238,7 @@ export default function AuctionRow({
           {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
-              className="bg-white dark:bg-slate-800 rounded-none overflow-hidden border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] animate-pulse"
+              className="bg-white dark:bg-slate-800 rounded-xl overflow-hidden border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] animate-pulse"
             >
               <div className="aspect-[4/3] bg-slate-200 dark:bg-slate-700" />
               <div className="p-3 space-y-2">

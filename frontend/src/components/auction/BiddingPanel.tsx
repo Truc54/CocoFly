@@ -167,7 +167,7 @@ export default function BiddingPanel({
   const displayError = error || localError;
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-none border-2 border-slate-200 dark:border-slate-700 p-6 shadow-[4px_4px_0px_#E2B9A1] relative">
+    <div className="bg-white dark:bg-slate-800 rounded-xl border-2 border-slate-200 dark:border-slate-700 p-6 shadow-[4px_4px_0px_#E2B9A1] relative">
       {/* Full-screen Bid Confirmation Modal */}
       {showBidConfirm && pendingBid && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in" onClick={cancelBid}>
@@ -258,7 +258,7 @@ export default function BiddingPanel({
               onKeyDown={(e) => e.key === "Enter" && !isBidDisabled && handleBidClick()}
               disabled={isBidDisabled}
               aria-label="Nhập giá đặt"
-              className={`w-full pl-4 pr-12 py-3 bg-white border-2 rounded-none text-base font-bold focus:ring-0 outline-none transition-all placeholder:text-slate-400 placeholder:font-normal shadow-[inset_2px_2px_0px_#f1f5f9] disabled:opacity-50 disabled:bg-slate-50 text-slate-800 ${
+              className={`w-full pl-4 pr-12 py-3 bg-white border-2 rounded-xl text-base font-bold focus:ring-0 outline-none transition-all placeholder:text-slate-400 placeholder:font-normal shadow-[inset_2px_2px_0px_#f1f5f9] disabled:opacity-50 disabled:bg-slate-50 text-slate-800 ${
                 displayError
                   ? "border-red-400"
                   : "border-slate-300"
@@ -286,7 +286,7 @@ export default function BiddingPanel({
             <div className="relative group flex items-center">
               <span className="material-symbols-outlined text-[16px] text-slate-400 hover:text-[#0066FF] cursor-pointer transition-colors">info</span>
               {/* Tooltip */}
-              <div className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 w-64 p-3 bg-slate-800 text-white text-xs leading-relaxed font-medium rounded-none shadow-[4px_4px_0px_#cbd5e1] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-30 pointer-events-none">
+              <div className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 w-64 p-3 bg-slate-800 text-white text-xs leading-relaxed font-medium rounded-lg shadow-[4px_4px_0px_#cbd5e1] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-30 pointer-events-none">
                 Hệ thống sẽ tự động đặt giá thay bạn từng bước một, vừa đủ để dẫn đầu, cho đến khi đạt mức giá tối đa bạn nhập vào. Không ai khác biết giới hạn thật của bạn.
                 <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
               </div>

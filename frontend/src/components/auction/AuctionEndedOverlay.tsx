@@ -36,7 +36,7 @@ export default function AuctionEndedOverlay({
   totalBids,
 }: AuctionEndedOverlayProps) {
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-none border-2 border-[#8f5c38] p-8 shadow-[6px_6px_0px_#E2B9A1] relative">
+    <div className="bg-white dark:bg-slate-800 rounded-xl border-2 border-[#8f5c38] p-8 shadow-[6px_6px_0px_#E2B9A1] relative">
       {/* Header */}
       <div className="flex flex-col items-center justify-center text-center mb-8">
         <div className="mb-4">
