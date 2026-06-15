@@ -24,13 +24,15 @@ const AUTH_PATHS = new Set([
 export default function AppChrome({ children }: AppChromeProps) {
   const pathname = usePathname();
   const isAuthPage = AUTH_PATHS.has(pathname);
+  const isAdminPage = pathname.startsWith("/admin");
+  const hideChrome = isAuthPage || isAdminPage;
 
   return (
     <>
-      {!isAuthPage && <HeaderNew />}
-      <main className={isAuthPage ? "min-h-dvh" : "grow"}>{children}</main>
-      {!isAuthPage && <FooterNew />}
-      {!isAuthPage && <FloatingChatButton />}
+      {!hideChrome && <HeaderNew />}
+      <main className={hideChrome ? "min-h-dvh" : "grow"}>{children}</main>
+      {!hideChrome && <FooterNew />}
+      {!hideChrome && <FloatingChatButton />}
     </>
   );
 }

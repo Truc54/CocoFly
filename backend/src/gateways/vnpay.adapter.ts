@@ -27,6 +27,17 @@ function sortObject(obj: Record<string, string>): Record<string, string> {
   return sorted;
 }
 
+function sortObjectVerify(obj: Record<string, string>): Record<string, string> {
+  const sorted: Record<string, string> = {};
+  const keys = Object.keys(obj).sort();
+  for (const key of keys) {
+    sorted[key] = encodeURIComponent(obj[key])
+      .replace(/%20/g, '+')
+      .replace(/[!'()*]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase());
+  }
+  return sorted;
+}
+
 function formatVNPayDate(date: Date): string {
   const pad = (n: number) => n.toString().padStart(2, '0');
   return (
@@ -67,7 +78,9 @@ export function createVNPayUrl(params: VNPayCreateParams): string {
   const hmac = crypto.createHmac('sha512', env.VNPAY_HASH_SECRET);
   const signed = hmac.update(Buffer.from(signData, 'utf-8')).digest('hex');
 
-  return `${env.VNPAY_URL}?${signData}&vnp_SecureHash=${signed}`;
+  const finalUrl = `${env.VNPAY_URL}?${signData}&vnp_SecureHash=${signed}`;
+
+  return finalUrl;
 }
 
 export function verifyVNPayReturn(query: Record<string, string>): {
@@ -82,7 +95,7 @@ export function verifyVNPayReturn(query: Record<string, string>): {
   delete params['vnp_SecureHash'];
   delete params['vnp_SecureHashType'];
 
-  const sorted = sortObject(params);
+  const sorted = sortObjectVerify(params);
   const signData = Object.entries(sorted)
     .map(([key, val]) => `${key}=${val}`)
     .join('&');

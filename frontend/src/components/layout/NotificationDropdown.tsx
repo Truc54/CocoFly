@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Bell, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { notificationApi } from "@/lib/api";
+import { notificationApi, paymentApi } from "@/lib/api";
 import { connectSocket } from "@/lib/socket";
 
 // Must match Prisma NotificationType
@@ -170,11 +170,17 @@ export default function NotificationDropdown() {
     }
   };
 
-  const handleNotificationClick = (n: NotificationItem) => {
+  const handleNotificationClick = async (n: NotificationItem) => {
     if (!n.isRead) {
       handleMarkAsRead(n.id);
     }
     setIsOpen(false);
+
+    const isDisputeNotification =
+      n.type === "dispute_opened" ||
+      n.type === "dispute_resolved" ||
+      n.title === "Người bán đã phản hồi khiếu nại" ||
+      (n.metadata && typeof n.metadata.disputeId === "string");
 
     // Route based on type
     if (n.type === "outbid" || n.type === "auction_starting" || n.type === "auction_ending") {
@@ -183,6 +189,29 @@ export default function NotificationDropdown() {
       if (n.auctionId) router.push(`/checkout/${n.auctionId}`);
     } else if (n.type === "payment_confirmed") {
       router.push(`/won-auctions?tab=won`);
+    } else if (isDisputeNotification) {
+      if (n.title === "Gửi khiếu nại thành công") {
+        router.push(`/won-auctions?tab=received`);
+      } else {
+        const disputeId = n.metadata?.disputeId;
+        if (disputeId) {
+          router.push(`/disputes/${disputeId}`);
+        } else if (n.auctionId) {
+          try {
+            const res = await paymentApi.getDisputeByAuction(n.auctionId);
+            if (res && res.success && res.data) {
+              router.push(`/disputes/${res.data.id}`);
+            } else {
+              router.push(`/won-auctions?tab=won`);
+            }
+          } catch (err) {
+            console.error(err);
+            router.push(`/won-auctions?tab=won`);
+          }
+        } else {
+          router.push(`/won-auctions?tab=won`);
+        }
+      }
     } else {
       router.push(`/notifications`);
     }

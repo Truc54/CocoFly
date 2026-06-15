@@ -130,20 +130,22 @@ export function verifyMoMoIPN(data: MoMoIPNData): {
   transactionId: string;
   message: string;
 } {
+  const getSafe = (val: any) => (val === undefined || val === null ? '' : String(val));
+
   const rawSignature =
     `accessKey=${env.MOMO_ACCESS_KEY}` +
-    `&amount=${data.amount}` +
-    `&extraData=${data.extraData}` +
-    `&message=${data.message}` +
-    `&orderId=${data.orderId}` +
-    `&orderInfo=${data.orderInfo}` +
-    `&orderType=${data.orderType}` +
-    `&partnerCode=${data.partnerCode}` +
-    `&payType=${data.payType}` +
-    `&requestId=${data.requestId}` +
-    `&responseTime=${data.responseTime}` +
-    `&resultCode=${data.resultCode}` +
-    `&transId=${data.transId}`;
+    `&amount=${getSafe(data.amount)}` +
+    `&extraData=${getSafe(data.extraData)}` +
+    `&message=${getSafe(data.message)}` +
+    `&orderId=${getSafe(data.orderId)}` +
+    `&orderInfo=${getSafe(data.orderInfo)}` +
+    `&orderType=${getSafe(data.orderType)}` +
+    `&partnerCode=${getSafe(data.partnerCode)}` +
+    `&payType=${getSafe(data.payType)}` +
+    `&requestId=${getSafe(data.requestId)}` +
+    `&responseTime=${getSafe(data.responseTime)}` +
+    `&resultCode=${getSafe(data.resultCode)}` +
+    `&transId=${getSafe(data.transId)}`;
 
   const checkSignature = createSignature(rawSignature);
 

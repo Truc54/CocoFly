@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
@@ -29,6 +30,17 @@ const NEW_CATEGORIES = [
   { name: 'Đồ chơi & Mô hình', slug: 'do-choi-mo-hinh', description: 'Mô hình, figure, đồ chơi sưu tầm', iconUrl: 'toys', sortOrder: 14 },
 ];
 
+// Default System Configurations
+const SYSTEM_CONFIGS = [
+  { key: 'platform_fee_rate', value: '5', description: 'Tỷ lệ phí nền tảng (%)' },
+  { key: 'payment_timeout_hours', value: '48', description: 'Thời hạn thanh toán của người mua (giờ)' },
+  { key: 'auto_confirm_days', value: '7', description: 'Thời gian tự động xác nhận đã nhận hàng kể từ khi giao hàng (ngày)' },
+  { key: 'max_active_listings', value: '10', description: 'Giới hạn số phiên đấu giá đang hoạt động tối đa cho mỗi người bán' },
+  { key: 'new_account_bid_limit', value: '5000000', description: 'Giới hạn số tiền đặt giá tối đa cho tài khoản mới chưa xác minh số điện thoại (VND)' },
+  { key: 'seller_shipping_deadline_days', value: '5', description: 'Hạn cuối để người bán gửi hàng đi kể từ khi thanh toán hoàn tất (ngày)' },
+  { key: 'max_non_payment_strikes', value: '3', description: 'Số lần vi phạm thanh toán (gậy) tối đa trước khi tài khoản bị tự động khóa' },
+];
+
 async function main() {
   console.log('🌱 Seeding categories...');
 
@@ -41,7 +53,7 @@ async function main() {
     });
     updated += result.count;
   }
-  console.log(`  ✅ Updated ${updated} existing categories`);
+  console.log(`  Category: Updated ${updated} existing categories`);
 
   // 2. Reset autoincrement sequence to max existing id
   await prisma.$executeRawUnsafe(
@@ -57,11 +69,55 @@ async function main() {
       created++;
     }
   }
-  console.log(`  ✅ Created ${created} new categories`);
+  console.log(`  Category: Created ${created} new categories`);
 
-  // 3. Verify
-  const total = await prisma.category.count({ where: { isActive: true } });
-  console.log(`\n🎉 Total active categories: ${total}`);
+  // 4. Seed Admin user
+  console.log('🌱 Seeding Admin User...');
+  const adminEmail = 'admin@cocofly.vn';
+  const adminExists = await prisma.user.findUnique({ where: { email: adminEmail } });
+
+  if (!adminExists) {
+    const passwordHash = await bcrypt.hash('Admin@12345', 12);
+    const adminUser = await prisma.user.create({
+      data: {
+        email: adminEmail,
+        passwordHash,
+        fullName: 'CocoFly Admin',
+        role: 'admin',
+        accountStatus: 'active',
+      },
+    });
+    console.log(`  User: Created admin account: ${adminEmail} (password: Admin@12345)`);
+  } else {
+    // Force role to admin if it was created differently
+    await prisma.user.update({
+      where: { email: adminEmail },
+      data: { role: 'admin', accountStatus: 'active' },
+    });
+    console.log(`  User: Admin account already exists: ${adminEmail}`);
+  }
+
+  // 5. Seed System Configurations
+  console.log('🌱 Seeding System Configurations...');
+  let configsCreated = 0;
+  let configsUpdated = 0;
+
+  for (const config of SYSTEM_CONFIGS) {
+    const exists = await prisma.systemConfig.findUnique({ where: { key: config.key } });
+    if (!exists) {
+      await prisma.systemConfig.create({ data: config });
+      configsCreated++;
+    } else {
+      await prisma.systemConfig.update({
+        where: { key: config.key },
+        data: { description: config.description }, // update description in case it changed
+      });
+      configsUpdated++;
+    }
+  }
+  console.log(`  Config: Created ${configsCreated}, Updated ${configsUpdated} system config keys`);
+
+  console.log('\n🎉 Seed completed successfully!');
 }
 
 main()

@@ -63,7 +63,11 @@ export default function AuthCard({ mode }: AuthCardProps) {
         authStorage.setRememberMe(rememberMe);
         authStorage.save(data.accessToken, data.user || {});
         window.dispatchEvent(new Event("auth-change"));
-        router.push("/");
+        if (data.user?.role === "admin") {
+          router.push("/admin");
+        } else {
+          router.push("/");
+        }
       }
     } catch (err: unknown) {
       setErrorMsg((err as Error).message || "Có lỗi xảy ra.");

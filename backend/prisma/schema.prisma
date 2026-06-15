@@ -463,7 +463,8 @@ model Dispute {
   paymentId      String        @map("payment_id") @db.Uuid
   openedById     String        @map("opened_by_id") @db.Uuid
   reason         String        @db.Text
-  status         DisputeStatus @default(opened)
+  sellerResponse String?       @map("seller_response") @db.Text
+  status         DisputeStatus @default(pending)
   resolutionNote String?       @map("resolution_note") @db.Text
   resolvedById   String?       @map("resolved_by_id") @db.Uuid
   createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz()
@@ -477,10 +478,8 @@ model Dispute {
 }
 
 enum DisputeStatus {
-  opened
-  under_review
-  resolved_buyer // Buyer wins -> Refund
-  resolved_seller // Seller wins -> Release Escrow
+  pending
+  resolved
 }
 
 // ============================================================================

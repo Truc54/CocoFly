@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { notificationApi } from "@/lib/api";
+import { notificationApi, paymentApi } from "@/lib/api";
 import { Bell, Check, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { connectSocket } from "@/lib/socket";
@@ -150,10 +150,16 @@ export default function NotificationsPage() {
     }
   };
 
-  const handleNotificationClick = (n: NotificationItem) => {
+  const handleNotificationClick = async (n: NotificationItem) => {
     if (!n.isRead) {
       handleMarkAsRead(n.id);
     }
+
+    const isDisputeNotification =
+      n.type === "dispute_opened" ||
+      n.type === "dispute_resolved" ||
+      n.title === "Người bán đã phản hồi khiếu nại" ||
+      (n.metadata && typeof n.metadata.disputeId === "string");
 
     if (n.type === "outbid" || n.type === "auction_starting" || n.type === "auction_ending") {
       if (n.auctionId) router.push(`/auction/${n.auctionId}`);
@@ -161,6 +167,29 @@ export default function NotificationsPage() {
       if (n.auctionId) router.push(`/checkout/${n.auctionId}`);
     } else if (n.type === "payment_confirmed") {
       router.push(`/won-auctions?tab=won`);
+    } else if (isDisputeNotification) {
+      if (n.title === "Gửi khiếu nại thành công") {
+        router.push(`/won-auctions?tab=received`);
+      } else {
+        const disputeId = n.metadata?.disputeId;
+        if (disputeId) {
+          router.push(`/disputes/${disputeId}`);
+        } else if (n.auctionId) {
+          try {
+            const res = await paymentApi.getDisputeByAuction(n.auctionId);
+            if (res && res.success && res.data) {
+              router.push(`/disputes/${res.data.id}`);
+            } else {
+              router.push(`/won-auctions?tab=won`);
+            }
+          } catch (err) {
+            console.error(err);
+            router.push(`/won-auctions?tab=won`);
+          }
+        } else {
+          router.push(`/won-auctions?tab=won`);
+        }
+      }
     }
   };
 

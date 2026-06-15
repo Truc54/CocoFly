@@ -188,11 +188,22 @@ export class PaymentService {
       throw new Error('Số tiền hoàn không được vượt quá số tiền thanh toán');
     }
 
-    await this.paymentRepo.updateStatus(paymentId, {
-      status: 'refunded',
-      refundedAt: new Date(),
-      note: `Hoàn tiền ${amount.toLocaleString()}₫ | Lý do: ${reason} | Admin: ${adminId}`,
-    });
+    await prisma.$transaction([
+      prisma.payment.update({
+        where: { id: paymentId },
+        data: {
+          status: 'refunded',
+          refundedAt: new Date(),
+          note: `Hoàn tiền ${amount.toLocaleString()}₫ | Lý do: ${reason} | Admin: ${adminId}`,
+        },
+      }),
+      prisma.user.update({
+        where: { id: payment.buyerId },
+        data: {
+          balance: { increment: amount },
+        },
+      }),
+    ]);
 
     const notificationService = new NotificationService();
     // Notify buyer
@@ -335,5 +346,185 @@ export class PaymentService {
       title: 'Người mua đã thanh toán!',
       message: `Vui lòng gửi hàng trong vòng 5 ngày.`,
     });
+  }
+
+  // ── Buyer: Open Dispute ────────────────────────────────────────────────
+  async openDispute(paymentId: string, userId: string, reason: string): Promise<void> {
+    const payment = await this.paymentRepo.findById(paymentId);
+    if (!payment) throw new AppError('Không tìm thấy thanh toán', 404);
+    if (payment.buyerId !== userId) {
+      throw new AppError('Bạn không có quyền thực hiện khiếu nại này', 403);
+    }
+
+    if (payment.status !== 'paid' && payment.status !== 'escrow_released') {
+      throw new AppError('Chỉ có thể khiếu nại đơn hàng đã thanh toán hoặc đã nhận hàng', 400);
+    }
+
+    // Check if a dispute already exists for this payment
+    const existingDispute = await prisma.dispute.findFirst({
+      where: { paymentId },
+    });
+    if (existingDispute) {
+      throw new AppError('Đơn hàng này đã có khiếu nại đang được xử lý', 400);
+    }
+
+    // Create dispute in transaction
+    const dispute = await prisma.$transaction(async (tx) => {
+      return await tx.dispute.create({
+        data: {
+          paymentId,
+          openedById: userId,
+          reason,
+          status: 'pending',
+        },
+      });
+    });
+
+    const itemTitle = payment.auction?.item?.title || 'Sản phẩm';
+    const notificationService = new NotificationService();
+
+    // 1. Notify Seller
+    await notificationService.send({
+      userId: payment.sellerId,
+      auctionId: payment.auctionId,
+      type: 'dispute_opened',
+      title: 'Đơn hàng của bạn bị khiếu nại!',
+      message: `Người mua đã mở khiếu nại cho sản phẩm "${itemTitle}" với lý do: "${reason}". Vui lòng phản hồi hoặc liên hệ ban quản trị để giải quyết.`,
+      metadata: { disputeId: dispute.id },
+    });
+
+    // 2. Notify Buyer
+    await notificationService.send({
+      userId: payment.buyerId,
+      auctionId: payment.auctionId,
+      type: 'dispute_opened',
+      title: 'Gửi khiếu nại thành công',
+      message: `Yêu cầu khiếu nại của bạn cho sản phẩm "${itemTitle}" đã được gửi lên hệ thống. Ban quản trị sẽ tiến hành xác minh và xử lý sớm nhất.`,
+      metadata: { disputeId: dispute.id },
+    });
+  }
+
+  // ── Get Dispute by ID ──────────────────────────────────────────────────
+  async getDisputeById(disputeId: string, userId: string) {
+    const dispute = await prisma.dispute.findUnique({
+      where: { id: disputeId },
+      include: {
+        payment: {
+          include: {
+            buyer: { select: { id: true, fullName: true, email: true, rating: true } },
+            seller: { select: { id: true, fullName: true, email: true, rating: true } },
+            auction: {
+              include: {
+                item: {
+                  include: {
+                    media: { select: { id: true, cdnUrl: true, type: true } },
+                  },
+                },
+              },
+            },
+          },
+        },
+        openedBy: { select: { id: true, fullName: true, email: true } },
+      },
+    });
+
+    if (!dispute) throw new AppError('Không tìm thấy khiếu nại', 404);
+
+    if (dispute.payment.buyerId !== userId && dispute.payment.sellerId !== userId) {
+      throw new AppError('Bạn không có quyền xem khiếu nại này', 403);
+    }
+
+    return dispute;
+  }
+
+  // ── Seller: Respond to Dispute ──────────────────────────────────────────
+  async respondDispute(disputeId: string, userId: string, responseText: string) {
+    const dispute = await prisma.dispute.findUnique({
+      where: { id: disputeId },
+      include: {
+        payment: {
+          include: {
+            auction: {
+              include: {
+                item: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!dispute) throw new AppError('Không tìm thấy khiếu nại', 404);
+
+    if (dispute.payment.sellerId !== userId) {
+      throw new AppError('Chỉ người bán của đơn hàng mới có thể phản hồi khiếu nại', 403);
+    }
+
+    if (dispute.status !== 'pending') {
+      throw new AppError('Khiếu nại này đã được phân xử hoặc đóng', 400);
+    }
+
+    if (dispute.sellerResponse) {
+      throw new AppError('Bạn đã gửi phản hồi cho khiếu nại này rồi', 400);
+    }
+
+    // Update dispute response
+    const updatedDispute = await prisma.dispute.update({
+      where: { id: disputeId },
+      data: {
+        sellerResponse: responseText,
+      },
+    });
+
+    // Send notification to buyer
+    const notificationService = new NotificationService();
+    const itemTitle = dispute.payment.auction?.item?.title || 'Sản phẩm';
+    await notificationService.send({
+      userId: dispute.payment.buyerId,
+      auctionId: dispute.payment.auctionId,
+      type: 'system',
+      title: 'Người bán đã phản hồi khiếu nại',
+      message: `Người bán đã phản hồi yêu cầu khiếu nại của bạn cho sản phẩm "${itemTitle}".`,
+      metadata: { disputeId },
+    });
+
+    return updatedDispute;
+  }
+
+  // ── Get Dispute by Auction ID ──────────────────────────────────────────
+  async getDisputeByAuction(auctionId: string, userId: string) {
+    const dispute = await prisma.dispute.findFirst({
+      where: {
+        payment: {
+          auctionId,
+        },
+      },
+      include: {
+        payment: {
+          include: {
+            buyer: { select: { id: true, fullName: true, email: true, rating: true } },
+            seller: { select: { id: true, fullName: true, email: true, rating: true } },
+            auction: {
+              include: {
+                item: {
+                  include: {
+                    media: { select: { id: true, cdnUrl: true, type: true } },
+                  },
+                },
+              },
+            },
+          },
+        },
+        openedBy: { select: { id: true, fullName: true, email: true } },
+      },
+    });
+
+    if (!dispute) throw new AppError('Không tìm thấy khiếu nại cho phiên đấu giá này', 404);
+
+    if (dispute.payment.buyerId !== userId && dispute.payment.sellerId !== userId) {
+      throw new AppError('Bạn không có quyền xem khiếu nại này', 403);
+    }
+
+    return dispute;
   }
 }

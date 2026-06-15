@@ -260,6 +260,16 @@ export const paymentApi = {
     fetchApi(`/api/payments/${paymentId}/confirm-shipping`, { method: 'PATCH' }),
   confirmDelivery: (paymentId: string) =>
     fetchApi(`/api/payments/${paymentId}/confirm-delivery`, { method: 'PATCH' }),
+  openDispute: (paymentId: string, reason: string) => fetchApi(`/api/payments/${paymentId}/dispute`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  }),
+  getDispute: (id: string) => fetchApi(`/api/payments/dispute/${id}`),
+  getDisputeByAuction: (auctionId: string) => fetchApi(`/api/payments/dispute/by-auction/${auctionId}`),
+  respondDispute: (id: string, response: string) => fetchApi(`/api/payments/dispute/${id}/respond`, {
+    method: 'POST',
+    body: JSON.stringify({ response }),
+  }),
 };
 
 export const messageApi = {

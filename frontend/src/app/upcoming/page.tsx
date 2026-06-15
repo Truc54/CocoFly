@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { auctionApi, categoryApi } from "@/lib/api";
 
@@ -70,7 +70,7 @@ const PERIOD_TABS = [
   { label: "Tất cả", value: "all" },
 ];
 
-export default function UpcomingAuctionsPage() {
+function UpcomingAuctionsPageContent() {
   const searchParams = useSearchParams();
   const urlCategoryId = searchParams.get("categoryId");
   const urlSort = searchParams.get("sort");
@@ -620,5 +620,20 @@ export default function UpcomingAuctionsPage() {
         </div>
       </div>
     </section>
+  );
+}
+
+export default function UpcomingAuctionsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center bg-white dark:bg-background-dark">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 rounded-full border-4 border-[#8f5c38] border-t-transparent animate-spin"></div>
+          <p className="text-sm font-semibold text-slate-500 animate-pulse">Đang tải...</p>
+        </div>
+      </div>
+    }>
+      <UpcomingAuctionsPageContent />
+    </Suspense>
   );
 }

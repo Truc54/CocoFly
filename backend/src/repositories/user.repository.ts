@@ -201,7 +201,8 @@ export class UserRepository {
         },
         payments: {
           orderBy: { createdAt: 'desc' },
-          take: 1
+          take: 1,
+          include: { disputes: true }
         },
         reviews: {
           where: { authorId: userId },
