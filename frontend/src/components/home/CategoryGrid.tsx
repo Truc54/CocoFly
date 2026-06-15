@@ -77,12 +77,12 @@ export default function CategoryGrid() {
                 className={`group relative flex items-center gap-3 px-4 py-4 rounded-xl bg-gradient-to-br ${CARD_COLORS[i % CARD_COLORS.length]} border border-slate-100 dark:border-slate-700/30 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5`}
               >
                 {imgUrl ? (
-                  <div className="relative w-8 h-8 rounded-lg overflow-hidden shrink-0 transition-transform group-hover:scale-110">
+                  <div className="relative w-10 h-10 rounded-lg overflow-hidden shrink-0 transition-transform group-hover:scale-110">
                     <Image
                       src={imgUrl}
                       alt={cat.name}
                       fill
-                      sizes="32px"
+                      sizes="40px"
                       className="object-cover"
                       unoptimized
                     />
@@ -96,10 +96,10 @@ export default function CategoryGrid() {
                     category
                   </span>
                 )}
-              <div className="min-w-0">
-                <p className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate">
-                  {cat.name}
-                </p>
+                <div className="min-w-0">
+                  <p className="text-[15px] font-bold text-slate-700 dark:text-slate-200 truncate">
+                    {cat.name}
+                  </p>
                 {cat.description && (
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
                     {cat.description}

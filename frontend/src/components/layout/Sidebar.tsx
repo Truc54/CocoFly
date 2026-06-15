@@ -28,24 +28,23 @@ export default function Sidebar() {
   }, []);
 
   return (
-    <aside className="hidden lg:block w-[220px] shrink-0 self-start sticky top-[102px]">
-      <div className="bg-white dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50 overflow-hidden">
+    <aside className="hidden lg:block w-[240px] shrink-0 self-start sticky top-[102px] h-[calc(100vh-120px)] overflow-y-auto pb-4 pr-1 scrollbar-thin">
+      <div className="bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] rounded-xl overflow-hidden">
         {/* Header */}
-        <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700/50">
-          <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200 flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary text-lg">category</span>
+        <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700/50 bg-primary/5">
+          <h3 className="font-black text-xs uppercase tracking-widest text-slate-700 dark:text-slate-200">
             Danh mục
           </h3>
         </div>
 
         {/* Category list */}
-        <nav className="py-1 max-h-[calc(100vh-200px)] overflow-y-auto hide-scrollbar">
+        <nav className="py-1">
           {loading ? (
             // Skeleton
             Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-3 px-4 py-2.5">
-                <div className="w-5 h-5 rounded bg-slate-200 dark:bg-slate-700 animate-pulse" />
-                <div className="h-3.5 rounded bg-slate-200 dark:bg-slate-700 animate-pulse flex-1" />
+              <div key={i} className="flex items-center gap-3 px-4 py-3 mx-2 my-1">
+                <div className="w-8 h-8 rounded bg-slate-200 dark:bg-slate-700 animate-pulse shrink-0" />
+                <div className="h-4 rounded bg-slate-200 dark:bg-slate-700 animate-pulse flex-1" />
               </div>
             ))
           ) : (
@@ -55,25 +54,25 @@ export default function Sidebar() {
                 <Link
                   key={cat.id}
                   href={`/live?categoryId=${cat.id}`}
-                  className="group flex items-center gap-3 px-3 py-2 text-[13px] font-medium text-slate-600 dark:text-slate-400 hover:bg-primary/5 hover:text-primary dark:hover:text-primary transition-all rounded-lg mx-2"
+                  className="group flex items-center gap-3 px-3 py-2.5 text-[15px] font-bold text-slate-700 dark:text-slate-200 hover:bg-primary/5 hover:text-primary dark:hover:text-primary transition-all rounded-xl mx-2 my-1 border border-transparent hover:border-primary/10"
                 >
                   {imgUrl ? (
-                    <div className="relative w-[18px] h-[18px] rounded overflow-hidden shrink-0">
+                    <div className="relative w-8 h-8 rounded-lg overflow-hidden shrink-0">
                       <Image
                         src={imgUrl}
                         alt={cat.name}
                         fill
-                        sizes="18px"
+                        sizes="32px"
                         className="object-cover"
                         unoptimized
                       />
                     </div>
                   ) : cat.iconUrl ? (
-                    <span className="material-symbols-outlined text-[18px] text-slate-400 group-hover:text-primary transition-colors">
+                    <span className="material-symbols-outlined text-[22px] text-slate-400 group-hover:text-primary transition-colors">
                       {cat.iconUrl}
                     </span>
                   ) : (
-                    <span className="material-symbols-outlined text-[18px] text-slate-400 group-hover:text-primary transition-colors">
+                    <span className="material-symbols-outlined text-[22px] text-slate-400 group-hover:text-primary transition-colors">
                       category
                     </span>
                   )}

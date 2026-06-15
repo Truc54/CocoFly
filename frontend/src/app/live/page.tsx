@@ -347,7 +347,7 @@ function LiveAuctionsPageContent() {
       )}
       <div className="flex gap-6">
         {/* Filter Sidebar */}
-        <aside className="hidden lg:block w-64 shrink-0 self-start sticky top-[102px]">
+        <aside className="hidden lg:block w-64 shrink-0 self-start sticky top-[102px] h-[calc(100vh-120px)] overflow-y-auto pb-6 pr-1 scrollbar-thin">
           {/* Filter Panel */}
           <div className="bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] overflow-hidden rounded-xl animate-in fade-in slide-in-from-left-2 duration-500">
             {/* Header */}
@@ -385,23 +385,20 @@ function LiveAuctionsPageContent() {
           {/* Category Panel */}
           <div className="mt-3 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] overflow-hidden rounded-xl">
             <div className="px-4 py-3 border-b-2 border-slate-200 dark:border-slate-700 bg-primary/5">
-              <h3 className="text-xs font-black uppercase tracking-widest text-slate-700 dark:text-slate-200 flex items-center gap-2">
-                <div className="w-5 h-5 bg-primary flex items-center justify-center">
-                  <span className="material-symbols-outlined text-white text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>category</span>
-                </div>
+              <h3 className="text-xs font-black uppercase tracking-widest text-slate-700 dark:text-slate-200">
                 Danh mục
               </h3>
             </div>
             <nav className="py-1">
               <button
                 onClick={() => setActiveCategoryId(undefined)}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold transition-all cursor-pointer border-l-4 ${
+                className={`w-full flex items-center gap-3 px-4 py-3 text-[15px] font-bold transition-all cursor-pointer border-l-4 ${
                   !activeCategoryId
                     ? "border-primary bg-primary/5 text-primary"
-                    : "border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-primary hover:border-primary/40"
+                    : "border-transparent text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-primary hover:border-primary/40"
                 }`}
               >
-                <span className="material-symbols-outlined text-base">apps</span>
+                <span className="material-symbols-outlined text-[22px]">apps</span>
                 Tất cả
               </button>
               {categories.map((cat) => {
@@ -410,29 +407,29 @@ function LiveAuctionsPageContent() {
                   <button
                     key={cat.id}
                     onClick={() => setActiveCategoryId(cat.id)}
-                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold transition-all cursor-pointer border-l-4 ${
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-[15px] font-bold transition-all cursor-pointer border-l-4 ${
                       activeCategoryId === cat.id
                         ? "border-primary bg-primary/5 text-primary"
-                        : "border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-primary hover:border-primary/40"
+                        : "border-transparent text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-primary hover:border-primary/40"
                     }`}
                   >
                     {imgUrl ? (
-                      <div className="relative w-5 h-5 rounded overflow-hidden shrink-0">
+                      <div className="relative w-8 h-8 rounded-lg overflow-hidden shrink-0">
                         <Image
                           src={imgUrl}
                           alt={cat.name}
                           fill
-                          sizes="20px"
+                          sizes="32px"
                           className="object-cover"
                           unoptimized
                         />
                       </div>
                     ) : cat.iconUrl ? (
-                      <span className={`material-symbols-outlined text-base ${activeCategoryId === cat.id ? "text-primary" : "text-slate-400"}`}>
+                      <span className={`material-symbols-outlined text-[22px] ${activeCategoryId === cat.id ? "text-primary" : "text-slate-400"}`}>
                         {cat.iconUrl}
                       </span>
                     ) : (
-                      <span className="material-symbols-outlined text-base text-slate-400">category</span>
+                      <span className="material-symbols-outlined text-[22px] text-slate-400">category</span>
                     )}
                     <span className="truncate">{cat.name}</span>
                   </button>

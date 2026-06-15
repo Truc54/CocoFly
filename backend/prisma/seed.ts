@@ -5,12 +5,12 @@ const prisma = new PrismaClient();
 
 // Update existing categories (match by slug)
 const EXISTING_UPDATES = [
-  { slug: 'cong-nghe', update: { iconUrl: 'devices', sortOrder: 1 } },
-  { slug: 'thoi-trang-phu-kien', update: { iconUrl: 'checkroom', sortOrder: 2 } },
-  { slug: 'co-vat-suu-tam', update: { iconUrl: 'account_balance', sortOrder: 3 } },
-  { slug: 'nghe-thuat', update: { iconUrl: 'palette', sortOrder: 4 } },
-  // Rename/update "Xe cộ" → "Xe & Phương tiện"
-  { slug: 'xe-co', update: { name: 'Xe & Phương tiện', description: 'Ô tô, xe máy, xe đạp và phụ tùng', iconUrl: 'directions_car', sortOrder: 5 } },
+  { slug: 'cong-nghe', update: { name: 'Công nghệ', iconUrl: 'devices', sortOrder: 1 } },
+  { slug: 'thoi-trang-phu-kien', update: { name: 'Thời trang - Phụ kiện', iconUrl: 'checkroom', sortOrder: 2 } },
+  { slug: 'co-vat-suu-tam', update: { name: 'Cổ vật - Sưu tầm', iconUrl: 'account_balance', sortOrder: 3 } },
+  { slug: 'nghe-thuat', update: { name: 'Nghệ thuật', iconUrl: 'palette', sortOrder: 4 } },
+  // Rename/update "Xe cộ" → "Xe - Phương tiện"
+  { slug: 'xe-co', update: { name: 'Xe - Phương tiện', description: 'Ô tô, xe máy, xe đạp và phụ tùng', iconUrl: 'directions_car', sortOrder: 5 } },
   // Deactivate "Sưu tầm" (duplicate of "Cổ vật & Sưu tầm")
   { slug: 'suu-tam', update: { isActive: false } },
   // Update "Khác"
@@ -19,27 +19,15 @@ const EXISTING_UPDATES = [
 
 // New categories to add
 const NEW_CATEGORIES = [
-  { name: 'Đồng hồ & Trang sức', slug: 'dong-ho-trang-suc', description: 'Đồng hồ cao cấp, nhẫn, vòng, dây chuyền', iconUrl: 'watch', sortOrder: 6 },
-  { name: 'Rượu vang & Đồ uống', slug: 'ruou-vang-do-uong', description: 'Rượu vang, whisky, rượu sưu tầm', iconUrl: 'wine_bar', sortOrder: 7 },
+  { name: 'Đồng hồ - Trang sức', slug: 'dong-ho-trang-suc', description: 'Đồng hồ cao cấp, nhẫn, vòng, dây chuyền', iconUrl: 'watch', sortOrder: 6 },
+  { name: 'Rượu vang - Đồ uống', slug: 'ruou-vang-do-uong', description: 'Rượu vang, whisky, rượu sưu tầm', iconUrl: 'wine_bar', sortOrder: 7 },
   { name: 'Bất động sản', slug: 'bat-dong-san', description: 'Nhà, đất, căn hộ đấu giá', iconUrl: 'home_work', sortOrder: 8 },
   { name: 'Nhạc cụ', slug: 'nhac-cu', description: 'Guitar, piano, violin và nhạc cụ khác', iconUrl: 'piano', sortOrder: 9 },
-  { name: 'Thể thao & Outdoor', slug: 'the-thao-outdoor', description: 'Dụng cụ thể thao, camping, đồ dã ngoại', iconUrl: 'fitness_center', sortOrder: 10 },
-  { name: 'Sách & Tài liệu quý', slug: 'sach-tai-lieu-quy', description: 'Sách hiếm, bản thảo, tài liệu cổ', iconUrl: 'menu_book', sortOrder: 11 },
-  { name: 'Nội thất & Decor', slug: 'noi-that-decor', description: 'Bàn ghế, đèn, đồ trang trí nội thất', iconUrl: 'chair', sortOrder: 12 },
-  { name: 'Máy ảnh & Ống kính', slug: 'may-anh-ong-kinh', description: 'Máy ảnh, ống kính, phụ kiện nhiếp ảnh', iconUrl: 'photo_camera', sortOrder: 13 },
-  { name: 'Đồ chơi & Mô hình', slug: 'do-choi-mo-hinh', description: 'Mô hình, figure, đồ chơi sưu tầm', iconUrl: 'toys', sortOrder: 14 },
-  { name: 'Nhà Sách Tiki', slug: 'nha-sach-tiki', description: 'Sách, văn phòng phẩm, dụng cụ học tập', iconUrl: 'menu_book', sortOrder: 15 },
-  { name: 'Nhà Cửa - Đời Sống', slug: 'nha-cua-doi-song', description: 'Đồ dùng nhà bếp, phòng khách, phòng ngủ', iconUrl: 'home', sortOrder: 16 },
-  { name: 'Điện Thoại - Máy Tính Bảng', slug: 'dien-thoai-may-tinh-bang', description: 'Smartphones, iPad, máy tính bảng các loại', iconUrl: 'smartphone', sortOrder: 17 },
-  { name: 'Đồ Chơi - Mẹ & Bé', slug: 'do-choi-me-be', description: 'Đồ chơi trẻ em, tã bỉm, sữa, đồ dùng cho mẹ và bé', iconUrl: 'child_care', sortOrder: 18 },
-  { name: 'Thiết Bị Số - Phụ Kiện Số', slug: 'thiet-bi-so-phu-kien-so', description: 'Tai nghe, loa, cáp sạc, phụ kiện thông minh', iconUrl: 'headset', sortOrder: 19 },
-  { name: 'Điện Gia Dụng', slug: 'dien-gia-dung', description: 'Tủ lạnh, máy giặt, nồi chiên không dầu, lò vi sóng', iconUrl: 'kitchen', sortOrder: 20 },
-  { name: 'Làm Đẹp - Sức Khỏe', slug: 'lam-dep-suc-khoe', description: 'Mỹ phẩm, đồ trang điểm, thực phẩm chức năng', iconUrl: 'content_cut', sortOrder: 21 },
-  { name: 'Thời trang nữ', slug: 'thoi-trang-nu', description: 'Váy, đầm, áo nữ, quần nữ thời trang', iconUrl: 'styler', sortOrder: 22 },
-  { name: 'Bách Hóa Online', slug: 'bach-hoa-online', description: 'Thực phẩm, đồ uống tiêu dùng hàng ngày', iconUrl: 'shopping_cart', sortOrder: 23 },
-  { name: 'Thời trang nam', slug: 'thoi-trang-nam', description: 'Áo thun, quần jean, vest nam thời trang', iconUrl: 'man', sortOrder: 24 },
-  { name: 'Cross Border - Hàng Quốc Tế', slug: 'hang-quoc-te', description: 'Sản phẩm nhập khẩu chính hãng từ nước ngoài', iconUrl: 'public', sortOrder: 25 },
-  { name: 'Laptop - Máy Vi Tính', slug: 'laptop-may-vi-tinh', description: 'Laptop văn phòng, laptop gaming, PC đồng bộ', iconUrl: 'laptop', sortOrder: 26 },
+  { name: 'Thể thao - Outdoor', slug: 'the-thao-outdoor', description: 'Dụng cụ thể thao, camping, đồ dã ngoại', iconUrl: 'fitness_center', sortOrder: 10 },
+  { name: 'Sách - Tài liệu quý', slug: 'sach-tai-lieu-quy', description: 'Sách hiếm, bản thảo, tài liệu cổ', iconUrl: 'menu_book', sortOrder: 11 },
+  { name: 'Nội thất - Decor', slug: 'noi-that-decor', description: 'Bàn ghế, đèn, đồ trang trí nội thất', iconUrl: 'chair', sortOrder: 12 },
+  { name: 'Máy ảnh - Ống kính', slug: 'may-anh-ong-kinh', description: 'Máy ảnh, ống kính, phụ kiện nhiếp ảnh', iconUrl: 'photo_camera', sortOrder: 13 },
+  { name: 'Đồ chơi - Mô hình', slug: 'do-choi-mo-hinh', description: 'Mô hình, figure, đồ chơi sưu tầm', iconUrl: 'toys', sortOrder: 14 },
 ];
 
 // Default System Configurations
@@ -54,6 +42,45 @@ const SYSTEM_CONFIGS = [
 ];
 
 async function main() {
+  console.log('🌱 Cleaning up unnecessary categories...');
+  const SLUGS_TO_DELETE = [
+    'nha-sach-tiki',
+    'nha-cua-doi-song',
+    'dien-thoai-may-tinh-bang',
+    'do-choi-me-be',
+    'thiet-bi-so-phu-kien-so',
+    'dien-gia-dung',
+    'lam-dep-suc-khoe',
+    'thoi-trang-nu',
+    'bach-hoa-online',
+    'thoi-trang-nam',
+    'hang-quoc-te',
+    'laptop-may-vi-tinh'
+  ];
+  let deletedCount = 0;
+  let deactivatedCount = 0;
+  for (const slug of SLUGS_TO_DELETE) {
+    try {
+      // Check if there are items associated with this category
+      const associatedItems = await prisma.item.findFirst({
+        where: { category: { slug } }
+      });
+      if (associatedItems) {
+        await prisma.category.updateMany({
+          where: { slug },
+          data: { isActive: false }
+        });
+        deactivatedCount++;
+      } else {
+        await prisma.category.deleteMany({ where: { slug } });
+        deletedCount++;
+      }
+    } catch (e) {
+      console.log(`Failed to process deletion for category slug: ${slug}, error:`, e);
+    }
+  }
+  console.log(`  Cleaned up: Deleted ${deletedCount} unused, Deactivated ${deactivatedCount} used categories.`);
+
   console.log('🌱 Seeding categories...');
 
   // 1. Update existing categories
@@ -72,16 +99,23 @@ async function main() {
     `SELECT setval(pg_get_serial_sequence('categories', 'id'), (SELECT COALESCE(MAX(id), 1) FROM categories));`
   );
 
-  // 3. Create new categories (skip if slug already exists)
+  // 3. Create or update new categories
   let created = 0;
+  let categoryUpdated = 0;
   for (const cat of NEW_CATEGORIES) {
     const exists = await prisma.category.findUnique({ where: { slug: cat.slug } });
     if (!exists) {
       await prisma.category.create({ data: cat });
       created++;
+    } else {
+      await prisma.category.update({
+        where: { slug: cat.slug },
+        data: { name: cat.name, iconUrl: cat.iconUrl, sortOrder: cat.sortOrder, isActive: true }
+      });
+      categoryUpdated++;
     }
   }
-  console.log(`  Category: Created ${created} new categories`);
+  console.log(`  Category: Created ${created} new categories, Updated ${categoryUpdated} categories`);
 
   // 4. Seed Admin user
   console.log('🌱 Seeding Admin User...');
