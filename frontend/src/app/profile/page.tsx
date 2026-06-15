@@ -380,13 +380,15 @@ export default function ProfilePage() {
                         <Settings className="w-4 h-4" />
                         Chỉnh sửa hồ sơ
                       </Link>
-                      <Link
-                        href="/upgrade"
-                        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-xl border-2 border-blue-500 bg-blue-500 text-white shadow-[2px_2px_0px_#93C5FD] hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_#93C5FD] transition-all"
-                      >
-                        <ArrowUpCircle className="w-4 h-4" />
-                        Nâng cấp tài khoản
-                      </Link>
+                      {!(profile.role === "seller" || profile.phoneVerified) && (
+                        <Link
+                          href="/upgrade"
+                          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-xl border-2 border-blue-500 bg-blue-500 text-white shadow-[2px_2px_0px_#93C5FD] hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_#93C5FD] transition-all"
+                        >
+                          <ArrowUpCircle className="w-4 h-4" />
+                          Nâng cấp tài khoản
+                        </Link>
+                      )}
                       {profile.role === "seller" && (
                         <div className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-xl border-2 border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 shadow-[2px_2px_0px_#A7F3D0] ml-auto">
                           <Wallet className="w-4 h-4" />

@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { categoryApi } from "@/lib/api";
+import { getCategoryImageUrl } from "@/lib/categoryImages";
 
 interface SidebarCategory {
   id: number;
@@ -47,20 +49,38 @@ export default function Sidebar() {
               </div>
             ))
           ) : (
-            categories.map((cat) => (
-              <Link
-                key={cat.id}
-                href={`/live?categoryId=${cat.id}`}
-                className="group flex items-center gap-3 px-3 py-2 text-[13px] font-medium text-slate-600 dark:text-slate-400 hover:bg-primary/5 hover:text-primary dark:hover:text-primary transition-all rounded-lg mx-2"
-              >
-                {cat.iconUrl && (
-                  <span className="material-symbols-outlined text-[18px] text-slate-400 group-hover:text-primary transition-colors">
-                    {cat.iconUrl}
-                  </span>
-                )}
-                <span className="flex-1 truncate">{cat.name}</span>
-              </Link>
-            ))
+            categories.map((cat) => {
+              const imgUrl = getCategoryImageUrl(cat.slug);
+              return (
+                <Link
+                  key={cat.id}
+                  href={`/live?categoryId=${cat.id}`}
+                  className="group flex items-center gap-3 px-3 py-2 text-[13px] font-medium text-slate-600 dark:text-slate-400 hover:bg-primary/5 hover:text-primary dark:hover:text-primary transition-all rounded-lg mx-2"
+                >
+                  {imgUrl ? (
+                    <div className="relative w-[18px] h-[18px] rounded overflow-hidden shrink-0">
+                      <Image
+                        src={imgUrl}
+                        alt={cat.name}
+                        fill
+                        sizes="18px"
+                        className="object-cover"
+                        unoptimized
+                      />
+                    </div>
+                  ) : cat.iconUrl ? (
+                    <span className="material-symbols-outlined text-[18px] text-slate-400 group-hover:text-primary transition-colors">
+                      {cat.iconUrl}
+                    </span>
+                  ) : (
+                    <span className="material-symbols-outlined text-[18px] text-slate-400 group-hover:text-primary transition-colors">
+                      category
+                    </span>
+                  )}
+                  <span className="flex-1 truncate">{cat.name}</span>
+                </Link>
+              );
+            })
           )}
         </nav>
       </div>

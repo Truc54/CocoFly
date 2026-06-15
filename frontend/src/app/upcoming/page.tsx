@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { auctionApi, categoryApi } from "@/lib/api";
+import { getCategoryImageUrl } from "@/lib/categoryImages";
 
 interface AuctionItem {
   id: string;
@@ -351,24 +352,40 @@ function UpcomingAuctionsPageContent() {
                 <span className="material-symbols-outlined text-base">apps</span>
                 Tất cả
               </button>
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => setActiveCategoryId(cat.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold transition-all cursor-pointer border-l-4 ${
-                    activeCategoryId === cat.id
-                      ? "border-primary bg-primary/5 text-primary"
-                      : "border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-primary hover:border-primary/40"
-                  }`}
-                >
-                  {cat.iconUrl && (
-                    <span className={`material-symbols-outlined text-base ${activeCategoryId === cat.id ? "text-primary" : "text-slate-400"}`}>
-                      {cat.iconUrl}
-                    </span>
-                  )}
-                  <span className="truncate">{cat.name}</span>
-                </button>
-              ))}
+              {categories.map((cat) => {
+                const imgUrl = getCategoryImageUrl(cat.slug);
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => setActiveCategoryId(cat.id)}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold transition-all cursor-pointer border-l-4 ${
+                      activeCategoryId === cat.id
+                        ? "border-primary bg-primary/5 text-primary"
+                        : "border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-primary hover:border-primary/40"
+                    }`}
+                  >
+                    {imgUrl ? (
+                      <div className="relative w-5 h-5 rounded overflow-hidden shrink-0">
+                        <Image
+                          src={imgUrl}
+                          alt={cat.name}
+                          fill
+                          sizes="20px"
+                          className="object-cover"
+                          unoptimized
+                        />
+                      </div>
+                    ) : cat.iconUrl ? (
+                      <span className={`material-symbols-outlined text-base ${activeCategoryId === cat.id ? "text-primary" : "text-slate-400"}`}>
+                        {cat.iconUrl}
+                      </span>
+                    ) : (
+                      <span className="material-symbols-outlined text-base text-slate-400">category</span>
+                    )}
+                    <span className="truncate">{cat.name}</span>
+                  </button>
+                );
+              })}
             </nav>
           </div>
 

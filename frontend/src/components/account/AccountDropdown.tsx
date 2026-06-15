@@ -36,33 +36,7 @@ const MOCK_COUNTS = {
   orders: 1,
 };
 
-// ─── Role Badge Component ────────────────────────────────────────────────────
-function RoleBadge({ role }: { role: UserRole }) {
-  /** Hiển thị label role hiện tại với màu phân biệt */
-  const config = {
-    buyer: {
-      label: "BUYER",
-      className: "bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/20",
-    },
-    seller: {
-      label: "SELLER",
-      className: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
-    },
-    admin: {
-      label: "ADMIN",
-      className: "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/20",
-    },
-  };
-  const c = config[role] || config.buyer;
 
-  return (
-    <span
-      className={`inline-flex items-center px-2 py-0.5 text-[10px] font-bold tracking-wider rounded-md border ${c.className}`}
-    >
-      {c.label}
-    </span>
-  );
-}
 
 // ─── Menu Item Component ─────────────────────────────────────────────────────
 interface MenuItemProps {
@@ -290,7 +264,6 @@ export default function AccountDropdown() {
                     <p className="text-sm font-semibold text-foreground truncate">
                       {user.fullName || "Người dùng"}
                     </p>
-                    <RoleBadge role={role} />
                   </div>
 
                   {/* Reputation Score */}

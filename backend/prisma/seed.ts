@@ -28,6 +28,18 @@ const NEW_CATEGORIES = [
   { name: 'Nội thất & Decor', slug: 'noi-that-decor', description: 'Bàn ghế, đèn, đồ trang trí nội thất', iconUrl: 'chair', sortOrder: 12 },
   { name: 'Máy ảnh & Ống kính', slug: 'may-anh-ong-kinh', description: 'Máy ảnh, ống kính, phụ kiện nhiếp ảnh', iconUrl: 'photo_camera', sortOrder: 13 },
   { name: 'Đồ chơi & Mô hình', slug: 'do-choi-mo-hinh', description: 'Mô hình, figure, đồ chơi sưu tầm', iconUrl: 'toys', sortOrder: 14 },
+  { name: 'Nhà Sách Tiki', slug: 'nha-sach-tiki', description: 'Sách, văn phòng phẩm, dụng cụ học tập', iconUrl: 'menu_book', sortOrder: 15 },
+  { name: 'Nhà Cửa - Đời Sống', slug: 'nha-cua-doi-song', description: 'Đồ dùng nhà bếp, phòng khách, phòng ngủ', iconUrl: 'home', sortOrder: 16 },
+  { name: 'Điện Thoại - Máy Tính Bảng', slug: 'dien-thoai-may-tinh-bang', description: 'Smartphones, iPad, máy tính bảng các loại', iconUrl: 'smartphone', sortOrder: 17 },
+  { name: 'Đồ Chơi - Mẹ & Bé', slug: 'do-choi-me-be', description: 'Đồ chơi trẻ em, tã bỉm, sữa, đồ dùng cho mẹ và bé', iconUrl: 'child_care', sortOrder: 18 },
+  { name: 'Thiết Bị Số - Phụ Kiện Số', slug: 'thiet-bi-so-phu-kien-so', description: 'Tai nghe, loa, cáp sạc, phụ kiện thông minh', iconUrl: 'headset', sortOrder: 19 },
+  { name: 'Điện Gia Dụng', slug: 'dien-gia-dung', description: 'Tủ lạnh, máy giặt, nồi chiên không dầu, lò vi sóng', iconUrl: 'kitchen', sortOrder: 20 },
+  { name: 'Làm Đẹp - Sức Khỏe', slug: 'lam-dep-suc-khoe', description: 'Mỹ phẩm, đồ trang điểm, thực phẩm chức năng', iconUrl: 'content_cut', sortOrder: 21 },
+  { name: 'Thời trang nữ', slug: 'thoi-trang-nu', description: 'Váy, đầm, áo nữ, quần nữ thời trang', iconUrl: 'styler', sortOrder: 22 },
+  { name: 'Bách Hóa Online', slug: 'bach-hoa-online', description: 'Thực phẩm, đồ uống tiêu dùng hàng ngày', iconUrl: 'shopping_cart', sortOrder: 23 },
+  { name: 'Thời trang nam', slug: 'thoi-trang-nam', description: 'Áo thun, quần jean, vest nam thời trang', iconUrl: 'man', sortOrder: 24 },
+  { name: 'Cross Border - Hàng Quốc Tế', slug: 'hang-quoc-te', description: 'Sản phẩm nhập khẩu chính hãng từ nước ngoài', iconUrl: 'public', sortOrder: 25 },
+  { name: 'Laptop - Máy Vi Tính', slug: 'laptop-may-vi-tinh', description: 'Laptop văn phòng, laptop gaming, PC đồng bộ', iconUrl: 'laptop', sortOrder: 26 },
 ];
 
 // Default System Configurations

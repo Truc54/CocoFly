@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { categoryApi } from "@/lib/api";
 import { mockFeaturedCategories } from "@/lib/mockData";
+import { getCategoryImageUrl } from "@/lib/categoryImages";
 
 interface FeaturedCategory {
   id: number;
@@ -66,17 +68,34 @@ export default function CategoryGrid() {
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {categories.map((cat, i) => (
-            <Link
-              key={cat.id}
-              href={`/live?categoryId=${cat.id}`}
-              className={`group relative flex items-center gap-3 px-4 py-4 rounded-xl bg-gradient-to-br ${CARD_COLORS[i % CARD_COLORS.length]} border border-slate-100 dark:border-slate-700/30 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5`}
-            >
-              {cat.iconUrl && (
-                <span className={`material-symbols-outlined text-2xl ${ICON_COLORS[i % ICON_COLORS.length]} transition-transform group-hover:scale-110`}>
-                  {cat.iconUrl}
-                </span>
-              )}
+          {categories.map((cat, i) => {
+            const imgUrl = getCategoryImageUrl(cat.slug);
+            return (
+              <Link
+                key={cat.id}
+                href={`/live?categoryId=${cat.id}`}
+                className={`group relative flex items-center gap-3 px-4 py-4 rounded-xl bg-gradient-to-br ${CARD_COLORS[i % CARD_COLORS.length]} border border-slate-100 dark:border-slate-700/30 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5`}
+              >
+                {imgUrl ? (
+                  <div className="relative w-8 h-8 rounded-lg overflow-hidden shrink-0 transition-transform group-hover:scale-110">
+                    <Image
+                      src={imgUrl}
+                      alt={cat.name}
+                      fill
+                      sizes="32px"
+                      className="object-cover"
+                      unoptimized
+                    />
+                  </div>
+                ) : cat.iconUrl ? (
+                  <span className={`material-symbols-outlined text-2xl ${ICON_COLORS[i % ICON_COLORS.length]} transition-transform group-hover:scale-110`}>
+                    {cat.iconUrl}
+                  </span>
+                ) : (
+                  <span className={`material-symbols-outlined text-2xl ${ICON_COLORS[i % ICON_COLORS.length]} transition-transform group-hover:scale-110`}>
+                    category
+                  </span>
+                )}
               <div className="min-w-0">
                 <p className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate">
                   {cat.name}
@@ -87,8 +106,9 @@ export default function CategoryGrid() {
                   </p>
                 )}
               </div>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
       )}
     </section>
