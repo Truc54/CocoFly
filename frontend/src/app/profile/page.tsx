@@ -452,7 +452,7 @@ export default function ProfilePage() {
                       {sortedAuctions.map((item, idx) => (
                         <div
                           key={item.id}
-                          className="group bg-white dark:bg-slate-800/60 rounded-none overflow-hidden border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] hover:-translate-y-1 hover:shadow-[6px_6px_0px_#E2B9A1] transition-all duration-300 cursor-pointer"
+                          className="group bg-white dark:bg-slate-800/60 rounded-xl overflow-hidden border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] hover:-translate-y-1 hover:shadow-[6px_6px_0px_#E2B9A1] transition-all duration-300 cursor-pointer"
                           style={{ animationDelay: `${idx * 60}ms` }}
                         >
                           {/* Image */}

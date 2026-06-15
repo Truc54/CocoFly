@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { useLiveChat } from "@/lib/hooks/useLiveChat";
 import type { BidEntry } from "@/lib/types/auction";
 import BidHistoryList from "./BidHistoryList";
@@ -66,7 +66,7 @@ export default function LiveChatPanel({
   const chatMessages = messages.filter(msg => msg.type !== "bid_alert");
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] flex flex-col h-[550px]">
+    <div className="bg-white dark:bg-slate-800 rounded-xl border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] flex flex-col h-[550px] overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b-2 border-slate-200 dark:border-slate-700 flex items-center justify-between shrink-0 bg-slate-50 dark:bg-slate-800">
         <div className="flex items-center gap-4">
@@ -97,10 +97,7 @@ export default function LiveChatPanel({
                 <span className="material-symbols-outlined text-base">visibility</span>
                 {viewerCount}
               </div>
-              <div className="flex items-center gap-1.5 bg-green-50 text-green-600 text-[10px] font-bold px-2.5 py-1 border border-green-200 rounded-full">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                LIVE
-              </div>
+
             </>
           )}
         </div>
@@ -218,7 +215,7 @@ export default function LiveChatPanel({
               </div>
             ))}
             
-            {hasMore && (
+            {hasMore && chatMessages.length > 0 && (
               <button
                 onClick={loadMore}
                 disabled={isLoadingHistory}

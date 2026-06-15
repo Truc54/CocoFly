@@ -346,7 +346,7 @@ export default function HeaderNew() {
             ) : (
               <Link
                 href="/login"
-                className="px-4 py-2 text-sm font-semibold text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors"
+                className="px-4 py-2 text-sm font-bold text-primary bg-white dark:bg-slate-800 border-2 border-primary rounded-lg hover:bg-primary hover:text-white dark:hover:bg-primary dark:hover:text-white transition-all hover:-translate-y-0.5 active:translate-y-0 shadow-[2px_2px_0px_#E2B9A1] hover:shadow-[3px_3px_0px_#E2B9A1] active:shadow-[1px_1px_0px_#E2B9A1]"
               >
                 Đăng nhập
               </Link>

@@ -100,11 +100,7 @@ export default function Header() {
             <>
               <Link
                 href="/login"
-                className={`px-5 py-2 text-sm font-bold rounded-xl transition-all cursor-pointer ${
-                  pathname === "/login"
-                    ? "bg-primary/10 text-primary"
-                    : "text-slate-700 dark:text-slate-200 hover:bg-primary/5 dark:hover:bg-primary/20"
-                }`}
+                className="px-5 py-2 text-sm font-bold text-primary bg-white dark:bg-slate-800 border-2 border-primary rounded-xl hover:bg-primary hover:text-white dark:hover:bg-primary dark:hover:text-white transition-all hover:-translate-y-0.5 active:translate-y-0 shadow-[2px_2px_0px_#E2B9A1] hover:shadow-[3px_3px_0px_#E2B9A1] active:shadow-[1px_1px_0px_#E2B9A1] cursor-pointer"
               >
                 Đăng nhập
               </Link>

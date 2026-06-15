@@ -219,7 +219,7 @@ function UpcomingAuctionsPageContent() {
                 type="button"
                 onClick={() => setPendingRating(option.value)}
                 aria-pressed={isActive}
-                className={`group flex items-center gap-2 px-3 py-2.5 border-2 text-sm font-semibold transition-all duration-200 ${
+                className={`group flex items-center gap-2 px-3 py-2.5 border-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
                   isActive
                     ? "border-primary bg-primary/5 text-primary shadow-[3px_3px_0px_#E2B9A1]"
                     : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-primary/50 hover:bg-primary/5 hover:shadow-[2px_2px_0px_#E2B9A1]"
@@ -264,7 +264,7 @@ function UpcomingAuctionsPageContent() {
             value={pendingMinPrice}
             onChange={(e) => setPendingMinPrice(e.target.value)}
             placeholder="Từ"
-            className="w-full px-3 py-2 border-2 border-slate-200 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 focus:border-slate-300 dark:focus:border-slate-600 outline-none transition-all"
+            className="w-full px-3 py-2 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 focus:border-slate-300 dark:focus:border-slate-600 outline-none transition-all"
           />
           <input
             type="number"
@@ -273,7 +273,7 @@ function UpcomingAuctionsPageContent() {
             value={pendingMaxPrice}
             onChange={(e) => setPendingMaxPrice(e.target.value)}
             placeholder="Đến"
-            className="w-full px-3 py-2 border-2 border-slate-200 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 focus:border-slate-300 dark:focus:border-slate-600 outline-none transition-all"
+            className="w-full px-3 py-2 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 focus:border-slate-300 dark:focus:border-slate-600 outline-none transition-all"
           />
         </div>
       </div>
@@ -296,11 +296,11 @@ function UpcomingAuctionsPageContent() {
         {/* Filter Sidebar */}
         <aside className="hidden lg:block w-64 shrink-0 self-start sticky top-[102px]">
           {/* Filter Panel */}
-          <div className="bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] overflow-hidden animate-in fade-in slide-in-from-left-2 duration-500">
+          <div className="bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] overflow-hidden rounded-xl animate-in fade-in slide-in-from-left-2 duration-500">
             {/* Header */}
             <div className="px-4 py-3 border-b-2 border-slate-200 dark:border-slate-700 flex items-center justify-between bg-primary/5">
               <div className="flex items-center gap-2">
-                <div className="w-5 h-5 bg-primary flex items-center justify-center">
+                <div className="w-5 h-5 bg-primary flex items-center justify-center rounded-md">
                   <span className="material-symbols-outlined text-white text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>tune</span>
                 </div>
                 <h3 className="text-xs font-black uppercase tracking-widest text-slate-700 dark:text-slate-200 whitespace-nowrap">
@@ -311,14 +311,14 @@ function UpcomingAuctionsPageContent() {
                 <button
                   onClick={handleResetFilters}
                   disabled={!hasActiveFilters}
-                  className="text-[10px] font-bold uppercase tracking-wide text-slate-500 hover:text-primary border-2 border-slate-200 dark:border-slate-600 px-2 py-1 transition-all disabled:opacity-30 hover:border-primary whitespace-nowrap"
+                  className="text-[10px] font-bold uppercase tracking-wide text-slate-500 hover:text-primary border-2 border-slate-200 dark:border-slate-600 px-2 py-1 transition-all disabled:opacity-30 hover:border-primary whitespace-nowrap rounded-lg"
                 >
                   Xóa tất cả
                 </button>
                 <button
                   onClick={handleApplyFilters}
                   disabled={!hasPendingChanges}
-                  className="text-[10px] font-bold uppercase tracking-wide bg-primary text-white border-2 border-primary px-2 py-1 transition-all disabled:opacity-40 hover:shadow-[2px_2px_0px_#E2B9A1] hover:-translate-y-[1px] whitespace-nowrap active:translate-y-0 active:shadow-none"
+                  className="text-[10px] font-bold uppercase tracking-wide bg-primary text-white border-2 border-primary px-2 py-1 transition-all disabled:opacity-40 hover:shadow-[2px_2px_0px_#E2B9A1] hover:-translate-y-[1px] whitespace-nowrap active:translate-y-0 active:shadow-none rounded-lg"
                 >
                   Áp dụng
                 </button>
@@ -330,10 +330,10 @@ function UpcomingAuctionsPageContent() {
           </div>
 
           {/* Category Panel */}
-          <div className="mt-3 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] overflow-hidden">
+          <div className="mt-3 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] overflow-hidden rounded-xl">
             <div className="px-4 py-3 border-b-2 border-slate-200 dark:border-slate-700 bg-primary/5">
               <h3 className="text-xs font-black uppercase tracking-widest text-slate-700 dark:text-slate-200 flex items-center gap-2">
-                <div className="w-5 h-5 bg-primary flex items-center justify-center">
+                <div className="w-5 h-5 bg-primary flex items-center justify-center rounded-md">
                   <span className="material-symbols-outlined text-white text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>category</span>
                 </div>
                 Danh mục
@@ -373,10 +373,10 @@ function UpcomingAuctionsPageContent() {
           </div>
 
           {/* Sort Panel */}
-          <div className="mt-3 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] overflow-hidden">
+          <div className="mt-3 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] overflow-hidden rounded-xl">
             <div className="px-4 py-3 border-b-2 border-slate-200 dark:border-slate-700 bg-primary/5">
               <h3 className="text-xs font-black uppercase tracking-widest text-slate-700 dark:text-slate-200 flex items-center gap-2">
-                <div className="w-5 h-5 bg-primary flex items-center justify-center">
+                <div className="w-5 h-5 bg-primary flex items-center justify-center rounded-md">
                   <span className="material-symbols-outlined text-white text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>sort</span>
                 </div>
                 Sắp xếp
@@ -408,12 +408,12 @@ function UpcomingAuctionsPageContent() {
         {/* Product Grid */}
         <div className="flex-1 min-w-0">
           <div className="flex justify-end mb-4">
-            <div className="flex items-center bg-white dark:bg-slate-800 p-1.5 border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1]">
+            <div className="flex items-center bg-white dark:bg-slate-800 p-1.5 border-2 border-slate-200 dark:border-slate-700 rounded-xl shadow-[4px_4px_0px_#E2B9A1]">
               {PERIOD_TABS.map((tab) => (
                 <button
                   key={tab.value}
                   onClick={() => setActivePeriod(tab.value)}
-                  className={`px-5 py-2 text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  className={`px-5 py-2 text-sm font-bold transition-all cursor-pointer whitespace-nowrap rounded-lg ${
                     activePeriod === tab.value
                       ? "bg-primary/10 text-primary border-b-2 border-primary"
                       : "text-slate-500 hover:text-primary border-b-2 border-transparent"
@@ -488,7 +488,7 @@ function UpcomingAuctionsPageContent() {
           {loading && (
             <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 transition-opacity duration-200 ${isRefetching ? "opacity-40 pointer-events-none" : ""}`}>
               {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="bg-white dark:bg-slate-800 overflow-hidden border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] animate-pulse">
+                <div key={i} className="bg-white dark:bg-slate-800 overflow-hidden border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] animate-pulse rounded-xl">
                   <div className="aspect-[4/3] bg-slate-200 dark:bg-slate-700" />
                   <div className="p-3 space-y-2">
                     <div className="h-2.5 bg-slate-200 dark:bg-slate-700 rounded w-16" />
@@ -508,7 +508,7 @@ function UpcomingAuctionsPageContent() {
               <p className="text-slate-500 mb-4">{error}</p>
               <button
                 onClick={() => fetchAuctions(1)}
-                className="px-6 py-2 bg-primary text-white rounded-lg font-bold hover:bg-primary/90 transition-all"
+                className="px-6 py-2 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all"
               >
                 Thử lại
               </button>
@@ -533,7 +533,7 @@ function UpcomingAuctionsPageContent() {
                   <p className="text-lg font-bold text-slate-700 dark:text-slate-300 mb-2">
                     Không có phiên phù hợp bộ lọc
                   </p>
-                  <p className="text-slate-500">Hãy thử điều chỉnh bộ lọc hoặc bấm "Xóa tất cả".</p>
+                  <p className="text-slate-500">Hãy thử điều chỉnh bộ lọc hoặc bấm &quot;Xóa tất cả&quot;.</p>
                 </div>
               ) : (
                 <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 transition-opacity duration-200 ${isRefetching ? "opacity-40 pointer-events-none" : ""}`}>
@@ -541,7 +541,7 @@ function UpcomingAuctionsPageContent() {
                     <Link
                       href={`/auction/${auction.id}`}
                       key={auction.id}
-                      className="group bg-white dark:bg-slate-800/60 overflow-hidden border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] hover:-translate-y-1 hover:shadow-[6px_6px_0px_#E2B9A1] transition-all duration-300 cursor-pointer"
+                      className="group bg-white dark:bg-slate-800/60 overflow-hidden border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] hover:-translate-y-1 hover:shadow-[6px_6px_0px_#E2B9A1] transition-all duration-300 cursor-pointer rounded-xl"
                       style={{ animationDelay: `${idx * 40}ms` }}
                     >
                       {/* Image */}
@@ -561,7 +561,7 @@ function UpcomingAuctionsPageContent() {
                           </div>
                         )}
                         <div className="absolute top-3 left-3">
-                          <span className="bg-primary/90 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 shadow-[2px_2px_0px_rgba(0,0,0,0.2)] flex items-center gap-1">
+                          <span className="bg-primary/90 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 shadow-[2px_2px_0px_rgba(0,0,0,0.2)] flex items-center gap-1 rounded-md">
                             <span className="material-symbols-outlined text-xs">schedule</span>
                             {formatScheduledStart(auction.scheduledStart)}
                           </span>
@@ -582,7 +582,7 @@ function UpcomingAuctionsPageContent() {
                             <p className="text-[10px] text-slate-500 font-medium">Giá khởi điểm</p>
                             <p className="text-sm font-bold text-primary">{formatVND(auction.startingPrice)}</p>
                           </div>
-                          <button className="mt-2 w-full flex items-center justify-center gap-2 py-2 border-2 border-primary text-primary font-bold hover:bg-primary/5 hover:shadow-[2px_2px_0px_#E2B9A1] transition-all text-xs active:translate-y-px active:shadow-none bg-white dark:bg-slate-800">
+                          <button className="mt-2 w-full flex items-center justify-center gap-2 py-2 border-2 border-primary text-primary font-bold hover:bg-primary/5 hover:shadow-[2px_2px_0px_#E2B9A1] transition-all text-xs active:translate-y-px active:shadow-none bg-white dark:bg-slate-800 rounded-xl">
                             <span className="material-symbols-outlined text-[16px]">notifications_active</span>
                             Nhắc tôi
                           </button>

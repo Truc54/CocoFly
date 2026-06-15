@@ -257,7 +257,7 @@ function LiveAuctionsPageContent() {
                 type="button"
                 onClick={() => setPendingRating(option.value)}
                 aria-pressed={isActive}
-                className={`group flex items-center gap-2 px-3 py-2.5 border-2 text-sm font-semibold transition-all duration-200 ${
+                className={`group flex items-center gap-2 px-3 py-2.5 border-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
                   isActive
                     ? "border-primary bg-primary/5 text-primary shadow-[3px_3px_0px_#E2B9A1]"
                     : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-primary/50 hover:bg-primary/5 hover:shadow-[2px_2px_0px_#E2B9A1]"
@@ -302,7 +302,7 @@ function LiveAuctionsPageContent() {
             value={pendingMinPrice}
             onChange={(e) => setPendingMinPrice(e.target.value)}
             placeholder="Từ"
-            className="w-full px-3 py-2 border-2 border-slate-200 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 focus:border-slate-300 dark:focus:border-slate-600 outline-none transition-all"
+            className="w-full px-3 py-2 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 focus:border-slate-300 dark:focus:border-slate-600 outline-none transition-all"
           />
           <input
             type="number"
@@ -311,7 +311,7 @@ function LiveAuctionsPageContent() {
             value={pendingMaxPrice}
             onChange={(e) => setPendingMaxPrice(e.target.value)}
             placeholder="Đến"
-            className="w-full px-3 py-2 border-2 border-slate-200 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 focus:border-slate-300 dark:focus:border-slate-600 outline-none transition-all"
+            className="w-full px-3 py-2 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 focus:border-slate-300 dark:focus:border-slate-600 outline-none transition-all"
           />
         </div>
       </div>
@@ -328,7 +328,7 @@ function LiveAuctionsPageContent() {
           value={pendingHoursLeft}
           onChange={(e) => setPendingHoursLeft(e.target.value)}
           placeholder="Ví dụ: 3"
-          className="w-full px-3 py-2 border-2 border-slate-200 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 focus:border-slate-300 dark:focus:border-slate-600 outline-none transition-all"
+          className="w-full px-3 py-2 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 focus:border-slate-300 dark:focus:border-slate-600 outline-none transition-all"
         />
       </div>
     </div>
@@ -348,7 +348,7 @@ function LiveAuctionsPageContent() {
         {/* Filter Sidebar */}
         <aside className="hidden lg:block w-64 shrink-0 self-start sticky top-[102px]">
           {/* Filter Panel */}
-          <div className="bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] overflow-hidden animate-in fade-in slide-in-from-left-2 duration-500">
+          <div className="bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] overflow-hidden rounded-xl animate-in fade-in slide-in-from-left-2 duration-500">
             {/* Header */}
             <div className="px-4 py-3 border-b-2 border-slate-200 dark:border-slate-700 flex items-center justify-between bg-primary/5">
               <div className="flex items-center gap-2">
@@ -363,14 +363,14 @@ function LiveAuctionsPageContent() {
                 <button
                   onClick={handleResetFilters}
                   disabled={!hasActiveFilters}
-                  className="text-[10px] font-bold uppercase tracking-wide text-slate-500 hover:text-primary border-2 border-slate-200 dark:border-slate-600 px-2 py-1 transition-all disabled:opacity-30 hover:border-primary whitespace-nowrap"
+                  className="text-[10px] font-bold uppercase tracking-wide text-slate-500 hover:text-primary border-2 border-slate-200 dark:border-slate-600 px-2 py-1 transition-all disabled:opacity-30 hover:border-primary whitespace-nowrap rounded-lg"
                 >
                   Xóa tất cả
                 </button>
                 <button
                   onClick={handleApplyFilters}
                   disabled={!hasPendingChanges}
-                  className="text-[10px] font-bold uppercase tracking-wide bg-primary text-white border-2 border-primary px-2 py-1 transition-all disabled:opacity-40 hover:shadow-[2px_2px_0px_#E2B9A1] hover:-translate-y-[1px] whitespace-nowrap active:translate-y-0 active:shadow-none"
+                  className="text-[10px] font-bold uppercase tracking-wide bg-primary text-white border-2 border-primary px-2 py-1 transition-all disabled:opacity-40 hover:shadow-[2px_2px_0px_#E2B9A1] hover:-translate-y-[1px] whitespace-nowrap active:translate-y-0 active:shadow-none rounded-lg"
                 >
                   Áp dụng
                 </button>
@@ -382,7 +382,7 @@ function LiveAuctionsPageContent() {
           </div>
 
           {/* Category Panel */}
-          <div className="mt-3 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] overflow-hidden">
+          <div className="mt-3 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] overflow-hidden rounded-xl">
             <div className="px-4 py-3 border-b-2 border-slate-200 dark:border-slate-700 bg-primary/5">
               <h3 className="text-xs font-black uppercase tracking-widest text-slate-700 dark:text-slate-200 flex items-center gap-2">
                 <div className="w-5 h-5 bg-primary flex items-center justify-center">
@@ -425,7 +425,7 @@ function LiveAuctionsPageContent() {
           </div>
 
           {/* Sort Panel */}
-          <div className="mt-3 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] overflow-hidden">
+          <div className="mt-3 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] overflow-hidden rounded-xl">
             <div className="px-4 py-3 border-b-2 border-slate-200 dark:border-slate-700 bg-primary/5">
               <h3 className="text-xs font-black uppercase tracking-widest text-slate-700 dark:text-slate-200 flex items-center gap-2">
                 <div className="w-5 h-5 bg-primary flex items-center justify-center">
@@ -578,7 +578,7 @@ function LiveAuctionsPageContent() {
                     <Link
                       href={`/auction/${auction.id}`}
                       key={auction.id}
-                      className="group bg-white dark:bg-slate-800/60 overflow-hidden border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] hover:-translate-y-1 hover:shadow-[6px_6px_0px_#E2B9A1] transition-all duration-300 cursor-pointer"
+                      className="group bg-white dark:bg-slate-800/60 overflow-hidden border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] hover:-translate-y-1 hover:shadow-[6px_6px_0px_#E2B9A1] transition-all duration-300 cursor-pointer rounded-xl"
                       style={{ animationDelay: `${idx * 40}ms` }}
                     >
                       {/* Image */}

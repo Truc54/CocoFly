@@ -97,6 +97,10 @@ export default function BiddingPanel({
   useEffect(() => setShowBuyoutModal(false), [currentPrice]);
 
   const handleBidClick = () => {
+    if (!isLoggedIn) {
+      router.push("/login");
+      return;
+    }
     onClearError();
     setLocalError(null);
 
@@ -142,6 +146,10 @@ export default function BiddingPanel({
   };
 
   const handleBuyout = () => {
+    if (!isLoggedIn) {
+      router.push("/login");
+      return;
+    }
     setShowBuyoutModal(true);
   };
 
@@ -247,7 +255,7 @@ export default function BiddingPanel({
       </div>
 
       {/* Bid Input */}
-      {isActive && isLoggedIn && !isHost && (
+      {isActive && !isHost && (
         <div className="mb-4">
           <div className="relative mb-3">
             <input
@@ -344,7 +352,7 @@ export default function BiddingPanel({
               ĐÃ KẾT THÚC
             </button>
           )
-        ) : isActive && isLoggedIn ? (
+        ) : isActive ? (
           <>
             {/* Info Texts above button */}
             {displayError && (
@@ -391,7 +399,14 @@ export default function BiddingPanel({
                 </button>
               )}
               <button 
-                onClick={(e) => { e.stopPropagation(); onToggleWatch(); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!isLoggedIn) {
+                    router.push("/login");
+                  } else {
+                    onToggleWatch();
+                  }
+                }}
                 disabled={watchLoading}
                 className={`${buyoutPrice ? "flex-1" : "w-full"} py-3 font-bold text-sm sm:text-base rounded-full border-2 shadow-[3px_3px_0px_#cbd5e1] hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#cbd5e1] active:translate-y-0 active:shadow-[1px_1px_0px_#cbd5e1] transition-all flex items-center justify-center gap-1 cursor-pointer ${
                   isWatching
@@ -419,7 +434,14 @@ export default function BiddingPanel({
             </button>
             <div className="flex gap-3">
               <button 
-                onClick={(e) => { e.stopPropagation(); onToggleWatch(); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!isLoggedIn) {
+                    router.push("/login");
+                  } else {
+                    onToggleWatch();
+                  }
+                }}
                 disabled={watchLoading}
                 className={`w-full py-3 font-bold text-sm sm:text-base rounded-full border-2 shadow-[3px_3px_0px_#cbd5e1] hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#cbd5e1] active:translate-y-0 active:shadow-[1px_1px_0px_#cbd5e1] transition-all flex items-center justify-center gap-1 cursor-pointer ${
                   isWatching

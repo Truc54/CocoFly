@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback, use } from "react";
 import { auctionApi } from "@/lib/api";
 import { authStorage } from "@/lib/auth-storage";
@@ -144,6 +145,7 @@ function AuctionDetailContent({
   onToggleWatch: () => void;
   isHost: boolean;
 }) {
+  const router = useRouter();
   const {
     currentPrice,
     totalBids,
@@ -266,7 +268,7 @@ function AuctionDetailContent({
 
           {/* Seller Info */}
           {auction.seller && !isHost && (
-            <div className="flex items-center gap-4 p-4 border-2 border-slate-200 shadow-[4px_4px_0px_#cbd5e1] bg-white dark:bg-slate-800 dark:border-slate-700">
+            <div className="flex items-center gap-4 p-4 border-2 border-slate-200 shadow-[4px_4px_0px_#cbd5e1] bg-white dark:bg-slate-800 dark:border-slate-700 rounded-xl">
               <UserHoverCard userId={auction.seller.id}>
                 <div className="w-12 h-12 rounded-full bg-slate-200 border-2 border-slate-800 flex items-center justify-center text-xl font-bold shrink-0 text-slate-800 overflow-hidden">
                   {auction.seller.avatarUrl ? (
@@ -286,8 +288,14 @@ function AuctionDetailContent({
                 </div>
               </div>
               <button
-                onClick={() => window.dispatchEvent(new CustomEvent("open-dm", { detail: { targetUserId: auction.seller?.id } }))}
-                className="px-4 py-2 bg-white border-2 border-blue-600 text-blue-600 font-bold flex items-center gap-2 hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_#bfdbfe] hover:bg-blue-600 hover:text-white transition-all cursor-pointer"
+                onClick={() => {
+                  if (!isLoggedIn) {
+                    router.push("/login");
+                  } else {
+                    window.dispatchEvent(new CustomEvent("open-dm", { detail: { targetUserId: auction.seller?.id } }));
+                  }
+                }}
+                className="px-4 py-2 bg-white border-2 border-blue-600 text-blue-600 font-bold flex items-center gap-2 hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_#bfdbfe] hover:bg-blue-600 hover:text-white transition-all cursor-pointer rounded-xl"
               >
                 <span className="material-symbols-outlined text-[20px]">chat</span>
                 Nhắn tin
