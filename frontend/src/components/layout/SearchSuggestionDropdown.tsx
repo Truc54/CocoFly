@@ -57,7 +57,7 @@ export default function SearchSuggestionDropdown({
   const showSuggestions = query.trim().length >= 2;
 
   return (
-    <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] z-50 overflow-hidden max-h-[420px] overflow-y-auto">
+    <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] z-50 overflow-hidden max-h-[420px] overflow-y-auto rounded-2xl">
       {/* ── Suggestions Mode ── */}
       {showSuggestions ? (
         <>

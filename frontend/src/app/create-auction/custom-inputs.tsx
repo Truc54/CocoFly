@@ -43,7 +43,7 @@ export function CustomSelect({ value, onChange, options, placeholder, hasError }
             ? "border-primary shadow-[4px_4px_0px_#E2B9A1]"
             : "border-slate-300 shadow-[3px_3px_0px_#cbd5e1] hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#E2B9A1] hover:border-primary/50"
         }
-        dark:bg-slate-900 dark:border-slate-700 dark:shadow-[3px_3px_0px_#334155]`}
+        dark:bg-slate-900 dark:border-slate-700 dark:shadow-[3px_3px_0px_#334155] rounded-xl`}
       >
         <span className={selectedOption ? "text-slate-900 dark:text-white" : "text-slate-400 font-medium"}>
           {selectedOption ? selectedOption.label : placeholder}
@@ -52,7 +52,7 @@ export function CustomSelect({ value, onChange, options, placeholder, hasError }
       </button>
 
       {isOpen && (
-        <div className="absolute z-30 mt-2 w-full bg-white border-2 border-slate-200 shadow-[4px_4px_0px_#cbd5e1] max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2 dark:bg-slate-800 dark:border-slate-700">
+        <div className="absolute z-30 mt-2 w-full bg-white border-2 border-slate-200 shadow-[4px_4px_0px_#cbd5e1] max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2 dark:bg-slate-800 dark:border-slate-700 rounded-xl overflow-hidden">
           <ul className="py-1">
             <li
               onClick={() => {
@@ -192,7 +192,7 @@ export function CustomDateTimePicker({ value, onChange, placeholder, hasError }:
             ? "border-primary shadow-[4px_4px_0px_#E2B9A1]"
             : "border-slate-300 shadow-[3px_3px_0px_#cbd5e1] hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#E2B9A1] hover:border-primary/50"
         }
-        dark:bg-slate-900 dark:border-slate-700 dark:shadow-[3px_3px_0px_#334155]`}
+        dark:bg-slate-900 dark:border-slate-700 dark:shadow-[3px_3px_0px_#334155] rounded-xl`}
       >
         <span className={value ? "text-slate-900 dark:text-white" : "text-slate-400 font-medium"}>
           {value ? formatDisplay(value) : placeholder}
@@ -201,7 +201,7 @@ export function CustomDateTimePicker({ value, onChange, placeholder, hasError }:
       </button>
 
       {isOpen && (
-        <div className="absolute z-30 mt-2 w-[320px] bg-white border-2 border-slate-200 shadow-[4px_4px_0px_#cbd5e1] animate-in fade-in slide-in-from-top-2 dark:bg-slate-800 dark:border-slate-700">
+        <div className="absolute z-30 mt-2 w-[320px] bg-white border-2 border-slate-200 shadow-[4px_4px_0px_#cbd5e1] animate-in fade-in slide-in-from-top-2 dark:bg-slate-800 dark:border-slate-700 rounded-xl overflow-hidden">
           <div className="p-3 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-primary/5">
             <button type="button" onClick={prevMonth} className="p-1 text-slate-500 hover:text-primary hover:bg-white rounded transition-colors"><ChevronDown className="w-4 h-4 rotate-90" /></button>
             <span className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">

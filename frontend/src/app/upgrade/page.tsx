@@ -199,7 +199,6 @@ export default function UpgradePage() {
                     {isSubmitting ? "Đang xử lý..." : (
                       <span className="relative z-10 flex items-center justify-center gap-2">
                         Gửi mã OTP
-                        <ArrowRight className="size-5 transition-transform group-hover:translate-x-1" />
                       </span>
                     )}
                   </Button>

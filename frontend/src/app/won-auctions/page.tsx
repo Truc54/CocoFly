@@ -43,10 +43,10 @@ interface OrderItem {
 }
 
 const TABS: { key: OrderTab; label: string; icon: React.ReactNode }[] = [
-  { key: "bidding", label: "Đang đấu giá", icon: <Gavel className="w-4 h-4" /> },
-  { key: "won", label: "Đã thắng", icon: <Trophy className="w-4 h-4" /> },
-  { key: "delivering", label: "Đang giao hàng", icon: <Truck className="w-4 h-4" /> },
-  { key: "received", label: "Đã nhận", icon: <CheckCircle2 className="w-4 h-4" /> },
+  { key: "bidding", label: "Đang đấu giá", icon: <img src="https://img.icons8.com/color/96/law.png" className="w-5 h-5" alt="bidding" /> },
+  { key: "won", label: "Đã thắng", icon: <img src="https://img.icons8.com/color/96/trophy.png" className="w-5 h-5" alt="won" /> },
+  { key: "delivering", label: "Đang giao hàng", icon: <img src="https://img.icons8.com/color/96/delivery.png" className="w-5 h-5" alt="delivering" /> },
+  { key: "received", label: "Đã nhận", icon: <img src="https://img.icons8.com/color/96/checkmark.png" className="w-5 h-5" alt="received" /> },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

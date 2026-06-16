@@ -253,7 +253,7 @@ function AuctionDetailContent({
                   <button
                     key={idx}
                     onClick={() => setActiveImageIdx(idx)}
-                    className={`relative w-[72px] h-[72px] shrink-0 rounded-xl border-2 transition-all cursor-pointer ${
+                    className={`relative w-[72px] h-[72px] shrink-0 rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
                       activeImageIdx === idx
                         ? "border-primary shadow-[3px_3px_0px_#8f5c38] scale-100"
                         : "border-slate-200 opacity-80 hover:opacity-100 hover:shadow-[3px_3px_0px_#cbd5e1] scale-95 hover:scale-100"

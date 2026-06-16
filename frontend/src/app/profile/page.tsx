@@ -9,7 +9,7 @@ import {
   ShieldCheck,
   MessageSquare,
   Clock,
-  ArrowUpCircle,
+  Crown,
   Settings,
   Pin,
   Loader2,
@@ -385,12 +385,12 @@ export default function ProfilePage() {
                           href="/upgrade"
                           className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-xl border-2 border-blue-500 bg-blue-500 text-white shadow-[2px_2px_0px_#93C5FD] hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_#93C5FD] transition-all"
                         >
-                          <ArrowUpCircle className="w-4 h-4" />
+                          <Crown className="w-4 h-4 text-amber-500 fill-amber-500/20" />
                           Nâng cấp tài khoản
                         </Link>
                       )}
-                      {profile.role === "seller" && (
-                        <div className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-xl border-2 border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 shadow-[2px_2px_0px_#A7F3D0] ml-auto">
+                      {(profile.role === "seller" || profile.role === "buyer") && (
+                        <div className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-xl border-2 border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 shadow-[2px_2px_0px_#A7F3D0]">
                           <Wallet className="w-4 h-4" />
                           Số dư: {showBalance ? `${new Intl.NumberFormat("vi-VN").format(profile.balance)} đ` : "********"}
                           <button

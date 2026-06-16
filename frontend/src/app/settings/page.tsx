@@ -57,7 +57,7 @@ const INITIAL_NOTIFICATION_SETTINGS: NotificationSetting[] = [
     id: "outbid",
     label: "Bị vượt giá",
     description: "Nhận thông báo khi có người đặt giá cao hơn bạn",
-    icon: <Gavel className="w-5 h-5" />,
+    icon: <img src="https://img.icons8.com/color/96/gavel.png" className="w-5 h-5" alt="gavel" />,
     enabled: true,
     category: "auction",
   },
@@ -65,7 +65,7 @@ const INITIAL_NOTIFICATION_SETTINGS: NotificationSetting[] = [
     id: "auction_starting",
     label: "Phiên đấu giá sắp bắt đầu",
     description: "Thông báo trước khi phiên đấu giá trong danh sách theo dõi bắt đầu",
-    icon: <Bell className="w-5 h-5" />,
+    icon: <img src="https://img.icons8.com/color/96/alarm-clock.png" className="w-5 h-5" alt="alarm" />,
     enabled: true,
     category: "auction",
   },
@@ -73,7 +73,7 @@ const INITIAL_NOTIFICATION_SETTINGS: NotificationSetting[] = [
     id: "auction_ending",
     label: "Phiên đấu giá sắp kết thúc",
     description: "Nhắc nhở khi phiên đấu giá bạn đang tham gia sắp kết thúc",
-    icon: <Bell className="w-5 h-5" />,
+    icon: <img src="https://img.icons8.com/color/96/hourglass.png" className="w-5 h-5" alt="hourglass" />,
     enabled: true,
     category: "auction",
   },
@@ -81,7 +81,7 @@ const INITIAL_NOTIFICATION_SETTINGS: NotificationSetting[] = [
     id: "auction_won",
     label: "Chiến thắng đấu giá",
     description: "Thông báo khi bạn thắng một phiên đấu giá",
-    icon: <Gift className="w-5 h-5" />,
+    icon: <img src="https://img.icons8.com/color/96/gift.png" className="w-5 h-5" alt="gift" />,
     enabled: true,
     category: "auction",
   },
@@ -89,7 +89,7 @@ const INITIAL_NOTIFICATION_SETTINGS: NotificationSetting[] = [
     id: "new_bid",
     label: "Có lượt đấu giá mới",
     description: "Thông báo khi có người đặt giá trên sản phẩm của bạn",
-    icon: <Gavel className="w-5 h-5" />,
+    icon: <img src="https://img.icons8.com/color/96/gavel.png" className="w-5 h-5" alt="gavel" />,
     enabled: true,
     category: "auction",
   },
@@ -97,7 +97,7 @@ const INITIAL_NOTIFICATION_SETTINGS: NotificationSetting[] = [
     id: "payment_due",
     label: "Nhắc thanh toán",
     description: "Nhắc nhở khi có khoản thanh toán cần thực hiện",
-    icon: <CreditCard className="w-5 h-5" />,
+    icon: <img src="https://img.icons8.com/color/96/bill.png" className="w-5 h-5" alt="bill" />,
     enabled: true,
     category: "payment",
   },
@@ -105,7 +105,7 @@ const INITIAL_NOTIFICATION_SETTINGS: NotificationSetting[] = [
     id: "payment_confirmed",
     label: "Thanh toán thành công",
     description: "Xác nhận khi thanh toán được xử lý thành công",
-    icon: <CreditCard className="w-5 h-5" />,
+    icon: <img src="https://img.icons8.com/color/96/checkmark.png" className="w-5 h-5" alt="success" />,
     enabled: true,
     category: "payment",
   },
@@ -113,7 +113,7 @@ const INITIAL_NOTIFICATION_SETTINGS: NotificationSetting[] = [
     id: "shipping_update",
     label: "Cập nhật giao hàng",
     description: "Theo dõi trạng thái giao hàng đơn hàng của bạn",
-    icon: <Truck className="w-5 h-5" />,
+    icon: <img src="https://img.icons8.com/color/96/delivery.png" className="w-5 h-5" alt="delivery" />,
     enabled: true,
     category: "payment",
   },
@@ -121,7 +121,7 @@ const INITIAL_NOTIFICATION_SETTINGS: NotificationSetting[] = [
     id: "review_received",
     label: "Nhận đánh giá mới",
     description: "Thông báo khi có người đánh giá bạn",
-    icon: <Star className="w-5 h-5" />,
+    icon: <img src="https://img.icons8.com/color/96/star.png" className="w-5 h-5" alt="star" />,
     enabled: true,
     category: "social",
   },
@@ -129,7 +129,7 @@ const INITIAL_NOTIFICATION_SETTINGS: NotificationSetting[] = [
     id: "dispute_opened",
     label: "Khiếu nại mới",
     description: "Thông báo khi có khiếu nại được mở liên quan đến bạn",
-    icon: <AlertTriangle className="w-5 h-5" />,
+    icon: <img src="https://img.icons8.com/color/96/warning-shield.png" className="w-5 h-5" alt="warning" />,
     enabled: true,
     category: "social",
   },
@@ -137,7 +137,7 @@ const INITIAL_NOTIFICATION_SETTINGS: NotificationSetting[] = [
     id: "system",
     label: "Thông báo hệ thống",
     description: "Cập nhật quan trọng từ CocoFly về tính năng và bảo trì",
-    icon: <Megaphone className="w-5 h-5" />,
+    icon: <img src="https://img.icons8.com/color/96/megaphone.png" className="w-5 h-5" alt="megaphone" />,
     enabled: true,
     category: "system",
   },
@@ -145,7 +145,7 @@ const INITIAL_NOTIFICATION_SETTINGS: NotificationSetting[] = [
     id: "account_warning",
     label: "Cảnh báo tài khoản",
     description: "Cảnh báo bảo mật và hoạt động bất thường trên tài khoản",
-    icon: <AlertTriangle className="w-5 h-5" />,
+    icon: <img src="https://img.icons8.com/color/96/alert.png" className="w-5 h-5" alt="alert" />,
     enabled: true,
     category: "system",
   },
@@ -422,7 +422,10 @@ export default function SettingsPage() {
 
             {/* ── Avatar + Bio ── */}
             <div className="bg-white dark:bg-slate-800/60 rounded-xl border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] p-6 sm:p-8">
-              <h2 className="text-base font-bold text-slate-800 dark:text-slate-100 mb-5">Hồ sơ</h2>
+              <div className="mb-5 flex items-center gap-2">
+                <img src="https://img.icons8.com/color/96/user-male-circle.png" className="w-5 h-5" alt="user" />
+                <h2 className="text-base font-bold text-slate-800 dark:text-slate-100">Hồ sơ</h2>
+              </div>
 
               <div className="flex flex-col sm:flex-row items-start gap-6">
                 {/* Avatar */}
@@ -491,7 +494,8 @@ export default function SettingsPage() {
 
             {/* ── Personal Info ── */}
             <div className="bg-white dark:bg-slate-800/60 rounded-xl border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] p-6 sm:p-8">
-              <div className="mb-5">
+              <div className="mb-5 flex items-center gap-2">
+                <img src="https://img.icons8.com/color/96/resume.png" className="w-5 h-5" alt="personal-info" />
                 <h2 className="text-base font-bold text-slate-800 dark:text-slate-100">Thông tin cá nhân</h2>
               </div>
 
@@ -540,15 +544,13 @@ export default function SettingsPage() {
 
             {/* ── Security ── */}
             <div className="bg-white dark:bg-slate-800/60 rounded-xl border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] p-6 sm:p-8">
-              <div className="mb-5">
+              <div className="mb-5 flex items-center gap-2">
+                <img src="https://img.icons8.com/color/96/shield.png" className="w-5 h-5" alt="security" />
                 <h2 className="text-base font-bold text-slate-800 dark:text-slate-100">Bảo mật</h2>
               </div>
 
               <div className="flex items-center justify-between border-t-2 border-slate-100 dark:border-slate-700 pt-5">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-500/10 border-2 border-amber-200 dark:border-amber-700 flex items-center justify-center">
-                    <Lock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                  </div>
                   <div>
                     <p className="text-sm font-bold text-slate-800 dark:text-slate-100">Mật khẩu</p>
                     <p className="text-xs text-slate-400 mt-0.5">Cập nhật mật khẩu để bảo vệ tài khoản</p>
@@ -565,23 +567,14 @@ export default function SettingsPage() {
 
             {/* ── Thông báo ── */}
             <div className="bg-white dark:bg-slate-800/60 rounded-xl border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] p-6 sm:p-8">
-              <div className="mb-5">
+              <div className="mb-5 flex items-center gap-2">
+                <img src="https://img.icons8.com/color/96/bell.png" className="w-5 h-5" alt="notifications" />
                 <h2 className="text-base font-bold text-slate-800 dark:text-slate-100">Thông báo</h2>
               </div>
 
               {/* Global Toggle */}
               <div className="flex items-center justify-between border-t-2 border-slate-100 dark:border-slate-700 pt-5 pb-4">
                 <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center border-2 transition-colors duration-300 ${
-                    allDisabled
-                      ? "bg-slate-100 dark:bg-slate-700 border-slate-200 dark:border-slate-600"
-                      : "bg-primary/10 border-primary/30"
-                  }`}>
-                    {allDisabled
-                      ? <BellOff className="w-5 h-5 text-slate-400" />
-                      : <Bell className="w-5 h-5 text-primary" />
-                    }
-                  </div>
                   <div>
                     <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
                       {allDisabled ? "Thông báo đã tắt" : "Tất cả thông báo"}
@@ -609,13 +602,6 @@ export default function SettingsPage() {
                         key={item.id}
                         className="flex items-center gap-4 py-3 px-1 hover:bg-slate-50/50 dark:hover:bg-slate-700/20 rounded-lg transition-colors"
                       >
-                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors duration-300 ${
-                          item.enabled
-                            ? "bg-primary/10 text-primary"
-                            : "bg-slate-100 dark:bg-slate-700 text-slate-400"
-                        }`}>
-                          {item.icon}
-                        </div>
                         <div className="flex-1 min-w-0">
                           <p className={`text-sm font-bold transition-colors duration-300 ${
                             item.enabled

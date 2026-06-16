@@ -77,7 +77,7 @@ interface FormData {
 const initialFormData: FormData = {
   title: "",
   categoryId: null,
-  condition: "good",
+  condition: "",
   description: "",
   brand: "",
   location: "",
@@ -330,8 +330,12 @@ export default function CreateAuctionPage() {
   }
 
   // ─── SHARED STYLES ───
-  const inputClass =
-    "h-12 w-full border-2 border-slate-300 bg-white px-4 text-base font-medium text-slate-900 shadow-[3px_3px_0px_#cbd5e1] outline-none transition-all focus:-translate-y-0.5 focus:border-primary-main focus:shadow-[4px_4px_0px_#E2B9A1] focus:ring-0 dark:bg-slate-900 dark:border-slate-700 dark:text-white dark:shadow-[3px_3px_0px_#334155] [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-inner-spin-button]:cursor-pointer";
+  const getInputClass = (hasError?: boolean) =>
+    `h-12 w-full border-2 bg-white px-4 text-base font-medium text-slate-900 outline-none transition-all focus:-translate-y-0.5 focus:ring-0 rounded-xl [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-inner-spin-button]:cursor-pointer ${
+      hasError
+        ? "border-red-500 focus:border-red-500 shadow-[3px_3px_0px_#fca5a5] dark:border-red-500"
+        : "border-slate-300 dark:border-slate-700 focus:border-primary-main focus:shadow-[4px_4px_0px_#E2B9A1] shadow-[3px_3px_0px_#cbd5e1] dark:shadow-[3px_3px_0px_#334155]"
+    }`;
   const labelClass =
     "block text-sm font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5";
   const errorClass = "text-xs text-red-500 mt-1 font-medium";
@@ -340,29 +344,26 @@ export default function CreateAuctionPage() {
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark pb-20">
       {/* Header */}
-      <div className="bg-white dark:bg-slate-900/80 border-b border-primary/10 sticky top-[57px] z-40 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-900/80 border-b border-primary/10 sticky top-[102px] z-40 backdrop-blur-sm">
         <div className="max-w-4xl mx-auto px-6 py-4">
           {/* Step Indicator */}
           {step < 4 && (
             <div className="flex items-center gap-1">
               {STEPS.map((s, i) => {
-                const Icon = s.icon;
                 const isActive = i === step;
                 const isReachable = i <= maxStepReached;
-                const isDone = i < step;
                 return (
                   <React.Fragment key={i}>
                     <button
                       onClick={() => { if (isReachable) setStep(i); }}
                       disabled={!isReachable}
-                      className={`flex items-center gap-2 px-3 py-1.5 text-xs font-bold uppercase tracking-wide transition-all
+                      className={`flex items-center justify-center px-4 py-1.5 text-xs font-bold uppercase tracking-wide transition-all rounded-xl
                         ${isActive ? "bg-primary text-white shadow-[3px_3px_0px_#E2B9A1]" : ""}
                         ${!isActive && isReachable ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 hover:-translate-y-0.5" : ""}
                         ${!isReachable ? "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-600 cursor-not-allowed" : ""}
                       `}
                     >
-                      <Icon className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">{s.label}</span>
+                      <span>{s.label}</span>
                     </button>
                     {i < STEPS.length - 1 && (
                       <div className={`flex-1 h-0.5 ${i < maxStepReached ? "bg-emerald-400" : "bg-slate-200 dark:bg-slate-700"}`} />
@@ -379,7 +380,7 @@ export default function CreateAuctionPage() {
         {/* ─── STEP 0: Product Info ─── */}
         {step === 0 && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-            <div className="bg-white dark:bg-slate-900/60 border-2 border-slate-200 dark:border-slate-800 p-6 md:p-8 shadow-[4px_4px_0px_#e2e8f0] dark:shadow-[4px_4px_0px_#1e293b]">
+            <div className="bg-white dark:bg-slate-900/60 border-2 border-slate-200 dark:border-slate-800 p-6 md:p-8 shadow-[4px_4px_0px_#e2e8f0] dark:shadow-[4px_4px_0px_#1e293b] rounded-2xl">
               <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
                 <Package className="w-5 h-5 text-primary" /> Thông tin sản phẩm
               </h2>
@@ -387,14 +388,14 @@ export default function CreateAuctionPage() {
               <div className="space-y-5">
                 {/* Title */}
                 <div>
-                  <label className={labelClass}>Tiêu đề sản phẩm *</label>
+                  <label className={labelClass}>Tiêu đề sản phẩm <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     value={form.title}
                     onChange={(e) => updateForm({ title: e.target.value })}
                     placeholder="VD: iPhone 15 Pro Max 256GB chính hãng"
                     maxLength={255}
-                    className={inputClass}
+                    className={getInputClass(!!errors.title)}
                   />
                   {errors.title && <p className={errorClass}>{errors.title}</p>}
                 </div>
@@ -402,7 +403,7 @@ export default function CreateAuctionPage() {
                 {/* Category + Condition */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
-                    <label className={labelClass}>Danh mục *</label>
+                    <label className={labelClass}>Danh mục <span className="text-red-500">*</span></label>
                     <CustomSelect
                       value={form.categoryId}
                       onChange={(val) => updateForm({ categoryId: val ? parseInt(val as string) : null })}
@@ -413,7 +414,7 @@ export default function CreateAuctionPage() {
                     {errors.categoryId && <p className={errorClass}>{errors.categoryId}</p>}
                   </div>
                   <div>
-                    <label className={labelClass}>Tình trạng *</label>
+                    <label className={labelClass}>Tình trạng <span className="text-red-500">*</span></label>
                     <CustomSelect
                       value={form.condition}
                       onChange={(val) => updateForm({ condition: val as string })}
@@ -434,7 +435,7 @@ export default function CreateAuctionPage() {
                       value={form.brand}
                       onChange={(e) => updateForm({ brand: e.target.value })}
                       placeholder="VD: Apple, Samsung..."
-                      className={inputClass}
+                      className={getInputClass(false)}
                     />
                   </div>
                   <div>
@@ -444,7 +445,7 @@ export default function CreateAuctionPage() {
                       value={form.location}
                       onChange={(e) => updateForm({ location: e.target.value })}
                       placeholder="VD: TP. Hồ Chí Minh"
-                      className={inputClass}
+                      className={getInputClass(false)}
                     />
                   </div>
                 </div>
@@ -457,7 +458,7 @@ export default function CreateAuctionPage() {
                     onChange={(e) => updateForm({ description: e.target.value })}
                     placeholder="Mô tả sản phẩm, tình trạng sử dụng, phụ kiện đi kèm..."
                     rows={4}
-                    className={`${inputClass} h-auto py-3 resize-none`}
+                    className={`${getInputClass(false)} h-auto py-3 resize-none`}
                   />
                 </div>
               </div>
@@ -468,7 +469,7 @@ export default function CreateAuctionPage() {
         {/* ─── STEP 1: Images ─── */}
         {step === 1 && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-            <div className="bg-white dark:bg-slate-900/60 border-2 border-slate-200 dark:border-slate-800 p-6 md:p-8 shadow-[4px_4px_0px_#e2e8f0] dark:shadow-[4px_4px_0px_#1e293b]">
+            <div className="bg-white dark:bg-slate-900/60 border-2 border-slate-200 dark:border-slate-800 p-6 md:p-8 shadow-[4px_4px_0px_#e2e8f0] dark:shadow-[4px_4px_0px_#1e293b] rounded-2xl">
               <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
                 <ImagePlus className="w-5 h-5 text-primary" /> Hình ảnh sản phẩm
               </h2>
@@ -487,7 +488,7 @@ export default function CreateAuctionPage() {
                 onClick={() => fileInputRef.current?.click()}
                 onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
                 onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleImageUpload(e.dataTransfer.files); }}
-                className="border-2 border-dashed border-slate-300 dark:border-slate-700 p-8 text-center transition-all hover:border-primary hover:bg-primary/5 group cursor-pointer"
+                className="border-2 border-dashed border-slate-300 dark:border-slate-700 p-8 text-center transition-all hover:border-primary hover:bg-primary/5 group cursor-pointer rounded-xl"
               >
                 {isUploading ? (
                   <div className="flex flex-col items-center gap-3">
@@ -523,7 +524,7 @@ export default function CreateAuctionPage() {
                       onDragStart={() => handleDragStart(i)}
                       onDragOver={(e) => handleDragOver(e, i)}
                       onDragEnd={handleDragEnd}
-                      className={`relative group border-2 overflow-hidden aspect-square bg-slate-50 dark:bg-slate-800 cursor-grab active:cursor-grabbing transition-all duration-200
+                      className={`relative group border-2 overflow-hidden aspect-square rounded-xl bg-slate-50 dark:bg-slate-800 cursor-grab active:cursor-grabbing transition-all duration-200
                         ${dragIndex === i ? "opacity-40 scale-95 border-primary" : ""}
                         ${dragOverIndex === i && dragIndex !== i ? "border-primary ring-2 ring-primary/30 scale-105" : "border-slate-200 dark:border-slate-700"}
                       `}
@@ -534,13 +535,13 @@ export default function CreateAuctionPage() {
                         className="w-full h-full object-cover pointer-events-none select-none"
                       />
                       {i === 0 && (
-                        <span className="absolute top-1.5 left-1.5 bg-primary text-white text-[10px] font-bold px-2 py-0.5 uppercase tracking-wider">
+                        <span className="absolute top-1.5 left-1.5 bg-primary text-white text-[10px] font-bold px-2 py-0.5 uppercase tracking-wider rounded-br-lg">
                           Thumbnail
                         </span>
                       )}
                       <button
                         onClick={(e) => { e.stopPropagation(); removeImage(i); }}
-                        className="absolute top-1.5 right-1.5 bg-red-500 text-white w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10"
+                        className="absolute top-1.5 right-1.5 bg-red-500 text-white w-6 h-6 flex items-center justify-center rounded-lg opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10"
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
@@ -559,7 +560,7 @@ export default function CreateAuctionPage() {
         {step === 2 && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
             {/* Price Card */}
-            <div className="bg-white dark:bg-slate-900/60 border-2 border-slate-200 dark:border-slate-800 p-6 md:p-8 shadow-[4px_4px_0px_#e2e8f0] dark:shadow-[4px_4px_0px_#1e293b]">
+            <div className="bg-white dark:bg-slate-900/60 border-2 border-slate-200 dark:border-slate-800 p-6 md:p-8 shadow-[4px_4px_0px_#e2e8f0] dark:shadow-[4px_4px_0px_#1e293b] rounded-2xl">
               <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
                 <Gavel className="w-5 h-5 text-primary" /> Thiết lập giá
               </h2>
@@ -567,24 +568,24 @@ export default function CreateAuctionPage() {
               <div className="space-y-5">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
-                    <label className={labelClass}>Giá khởi điểm (VNĐ) *</label>
+                    <label className={labelClass}>Giá khởi điểm (VNĐ) <span className="text-red-500">*</span></label>
                     <input
                       type="text"
                       value={formatVND(form.startingPrice)}
                       onChange={(e) => updateForm({ startingPrice: parseVND(e.target.value) })}
                       placeholder="0"
-                      className={inputClass}
+                      className={getInputClass(!!errors.startingPrice)}
                     />
                     {errors.startingPrice && <p className={errorClass}>{errors.startingPrice}</p>}
                   </div>
                   <div>
-                    <label className={labelClass}>Bước giá (VNĐ) *</label>
+                    <label className={labelClass}>Bước giá (VNĐ) <span className="text-red-500">*</span></label>
                     <input
                       type="text"
                       value={formatVND(form.bidIncrement)}
                       onChange={(e) => updateForm({ bidIncrement: parseVND(e.target.value) })}
                       placeholder="1,000"
-                      className={inputClass}
+                      className={getInputClass(!!errors.bidIncrement)}
                     />
                     {errors.bidIncrement && <p className={errorClass}>{errors.bidIncrement}</p>}
                   </div>
@@ -597,7 +598,7 @@ export default function CreateAuctionPage() {
                     value={formatVND(form.buyoutPrice)}
                     onChange={(e) => updateForm({ buyoutPrice: parseVND(e.target.value) })}
                     placeholder="Để trống nếu không cần"
-                    className={inputClass}
+                    className={getInputClass(!!errors.buyoutPrice)}
                   />
                   {errors.buyoutPrice && <p className={errorClass}>{errors.buyoutPrice}</p>}
                 </div>
@@ -605,7 +606,7 @@ export default function CreateAuctionPage() {
             </div>
 
             {/* Time Card */}
-            <div className="bg-white dark:bg-slate-900/60 border-2 border-slate-200 dark:border-slate-800 p-6 md:p-8 shadow-[4px_4px_0px_#e2e8f0] dark:shadow-[4px_4px_0px_#1e293b]">
+            <div className="bg-white dark:bg-slate-900/60 border-2 border-slate-200 dark:border-slate-800 p-6 md:p-8 shadow-[4px_4px_0px_#e2e8f0] dark:shadow-[4px_4px_0px_#1e293b] rounded-2xl">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <Clock className="w-5 h-5 text-primary" /> Thời gian
@@ -623,7 +624,7 @@ export default function CreateAuctionPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <label className={labelClass}>Bắt đầu *</label>
+                  <label className={labelClass}>Bắt đầu <span className="text-red-500">*</span></label>
                   <div className="relative">
                     <div className={form.startImmediately ? "opacity-40 grayscale" : ""}>
                       <CustomDateTimePicker
@@ -640,7 +641,7 @@ export default function CreateAuctionPage() {
                   {errors.scheduledStart && !form.startImmediately && <p className={errorClass}>{errors.scheduledStart}</p>}
                 </div>
                 <div>
-                  <label className={labelClass}>Kết thúc *</label>
+                  <label className={labelClass}>Kết thúc <span className="text-red-500">*</span></label>
                   <CustomDateTimePicker
                     value={form.endTime}
                     onChange={(val) => updateForm({ endTime: val })}
@@ -653,7 +654,7 @@ export default function CreateAuctionPage() {
             </div>
 
             {/* Anti-sniping Card */}
-            <div className="bg-white dark:bg-slate-900/60 border-2 border-slate-200 dark:border-slate-800 p-6 md:p-8 shadow-[4px_4px_0px_#e2e8f0] dark:shadow-[4px_4px_0px_#1e293b]">
+            <div className="bg-white dark:bg-slate-900/60 border-2 border-slate-200 dark:border-slate-800 p-6 md:p-8 shadow-[4px_4px_0px_#e2e8f0] dark:shadow-[4px_4px_0px_#1e293b] rounded-2xl">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <Zap className="w-5 h-5 text-amber-500" /> Chống sniping
@@ -676,7 +677,7 @@ export default function CreateAuctionPage() {
                       onChange={(e) => updateForm({ autoExtendThreshold: parseInt(e.target.value) || 5 })}
                       min={1}
                       max={30}
-                      className={inputClass}
+                      className={getInputClass(false)}
                     />
                     <p className="text-xs text-slate-400 mt-1">Đặt giá vào trong khoảng này sẽ kích hoạt gia hạn</p>
                   </div>
@@ -688,7 +689,7 @@ export default function CreateAuctionPage() {
                       onChange={(e) => updateForm({ autoExtendMinutes: parseInt(e.target.value) || 5 })}
                       min={1}
                       max={30}
-                      className={inputClass}
+                      className={getInputClass(false)}
                     />
                     <p className="text-xs text-slate-400 mt-1">Mỗi lần kích hoạt, thời gian kết thúc sẽ được cộng thêm</p>
                   </div>
@@ -707,7 +708,7 @@ export default function CreateAuctionPage() {
               </div>
             )}
 
-            <div className="bg-white dark:bg-slate-900/60 border-2 border-slate-200 dark:border-slate-800 p-6 md:p-8 shadow-[4px_4px_0px_#e2e8f0] dark:shadow-[4px_4px_0px_#1e293b]">
+            <div className="bg-white dark:bg-slate-900/60 border-2 border-slate-200 dark:border-slate-800 p-6 md:p-8 shadow-[4px_4px_0px_#e2e8f0] dark:shadow-[4px_4px_0px_#1e293b] rounded-2xl">
               <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-6">📋 Xem lại thông tin</h2>
 
               {/* Product Summary */}
@@ -818,7 +819,6 @@ export default function CreateAuctionPage() {
               onClick={step === 0 ? () => router.back() : handleBack}
               className="h-12 px-6 rounded-xl border-2 border-slate-300 bg-white text-base font-bold text-slate-700 shadow-[3px_3px_0px_#cbd5e1] transition-all hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#cbd5e1] dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300 dark:shadow-[3px_3px_0px_#334155]"
             >
-              <ArrowLeft className="w-4 h-4 mr-2" />
               {step === 0 ? "Hủy" : "Quay lại"}
             </Button>
 
@@ -828,7 +828,6 @@ export default function CreateAuctionPage() {
                 className="group h-12 px-8 rounded-xl border-2 border-primary-main bg-primary-main text-base font-bold text-white shadow-[3px_3px_0px_#E2B9A1] transition-all hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#E2B9A1]"
               >
                 Tiếp theo
-                <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
               </Button>
             ) : (
               <Button
