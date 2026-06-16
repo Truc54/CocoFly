@@ -303,8 +303,8 @@ export default function AuthCard({ mode }: AuthCardProps) {
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <a href={`${API_URL}/auth/google`} className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm transition-colors hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-50 dark:hover:bg-slate-800 dark:hover:text-slate-50">
+                <div className="flex flex-col gap-3">
+                  <a href={`${API_URL}/auth/google`} className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm transition-colors hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-50 dark:hover:bg-slate-800 dark:hover:text-slate-50 w-full">
                     <Image
                       src="/auth/google-logo.svg"
                       alt="Google"
@@ -313,16 +313,6 @@ export default function AuthCard({ mode }: AuthCardProps) {
                       className="size-4.5"
                     />
                     Tiếp tục với Google
-                  </a>
-                  <a href={`${API_URL}/auth/facebook`} className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm transition-colors hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-50 dark:hover:bg-slate-800 dark:hover:text-slate-50">
-                    <Image
-                      src="/auth/facebook-logo.svg"
-                      alt="Facebook"
-                      width={18}
-                      height={18}
-                      className="size-4.5"
-                    />
-                    Tiếp tục với Facebook
                   </a>
                 </div>
               </>

@@ -182,11 +182,11 @@ function UpcomingAuctionsPageContent() {
   };
 
   const ratingOptions = [
-    { value: 0, label: "Tất cả" },
-    { value: 4.5, label: "Từ 4.5 trở lên" },
-    { value: 4, label: "Từ 4.0 trở lên" },
-    { value: 3.5, label: "Từ 3.5 trở lên" },
-    { value: 3, label: "Từ 3.0 trở lên" },
+    { value: 5, label: "5" },
+    { value: 4.5, label: "4.5+" },
+    { value: 4, label: "4+" },
+    { value: 3.5, label: "3.5+" },
+    { value: 3, label: "3+" },
   ];
 
   const hasPendingChanges =
@@ -213,7 +213,7 @@ function UpcomingAuctionsPageContent() {
         <div className="grid gap-1.5">
           {ratingOptions.map((option) => {
             const isActive = pendingRating === option.value;
-            const starCount = option.value === 0 ? 5 : option.value;
+            const starCount = option.value;
             const fullStars = Math.floor(starCount);
             const hasHalf = starCount % 1 !== 0;
             return (
@@ -222,16 +222,16 @@ function UpcomingAuctionsPageContent() {
                 type="button"
                 onClick={() => setPendingRating(option.value)}
                 aria-pressed={isActive}
-                className={`group flex items-center gap-2 px-3 py-2.5 border-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                className={`group flex items-center justify-between gap-4 px-3 py-2.5 border-2 rounded-xl text-sm font-semibold transition-all duration-200 w-full ${
                   isActive
                     ? "border-primary bg-primary/5 text-primary shadow-[3px_3px_0px_#E2B9A1]"
                     : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-primary/50 hover:bg-primary/5 hover:shadow-[2px_2px_0px_#E2B9A1]"
                 }`}
               >
-                <div className="flex items-center gap-0.5">
+                <div className="flex items-center gap-0.5 shrink-0">
                   {Array.from({ length: 5 }).map((_, i) => {
-                    const filled = option.value === 0 ? true : i < fullStars;
-                    const half = option.value === 0 ? false : !filled && hasHalf && i === fullStars;
+                    const filled = i < fullStars;
+                    const half = !filled && hasHalf && i === fullStars;
                     return (
                       <span
                         key={i}
@@ -245,8 +245,8 @@ function UpcomingAuctionsPageContent() {
                     );
                   })}
                 </div>
-                <span className="text-xs flex-1">
-                  {option.value === 0 ? "Tất cả" : `${option.value}+`}
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 text-right self-center">
+                  {option.label}
                 </span>
               </button>
             );
@@ -295,17 +295,15 @@ function UpcomingAuctionsPageContent() {
           <span>Kết quả tìm kiếm &quot;{searchKeyword}&quot;</span>
         </div>
       )}
-            <div className="flex gap-6">
-        {/* Filter Sidebar */}
-        <aside className="hidden lg:block w-64 shrink-0 self-start sticky top-[102px] h-[calc(100vh-120px)] overflow-y-auto pb-6 pr-1 hide-scrollbar">
+      <div className="flex gap-6 relative">
+        {/* Filter Sidebar Wrapper */}
+        <div className="hidden lg:block w-64 shrink-0">
+          <aside className="sticky top-[102px] h-fit pb-6 pr-1 z-10">
           {/* Filter Panel */}
           <div className="bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] overflow-hidden rounded-xl animate-in fade-in slide-in-from-left-2 duration-500">
             {/* Header */}
             <div className="px-4 py-3 border-b-2 border-slate-200 dark:border-slate-700 flex items-center justify-between bg-primary/5">
               <div className="flex items-center gap-2">
-                <div className="w-5 h-5 bg-primary flex items-center justify-center rounded-md">
-                  <span className="material-symbols-outlined text-white text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>tune</span>
-                </div>
                 <h3 className="text-xs font-black uppercase tracking-widest text-slate-700 dark:text-slate-200 whitespace-nowrap">
                   Bộ lọc
                 </h3>
@@ -348,7 +346,16 @@ function UpcomingAuctionsPageContent() {
                     : "text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50"
                 }`}
               >
-                <span className="material-symbols-outlined text-[20px] text-slate-400">apps</span>
+                <div className="relative w-7 h-7 rounded-lg overflow-hidden shrink-0">
+                  <Image
+                    src="https://img.icons8.com/color/96/categorize.png"
+                    alt="Tất cả"
+                    fill
+                    sizes="28px"
+                    className="object-cover"
+                    unoptimized
+                  />
+                </div>
                 <span className="flex-1 truncate text-left">Tất cả</span>
               </button>
               {displayedCategories.map((cat) => {
@@ -390,34 +397,41 @@ function UpcomingAuctionsPageContent() {
           <div className="mt-3 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] overflow-hidden rounded-xl">
             <div className="px-4 py-3 border-b-2 border-slate-200 dark:border-slate-700 bg-primary/5">
               <h3 className="text-xs font-black uppercase tracking-widest text-slate-700 dark:text-slate-200 flex items-center gap-2">
-                <div className="w-5 h-5 bg-primary flex items-center justify-center rounded-md">
-                  <span className="material-symbols-outlined text-white text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>sort</span>
-                </div>
                 Sắp xếp
               </h3>
             </div>
-            <nav className="py-1">
+            <nav className="py-1 flex flex-col">
               {[
-                { value: "starts_soon", label: "Sắp diễn ra", icon: "alarm" },
-                { value: "price_asc", label: "Giá thấp → cao", icon: "arrow_upward" },
-                { value: "price_desc", label: "Giá cao → thấp", icon: "arrow_downward" },
+                { value: "starts_soon", label: "Sắp diễn ra", icon: "https://img.icons8.com/color/96/alarm-clock.png" },
+                { value: "price_asc", label: "Giá thấp → cao", icon: "https://img.icons8.com/color/96/numerical-sorting-12.png" },
+                { value: "price_desc", label: "Giá cao → thấp", icon: "https://img.icons8.com/color/96/numerical-sorting-21.png" },
               ].map((opt) => (
                 <button
                   key={opt.value}
                   onClick={() => setSort(opt.value)}
-                  className={`w-full flex items-center gap-3 px-4 py-2 text-xs font-semibold transition-all text-left border-l-4 ${
+                  className={`flex items-center gap-3 px-3 py-2 text-[12px] font-semibold transition-all cursor-pointer rounded-xl mx-2 my-0.5 border border-transparent shrink-0 ${
                     sort === opt.value
-                      ? "border-primary bg-primary/5 text-primary"
-                      : "border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-primary hover:border-primary/40"
+                      ? "bg-slate-200/80 dark:bg-slate-700 text-slate-700 dark:text-slate-200"
+                      : "text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50"
                   }`}
                 >
-                  <span className="material-symbols-outlined text-sm">{opt.icon}</span>
+                  <div className="relative w-5 h-5 overflow-hidden shrink-0">
+                    <Image
+                      src={opt.icon}
+                      alt={opt.label}
+                      fill
+                      sizes="20px"
+                      className="object-cover"
+                      unoptimized
+                    />
+                  </div>
                   {opt.label}
                 </button>
               ))}
             </nav>
           </div>
         </aside>
+      </div>
 
         {/* Product Grid */}
         <div className="flex-1 min-w-0">
@@ -574,10 +588,9 @@ function UpcomingAuctionsPageContent() {
                             <span className="material-symbols-outlined text-4xl text-slate-400">image</span>
                           </div>
                         )}
-                        <div className="absolute top-3 left-3">
-                          <span className="bg-primary/90 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 shadow-[2px_2px_0px_rgba(0,0,0,0.2)] flex items-center gap-1 rounded-md">
-                            <span className="material-symbols-outlined text-xs">schedule</span>
-                            {formatScheduledStart(auction.scheduledStart)}
+                        <div className="absolute top-3 right-3">
+                          <span className="bg-blue-500/90 backdrop-blur-sm px-2 py-0.5 rounded-full text-[10px] font-bold text-white shadow-sm">
+                            Sắp diễn ra
                           </span>
                         </div>
                       </div>
@@ -591,15 +604,17 @@ function UpcomingAuctionsPageContent() {
                           {auction.title}
                         </h3>
                         <div className="space-y-1 mt-1">
-
                           <div>
                             <p className="text-[10px] text-slate-500 font-medium">Giá khởi điểm</p>
                             <p className="text-sm font-bold text-primary">{formatVND(auction.startingPrice)}</p>
                           </div>
-                          <button className="mt-2 w-full flex items-center justify-center gap-2 py-2 border-2 border-primary text-primary font-bold hover:bg-primary/5 hover:shadow-[2px_2px_0px_#E2B9A1] transition-all text-xs active:translate-y-px active:shadow-none bg-white dark:bg-slate-800 rounded-xl">
-                            <span className="material-symbols-outlined text-[16px]">notifications_active</span>
-                            Nhắc tôi
-                          </button>
+                          <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100 dark:border-slate-700/50">
+                            <p className="text-[10px] text-slate-500 font-medium">Bắt đầu lúc</p>
+                            <p className="text-xs text-red-500 font-bold flex items-center gap-1">
+                              <span className="material-symbols-outlined text-sm">schedule</span>
+                              {formatScheduledStart(auction.scheduledStart)}
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </Link>

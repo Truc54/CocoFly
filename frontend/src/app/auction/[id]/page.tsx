@@ -448,7 +448,7 @@ function AuctionDetailContent({
                   />
                   <span className="absolute top-2 right-2 bg-red-500/90 backdrop-blur-sm px-2 py-0.5 rounded-full border border-red-600 text-[10px] font-bold text-white flex items-center gap-1 shadow-[2px_2px_0px_#991b1b]">
                     <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                    LIVE
+                    Đang diễn ra
                   </span>
                 </div>
                 <div className="p-3 space-y-1.5 flex-1 flex flex-col">

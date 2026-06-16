@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState, useMemo } from "react";
-import { Clock, Eye, ArrowRight } from "lucide-react";
+import { Clock, ArrowRight } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -107,19 +107,11 @@ export function AuctionCard({ auction, variant, countdown, index = 0 }: AuctionC
         {isLive ? (
           <span className="absolute top-2 right-2 bg-red-500/90 backdrop-blur-sm px-2 py-0.5 rounded-full text-[10px] font-bold text-white flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-            LIVE
+            Đang diễn ra
           </span>
         ) : (
           <span className="absolute top-2 right-2 bg-blue-500/90 backdrop-blur-sm px-2 py-0.5 rounded-full text-[10px] font-bold text-white">
             Sắp diễn ra
-          </span>
-        )}
-
-        {/* Bids/Watchers */}
-        {isLive && auction.totalWatchers > 0 && (
-          <span className="absolute top-2 left-2 bg-white/90 dark:bg-slate-900/80 backdrop-blur-sm px-2 py-0.5 rounded-full text-[10px] font-bold text-orange-600 flex items-center gap-1">
-            <Eye className="w-3 h-3" />
-            {auction.totalWatchers} theo dõi
           </span>
         )}
       </div>
