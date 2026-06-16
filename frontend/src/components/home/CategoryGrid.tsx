@@ -97,8 +97,8 @@ export default function CategoryGrid() {
                   </span>
                 )}
                 <div className="min-w-0">
-                  <p className="text-[15px] font-bold text-slate-700 dark:text-slate-200 truncate">
-                    {cat.name}
+                  <p className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate">
+                    {cat.name.replace(/&/g, "-")}
                   </p>
                 {cat.description && (
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">

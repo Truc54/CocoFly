@@ -129,7 +129,7 @@ export function AuctionCard({ auction, variant, countdown, index = 0 }: AuctionC
         {/* Category */}
         {auction.category && (
           <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-            {auction.category.name}
+            {auction.category.name.replace(/&/g, "-")}
           </span>
         )}
 

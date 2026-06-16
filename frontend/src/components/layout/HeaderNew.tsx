@@ -87,7 +87,7 @@ export default function HeaderNew() {
       .then((res) => {
         if (res?.data) {
           const filtered = res.data.filter((cat: CategoryLink) => !isRealEstateCategory(cat));
-          setCategories(filtered.slice(0, 9));
+          setCategories(filtered.slice(0, 8));
         }
       })
       .catch(() => {
@@ -101,7 +101,7 @@ export default function HeaderNew() {
           { id: 2, name: "Thời trang & Phụ kiện", slug: "thoi-trang-phu-kien" },
           { id: 13, name: "Máy ảnh & Ống kính", slug: "may-anh-ong-kinh" },
         ];
-        setCategories(fallback.filter((cat) => !isRealEstateCategory(cat)).slice(0, 9));
+        setCategories(fallback.filter((cat) => !isRealEstateCategory(cat)).slice(0, 8));
       });
   }, []);
 
@@ -414,7 +414,7 @@ export default function HeaderNew() {
                     onClick={() => setMobileMenuOpen(false)}
                     className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                   >
-                    {cat.name}
+                    {cat.name.replace(/&/g, "-")}
                   </Link>
                 ))}
               </div>

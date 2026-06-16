@@ -28,6 +28,10 @@ const NEW_CATEGORIES = [
   { name: 'Nội thất - Decor', slug: 'noi-that-decor', description: 'Bàn ghế, đèn, đồ trang trí nội thất', iconUrl: 'chair', sortOrder: 12 },
   { name: 'Máy ảnh - Ống kính', slug: 'may-anh-ong-kinh', description: 'Máy ảnh, ống kính, phụ kiện nhiếp ảnh', iconUrl: 'photo_camera', sortOrder: 13 },
   { name: 'Đồ chơi - Mô hình', slug: 'do-choi-mo-hinh', description: 'Mô hình, figure, đồ chơi sưu tầm', iconUrl: 'toys', sortOrder: 14 },
+  { name: 'Điện thoại - Máy tính bảng', slug: 'dien-thoai-may-tinh-bang', description: 'Điện thoại di động, máy tính bảng các loại', iconUrl: 'smartphone', sortOrder: 15 },
+  { name: 'Laptop - Máy vi tính', slug: 'laptop-may-vi-tinh', description: 'Máy tính xách tay, máy tính để bàn và phụ kiện', iconUrl: 'laptop', sortOrder: 16 },
+  { name: 'Hàng hiệu - Đồ xa xỉ', slug: 'hang-hieu-do-xa-xi', description: 'Túi hiệu, ví da, đồ xa xỉ thời trang', iconUrl: 'work', sortOrder: 17 },
+  { name: 'Điện gia dụng', slug: 'dien-gia-dung', description: 'Thiết bị điện gia dụng, gia dụng thông minh', iconUrl: 'blender', sortOrder: 18 },
 ];
 
 // Default System Configurations
@@ -46,16 +50,13 @@ async function main() {
   const SLUGS_TO_DELETE = [
     'nha-sach-tiki',
     'nha-cua-doi-song',
-    'dien-thoai-may-tinh-bang',
     'do-choi-me-be',
     'thiet-bi-so-phu-kien-so',
-    'dien-gia-dung',
     'lam-dep-suc-khoe',
     'thoi-trang-nu',
     'bach-hoa-online',
     'thoi-trang-nam',
     'hang-quoc-te',
-    'laptop-may-vi-tinh'
   ];
   let deletedCount = 0;
   let deactivatedCount = 0;

@@ -27,8 +27,11 @@ export default function Sidebar() {
       .finally(() => setLoading(false));
   }, []);
 
+  const laptopIndex = categories.findIndex((c) => c.slug === "laptop-may-vi-tinh");
+  const displayedCategories = laptopIndex !== -1 ? categories.slice(0, laptopIndex + 1) : categories;
+
   return (
-    <aside className="hidden lg:block w-[240px] shrink-0 self-start sticky top-[102px] h-[calc(100vh-120px)] overflow-y-auto pb-4 pr-1 scrollbar-thin">
+    <aside className="hidden lg:block w-[240px] shrink-0 self-start sticky top-[102px]">
       <div className="bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] rounded-xl overflow-hidden">
         {/* Header */}
         <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700/50 bg-primary/5">
@@ -38,7 +41,7 @@ export default function Sidebar() {
         </div>
 
         {/* Category list */}
-        <nav className="py-1">
+        <nav className="py-1 flex flex-col">
           {loading ? (
             // Skeleton
             Array.from({ length: 8 }).map((_, i) => (
@@ -48,35 +51,35 @@ export default function Sidebar() {
               </div>
             ))
           ) : (
-            categories.map((cat) => {
+            displayedCategories.map((cat) => {
               const imgUrl = getCategoryImageUrl(cat.slug);
               return (
                 <Link
                   key={cat.id}
                   href={`/live?categoryId=${cat.id}`}
-                  className="group flex items-center gap-3 px-3 py-2.5 text-[15px] font-bold text-slate-700 dark:text-slate-200 hover:bg-primary/5 hover:text-primary dark:hover:text-primary transition-all rounded-xl mx-2 my-1 border border-transparent hover:border-primary/10"
+                  className="group flex items-center gap-3 px-3 py-2 text-[12px] font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-all rounded-xl mx-2 my-0.5 border border-transparent shrink-0"
                 >
                   {imgUrl ? (
-                    <div className="relative w-8 h-8 rounded-lg overflow-hidden shrink-0">
+                    <div className="relative w-7 h-7 rounded-lg overflow-hidden shrink-0">
                       <Image
                         src={imgUrl}
                         alt={cat.name}
                         fill
-                        sizes="32px"
+                        sizes="28px"
                         className="object-cover"
                         unoptimized
                       />
                     </div>
                   ) : cat.iconUrl ? (
-                    <span className="material-symbols-outlined text-[22px] text-slate-400 group-hover:text-primary transition-colors">
+                    <span className="material-symbols-outlined text-[20px] text-slate-400">
                       {cat.iconUrl}
                     </span>
                   ) : (
-                    <span className="material-symbols-outlined text-[22px] text-slate-400 group-hover:text-primary transition-colors">
+                    <span className="material-symbols-outlined text-[20px] text-slate-400">
                       category
                     </span>
                   )}
-                  <span className="flex-1 truncate">{cat.name}</span>
+                  <span className="flex-1 truncate">{cat.name.replace(/&/g, "-")}</span>
                 </Link>
               );
             })

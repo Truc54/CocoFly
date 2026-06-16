@@ -81,6 +81,8 @@ function UpcomingAuctionsPageContent() {
     urlCategoryId ? parseInt(urlCategoryId) : undefined
   );
   const [categories, setCategories] = useState<CategoryItem[]>([]);
+  const laptopIndex = categories.findIndex((c) => c.slug === "laptop-may-vi-tinh");
+  const displayedCategories = laptopIndex !== -1 ? categories.slice(0, laptopIndex + 1) : categories;
   const [auctions, setAuctions] = useState<AuctionItem[]>([]);
   const [pagination, setPagination] = useState<PaginationInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -295,7 +297,7 @@ function UpcomingAuctionsPageContent() {
       )}
             <div className="flex gap-6">
         {/* Filter Sidebar */}
-        <aside className="hidden lg:block w-64 shrink-0 self-start sticky top-[102px] h-[calc(100vh-120px)] overflow-y-auto pb-6 pr-1 scrollbar-thin">
+        <aside className="hidden lg:block w-64 shrink-0 self-start sticky top-[102px] h-[calc(100vh-120px)] overflow-y-auto pb-6 pr-1 hide-scrollbar">
           {/* Filter Panel */}
           <div className="bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] overflow-hidden rounded-xl animate-in fade-in slide-in-from-left-2 duration-500">
             {/* Header */}
@@ -337,49 +339,47 @@ function UpcomingAuctionsPageContent() {
                 Danh mục
               </h3>
             </div>
-            <nav className="py-1">
+            <nav className="py-1 flex flex-col">
               <button
                 onClick={() => setActiveCategoryId(undefined)}
-                className={`w-full flex items-center gap-3 px-4 py-3 text-[15px] font-bold transition-all cursor-pointer border-l-4 ${
+                className={`flex items-center gap-3 px-3 py-2 text-[12px] font-semibold transition-all cursor-pointer rounded-xl mx-2 my-0.5 border border-transparent shrink-0 ${
                   !activeCategoryId
-                    ? "border-primary bg-primary/5 text-primary"
-                    : "border-transparent text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-primary hover:border-primary/40"
+                    ? "bg-slate-200/80 dark:bg-slate-700 text-slate-700 dark:text-slate-200"
+                    : "text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50"
                 }`}
               >
-                <span className="material-symbols-outlined text-[22px]">apps</span>
-                Tất cả
+                <span className="material-symbols-outlined text-[20px] text-slate-400">apps</span>
+                <span className="flex-1 truncate text-left">Tất cả</span>
               </button>
-              {categories.map((cat) => {
+              {displayedCategories.map((cat) => {
                 const imgUrl = getCategoryImageUrl(cat.slug);
                 return (
                   <button
                     key={cat.id}
                     onClick={() => setActiveCategoryId(cat.id)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 text-[15px] font-bold transition-all cursor-pointer border-l-4 ${
+                    className={`flex items-center gap-3 px-3 py-2 text-[12px] font-semibold transition-all cursor-pointer rounded-xl mx-2 my-0.5 border border-transparent shrink-0 ${
                       activeCategoryId === cat.id
-                        ? "border-primary bg-primary/5 text-primary"
-                        : "border-transparent text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-primary hover:border-primary/40"
+                        ? "bg-slate-200/80 dark:bg-slate-700 text-slate-700 dark:text-slate-200"
+                        : "text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50"
                     }`}
                   >
                     {imgUrl ? (
-                      <div className="relative w-8 h-8 rounded-lg overflow-hidden shrink-0">
+                      <div className="relative w-7 h-7 rounded-lg overflow-hidden shrink-0">
                         <Image
                           src={imgUrl}
                           alt={cat.name}
                           fill
-                          sizes="32px"
+                          sizes="28px"
                           className="object-cover"
                           unoptimized
                         />
                       </div>
-                    ) : cat.iconUrl ? (
-                      <span className={`material-symbols-outlined text-[22px] ${activeCategoryId === cat.id ? "text-primary" : "text-slate-400"}`}>
-                        {cat.iconUrl}
-                      </span>
                     ) : (
-                      <span className="material-symbols-outlined text-[22px] text-slate-400">category</span>
+                      <span className="material-symbols-outlined text-[20px] text-slate-400">
+                        {cat.iconUrl || "category"}
+                      </span>
                     )}
-                    <span className="truncate">{cat.name}</span>
+                    <span className="flex-1 truncate text-left">{cat.name.replace(/&/g, "-")}</span>
                   </button>
                 );
               })}
@@ -585,7 +585,7 @@ function UpcomingAuctionsPageContent() {
                       {/* Content */}
                       <div className="p-3 space-y-1.5">
                         <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                          {auction.category?.name ?? "Khác"}
+                          {(auction.category?.name ?? "Khác").replace(/&/g, "-")}
                         </span>
                         <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 line-clamp-2 leading-snug">
                           {auction.title}

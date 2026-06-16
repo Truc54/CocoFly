@@ -205,7 +205,7 @@ function AuctionDetailContent({
       <nav className="flex items-center gap-2 text-sm text-slate-500 mb-6 font-medium">
         <Link href="/" className="hover:text-primary transition-colors cursor-pointer">Trang chủ</Link>
         <span className="material-symbols-outlined text-xs">chevron_right</span>
-        <Link href="/live" className="hover:text-primary transition-colors cursor-pointer">{auction.category?.name ?? "Đấu giá"}</Link>
+        <Link href="/live" className="hover:text-primary transition-colors cursor-pointer">{(auction.category?.name ?? "Đấu giá").replace(/&/g, "-")}</Link>
         <span className="material-symbols-outlined text-xs">chevron_right</span>
         <span className="text-primary truncate max-w-xs">{auction.title}</span>
       </nav>
@@ -453,7 +453,7 @@ function AuctionDetailContent({
                 </div>
                 <div className="p-3 space-y-1.5 flex-1 flex flex-col">
                   <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                    {item.category?.name ?? "Đấu giá"}
+                    {(item.category?.name ?? "Đấu giá").replace(/&/g, "-")}
                   </span>
                   <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 line-clamp-2 leading-snug flex-1">
                     {item.title}

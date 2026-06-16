@@ -406,7 +406,7 @@ export default function CreateAuctionPage() {
                     <CustomSelect
                       value={form.categoryId}
                       onChange={(val) => updateForm({ categoryId: val ? parseInt(val as string) : null })}
-                      options={categories.map(c => ({ value: c.id, label: c.name }))}
+                      options={categories.map(c => ({ value: c.id, label: c.name.replace(/&/g, "-") }))}
                       placeholder={isLoadingCategories ? "Đang tải..." : "-- Chọn danh mục --"}
                       hasError={!!errors.categoryId}
                     />
