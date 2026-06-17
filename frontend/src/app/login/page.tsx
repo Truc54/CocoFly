@@ -1,7 +1,7 @@
 import AuthCard from "@/components/auth/AuthCard";
 
 export const metadata = {
-  title: "Đăng nhập | COCOFLY",
+  title: "Đăng nhập | CocoFly",
 };
 
 export default function LoginPage() {

@@ -54,9 +54,9 @@ interface PaginationInfo {
 }
 
 const TABS: { key: AuctionTab; label: string; icon: React.ReactNode }[] = [
-  { key: "ongoing", label: "Đang diễn ra", icon: <Activity className="w-4 h-4" /> },
-  { key: "upcoming", label: "Sắp diễn ra", icon: <Calendar className="w-4 h-4" /> },
-  { key: "ended", label: "Đã kết thúc", icon: <CheckCircle2 className="w-4 h-4" /> },
+  { key: "ongoing", label: "Đang diễn ra", icon: <img src="https://img.icons8.com/color/96/activity.png" className="w-5 h-5" alt="ongoing" /> },
+  { key: "upcoming", label: "Sắp diễn ra", icon: <img src="https://img.icons8.com/color/96/calendar.png" className="w-5 h-5" alt="upcoming" /> },
+  { key: "ended", label: "Đã kết thúc", icon: <img src="https://img.icons8.com/color/96/checkmark.png" className="w-5 h-5" alt="ended" /> },
 ];
 
 // ─── Helpers ────────────────────────────────────────────────────────────────

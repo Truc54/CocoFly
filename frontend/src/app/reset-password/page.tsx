@@ -84,7 +84,7 @@ export default function ResetPasswordPage() {
           <div className="space-y-3 text-center">
             <div className="mb-2 flex justify-center">
               <div className="inline-flex size-16 items-center justify-center rounded-2xl bg-primary/10 shadow-[4px_4px_0px_#E2B9A1]">
-                <Image src="/logo.jpeg" alt="COCOFLY Logo" width={34} height={34} className="rounded-md" />
+                <Image src="/logo.png" alt="CocoFly Logo" width={34} height={34} className="rounded-md" />
               </div>
             </div>
             <h1 className={`${playfairDisplay.className} text-4xl font-extrabold text-slate-900 dark:text-white`}>
@@ -167,7 +167,7 @@ export default function ResetPasswordPage() {
 
             <Button
               type="submit"
-              className="group relative h-14 w-full overflow-hidden rounded-none border-2 border-primary-main bg-primary-main text-lg font-bold text-white shadow-[4px_4px_0px_#E2B9A1] transition-all hover:-translate-y-1 hover:shadow-[6px_6px_0px_#E2B9A1] disabled:opacity-70 disabled:hover:translate-y-0 disabled:hover:shadow-[4px_4px_0px_#E2B9A1]"
+              className="group relative h-14 w-full overflow-hidden rounded-xl border-2 border-primary-main bg-primary-main text-lg font-bold text-white shadow-[4px_4px_0px_#E2B9A1] transition-all hover:-translate-y-1 hover:shadow-[6px_6px_0px_#E2B9A1] disabled:opacity-70 disabled:hover:translate-y-0 disabled:hover:shadow-[4px_4px_0px_#E2B9A1]"
               disabled={isSubmitting || !newPassword || !confirmPassword}
             >
               {isSubmitting ? "Đang xử lý..." : (

@@ -39,13 +39,13 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 group cursor-pointer">
           <Image
-            src="/logo.jpeg"
-            alt="COCOFLY Logo"
+            src="/logo.png"
+            alt="CocoFly Logo"
             width={40}
             height={40}
             className="rounded-lg"
           />
-          <span className="brand-text text-[2rem] leading-none text-primary">COCOFLY</span>
+          <span className="brand-text text-[2rem] leading-none text-primary">CocoFly</span>
         </Link>
         
         <nav className="hidden md:flex items-center gap-8 lg:gap-10">
@@ -100,17 +100,13 @@ export default function Header() {
             <>
               <Link
                 href="/login"
-                className={`px-5 py-2 text-sm font-bold rounded-xl transition-all cursor-pointer ${
-                  pathname === "/login"
-                    ? "bg-primary/10 text-primary"
-                    : "text-slate-700 dark:text-slate-200 hover:bg-primary/5 dark:hover:bg-primary/20"
-                }`}
+                className="px-5 py-2 text-sm font-bold text-primary bg-white dark:bg-slate-800 border-2 border-primary rounded-xl hover:bg-primary hover:text-white dark:hover:bg-primary dark:hover:text-white transition-all hover:-translate-y-0.5 active:translate-y-0 shadow-[2px_2px_0px_#E2B9A1] hover:shadow-[3px_3px_0px_#E2B9A1] active:shadow-[1px_1px_0px_#E2B9A1] cursor-pointer"
               >
                 Đăng nhập
               </Link>
               <Link
                 href="/register"
-                className={`px-5 py-2 text-sm font-bold rounded-none border-2 border-primary transition-all duration-200 cursor-pointer shadow-[2px_2px_0px_#E2B9A1] hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#E2B9A1] active:translate-y-px active:shadow-[1px_1px_0px_#E2B9A1] ${
+                className={`px-5 py-2 text-sm font-bold rounded-xl border-2 border-primary transition-all duration-200 cursor-pointer shadow-[2px_2px_0px_#E2B9A1] hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#E2B9A1] active:translate-y-px active:shadow-[1px_1px_0px_#E2B9A1] ${
                   pathname === "/register"
                     ? "bg-primary/90 text-white"
                     : "bg-primary text-white"

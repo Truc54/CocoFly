@@ -27,7 +27,7 @@ export default function CountdownTimer({ endTime }: CountdownTimerProps) {
   const isUrgent = seconds > 0 && seconds <= 60;
   const isCritical = seconds > 0 && seconds <= 10;
 
-  const blockClasses = `flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-none font-bold text-base sm:text-lg tabular-nums transition-colors duration-300 border-2 ${
+  const blockClasses = `flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg font-bold text-base sm:text-lg tabular-nums transition-colors duration-300 border-2 ${
     isUrgent
       ? "bg-red-50 text-red-600 border-red-500 shadow-[3px_3px_0px_#ef4444]"
       : "bg-white text-slate-800 border-slate-200 shadow-[3px_3px_0px_#cbd5e1] dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200"

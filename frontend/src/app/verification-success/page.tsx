@@ -65,7 +65,7 @@ export default function VerificationSuccessPage() {
             </h1>
             
             <p className="mb-8 text-base text-slate-600 dark:text-slate-400">
-              Tài khoản của bạn đã được bảo vệ. Vui lòng đăng nhập để bắt đầu trải nghiệm cùng COCOFLY.
+              Tài khoản của bạn đã được bảo vệ. Vui lòng đăng nhập để bắt đầu trải nghiệm cùng CocoFly.
             </p>
 
             <div className="w-full space-y-4 border-t border-slate-200 pt-6 dark:border-slate-800">

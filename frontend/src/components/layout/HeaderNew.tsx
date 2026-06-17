@@ -67,6 +67,24 @@ export default function HeaderNew() {
     }
   }, [pathname]);
 
+  const headerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!headerRef.current) return;
+    const updateHeight = () => {
+      if (headerRef.current) {
+        document.documentElement.style.setProperty(
+          "--header-height",
+          `${headerRef.current.offsetHeight}px`
+        );
+      }
+    };
+    updateHeight();
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(headerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
   useEffect(() => {
     setMounted(true);
     const checkAuth = () => {
@@ -87,7 +105,7 @@ export default function HeaderNew() {
       .then((res) => {
         if (res?.data) {
           const filtered = res.data.filter((cat: CategoryLink) => !isRealEstateCategory(cat));
-          setCategories(filtered.slice(0, 9));
+          setCategories(filtered.slice(0, 8));
         }
       })
       .catch(() => {
@@ -101,7 +119,7 @@ export default function HeaderNew() {
           { id: 2, name: "Thời trang & Phụ kiện", slug: "thoi-trang-phu-kien" },
           { id: 13, name: "Máy ảnh & Ống kính", slug: "may-anh-ong-kinh" },
         ];
-        setCategories(fallback.filter((cat) => !isRealEstateCategory(cat)).slice(0, 9));
+        setCategories(fallback.filter((cat) => !isRealEstateCategory(cat)).slice(0, 8));
       });
   }, []);
 
@@ -202,7 +220,7 @@ export default function HeaderNew() {
   );
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-white dark:bg-background-dark border-b border-slate-200 dark:border-slate-700/50 shadow-sm">
+    <header ref={headerRef} className="sticky top-0 z-50 w-full bg-white dark:bg-background-dark border-b border-slate-200 dark:border-slate-700/50 shadow-sm">
       <div className="max-w-[1400px] mx-auto px-4 lg:px-6">
         <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[auto_auto] items-center gap-x-2 md:gap-x-2.5 lg:gap-x-3 gap-y-1 pt-4 pb-1">
           <div className="row-start-1 col-start-1 flex items-center gap-2 lg:gap-3 min-w-0">
@@ -218,14 +236,14 @@ export default function HeaderNew() {
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 shrink-0">
               <Image
-                src="/logo.jpeg"
-                alt="COCOFLY Logo"
+                src="/logo.png"
+                alt="CocoFly Logo"
                 width={40}
                 height={40}
                 className="rounded-lg"
               />
               <span className="brand-text text-[1.8rem] leading-none text-primary hidden sm:block">
-                COCOFLY
+                CocoFly
               </span>
             </Link>
           </div>
@@ -233,20 +251,20 @@ export default function HeaderNew() {
           {/* ── Search bar with toggle + suggestions ── */}
           <div ref={searchWrapperRef} className="row-start-1 col-start-2 w-full min-w-0 justify-self-stretch relative">
             <form onSubmit={handleSearch}>
-              <div className="flex items-center bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-600 rounded-xl px-1 py-1 shadow-[3px_3px_0px_#E2B9A1] transition-all">
+              <div className="flex items-center bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-600 rounded-full px-1 py-1 shadow-[3px_3px_0px_#E2B9A1] transition-all">
                 {/* Status Toggle Dropdown */}
                 <div className="hidden sm:block relative ml-1 shrink-0 z-[60]">
                   <button
                     type="button"
                     onClick={() => setStatusDropdownOpen(!statusDropdownOpen)}
-                    className="flex items-center justify-center gap-1.5 w-[125px] px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 rounded-lg hover:border-primary/50 hover:text-primary transition-all whitespace-nowrap"
+                    className="flex items-center justify-center gap-1.5 w-[125px] px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 rounded-full hover:border-primary/50 hover:text-primary transition-all whitespace-nowrap"
                   >
                     <span>{searchStatus === "active" ? "Đang diễn ra" : "Sắp diễn ra"}</span>
                     <span className="material-symbols-outlined text-[16px]">expand_more</span>
                   </button>
                   
                   {statusDropdownOpen && (
-                    <div className="absolute top-full left-0 mt-1 w-36 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-lg shadow-[3px_3px_0px_#E2B9A1] overflow-hidden z-[60]">
+                    <div className="absolute top-full left-0 mt-2 w-36 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl shadow-[3px_3px_0px_#E2B9A1] overflow-hidden z-[60]">
                       <button
                         type="button"
                         onClick={() => {
@@ -296,7 +314,7 @@ export default function HeaderNew() {
                 {/* Search Button */}
                 <button
                   type="submit"
-                  className="inline-flex items-center gap-1.5 rounded-lg border-2 border-primary-main bg-primary-main px-3 py-2 text-sm font-bold text-white shadow-[2px_2px_0px_#E2B9A1] transition-all hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_#E2B9A1] shrink-0"
+                  className="inline-flex items-center gap-1.5 rounded-full border-2 border-primary-main bg-primary-main px-4 py-2 text-sm font-bold text-white shadow-[2px_2px_0px_#E2B9A1] transition-all hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_#E2B9A1] shrink-0"
                 >
                   <Search className="w-4 h-4" />
                   <span className="hidden sm:inline">Tìm kiếm</span>
@@ -331,9 +349,9 @@ export default function HeaderNew() {
             {mounted && isLoggedIn && userRole === "seller" && (
               <Link
                 href="/create-auction"
-                className="hidden md:inline-flex items-center gap-1.5 rounded-lg border-2 border-primary-main bg-primary-main px-3 py-2 text-sm font-bold text-white shadow-[2px_2px_0px_#E2B9A1] transition-all hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_#E2B9A1]"
+                className="group hidden md:inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-bold text-primary bg-white dark:bg-slate-800 border-2 border-primary rounded-lg hover:bg-primary hover:text-white dark:hover:bg-primary dark:hover:text-white transition-all hover:-translate-y-0.5 active:translate-y-0 shadow-[2px_2px_0px_#E2B9A1] hover:shadow-[3px_3px_0px_#E2B9A1] active:shadow-[1px_1px_0px_#E2B9A1]"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-4 h-4 transition-transform group-hover:rotate-90" />
                 <span>Tạo đấu giá</span>
               </Link>
             )}
@@ -346,7 +364,7 @@ export default function HeaderNew() {
             ) : (
               <Link
                 href="/login"
-                className="px-4 py-2 text-sm font-semibold text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors"
+                className="px-4 py-2 text-sm font-bold text-primary bg-white dark:bg-slate-800 border-2 border-primary rounded-lg hover:bg-primary hover:text-white dark:hover:bg-primary dark:hover:text-white transition-all hover:-translate-y-0.5 active:translate-y-0 shadow-[2px_2px_0px_#E2B9A1] hover:shadow-[3px_3px_0px_#E2B9A1] active:shadow-[1px_1px_0px_#E2B9A1]"
               >
                 Đăng nhập
               </Link>
@@ -414,7 +432,7 @@ export default function HeaderNew() {
                     onClick={() => setMobileMenuOpen(false)}
                     className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                   >
-                    {cat.name}
+                    {cat.name.replace(/&/g, "-")}
                   </Link>
                 ))}
               </div>

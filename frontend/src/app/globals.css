@@ -10,7 +10,7 @@
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
   
-  /* COCOFLY Custom Colors */
+  /* CocoFly Custom Colors */
   --color-primary-main: #8f5c38;
   --color-accent-main: #E2B9A1;
   --color-text-main: #2B2B2B;
@@ -20,7 +20,7 @@
   /* Font families mapped to Next.js */
   --font-display: var(--font-roboto);
   --font-body: var(--font-roboto);
-  --font-brand: var(--font-bebas);
+  --font-brand: var(--font-oswald);
 
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -195,7 +195,7 @@
     @apply font-display;
   }
   .brand-text {
-    @apply font-brand uppercase tracking-wide;
+    @apply font-brand font-bold tracking-wide;
   }
   .hide-scrollbar {
     scrollbar-width: none;

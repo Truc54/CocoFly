@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback, use } from "react";
 import { auctionApi } from "@/lib/api";
 import { authStorage } from "@/lib/auth-storage";
@@ -144,6 +145,7 @@ function AuctionDetailContent({
   onToggleWatch: () => void;
   isHost: boolean;
 }) {
+  const router = useRouter();
   const {
     currentPrice,
     totalBids,
@@ -203,7 +205,7 @@ function AuctionDetailContent({
       <nav className="flex items-center gap-2 text-sm text-slate-500 mb-6 font-medium">
         <Link href="/" className="hover:text-primary transition-colors cursor-pointer">Trang chủ</Link>
         <span className="material-symbols-outlined text-xs">chevron_right</span>
-        <Link href="/live" className="hover:text-primary transition-colors cursor-pointer">{auction.category?.name ?? "Đấu giá"}</Link>
+        <Link href="/live" className="hover:text-primary transition-colors cursor-pointer">{(auction.category?.name ?? "Đấu giá").replace(/&/g, "-")}</Link>
         <span className="material-symbols-outlined text-xs">chevron_right</span>
         <span className="text-primary truncate max-w-xs">{auction.title}</span>
       </nav>
@@ -215,7 +217,7 @@ function AuctionDetailContent({
 
           {/* Photo Gallery */}
           <div className="space-y-4">
-            <div className="relative aspect-[4/3] bg-white dark:bg-slate-800 rounded-none border-2 border-slate-200 dark:border-slate-700 overflow-hidden shadow-[4px_4px_0px_#E2B9A1] group">
+            <div className="relative aspect-[4/3] bg-white dark:bg-slate-800 rounded-xl border-2 border-slate-200 dark:border-slate-700 overflow-hidden shadow-[4px_4px_0px_#E2B9A1] group">
               <Image
                 src={images[activeImageIdx]}
                 alt={auction.title}
@@ -239,7 +241,7 @@ function AuctionDetailContent({
                   </button>
                 </>
               )}
-              <div className="absolute bottom-3 right-3 bg-white border-2 border-slate-800 text-slate-800 text-xs font-bold px-2 py-1 rounded-none shadow-[2px_2px_0px_#1e293b]">
+              <div className="absolute bottom-3 right-3 bg-white border-2 border-slate-800 text-slate-800 text-xs font-bold px-2 py-1 rounded-lg shadow-[2px_2px_0px_#1e293b]">
                 {activeImageIdx + 1} / {images.length}
               </div>
             </div>
@@ -251,7 +253,7 @@ function AuctionDetailContent({
                   <button
                     key={idx}
                     onClick={() => setActiveImageIdx(idx)}
-                    className={`relative w-[72px] h-[72px] shrink-0 rounded-none border-2 transition-all cursor-pointer ${
+                    className={`relative w-[72px] h-[72px] shrink-0 rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
                       activeImageIdx === idx
                         ? "border-primary shadow-[3px_3px_0px_#8f5c38] scale-100"
                         : "border-slate-200 opacity-80 hover:opacity-100 hover:shadow-[3px_3px_0px_#cbd5e1] scale-95 hover:scale-100"
@@ -266,7 +268,7 @@ function AuctionDetailContent({
 
           {/* Seller Info */}
           {auction.seller && !isHost && (
-            <div className="flex items-center gap-4 p-4 border-2 border-slate-200 shadow-[4px_4px_0px_#cbd5e1] bg-white dark:bg-slate-800 dark:border-slate-700">
+            <div className="flex items-center gap-4 p-4 border-2 border-slate-200 shadow-[4px_4px_0px_#cbd5e1] bg-white dark:bg-slate-800 dark:border-slate-700 rounded-xl">
               <UserHoverCard userId={auction.seller.id}>
                 <div className="w-12 h-12 rounded-full bg-slate-200 border-2 border-slate-800 flex items-center justify-center text-xl font-bold shrink-0 text-slate-800 overflow-hidden">
                   {auction.seller.avatarUrl ? (
@@ -286,8 +288,14 @@ function AuctionDetailContent({
                 </div>
               </div>
               <button
-                onClick={() => window.dispatchEvent(new CustomEvent("open-dm", { detail: { targetUserId: auction.seller?.id } }))}
-                className="px-4 py-2 bg-white border-2 border-blue-600 text-blue-600 font-bold flex items-center gap-2 hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_#bfdbfe] hover:bg-blue-600 hover:text-white transition-all cursor-pointer"
+                onClick={() => {
+                  if (!isLoggedIn) {
+                    router.push("/login");
+                  } else {
+                    window.dispatchEvent(new CustomEvent("open-dm", { detail: { targetUserId: auction.seller?.id } }));
+                  }
+                }}
+                className="px-4 py-2 bg-white border-2 border-blue-600 text-blue-600 font-bold flex items-center gap-2 hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_#bfdbfe] hover:bg-blue-600 hover:text-white transition-all cursor-pointer rounded-xl"
               >
                 <span className="material-symbols-outlined text-[20px]">chat</span>
                 Nhắn tin
@@ -297,7 +305,7 @@ function AuctionDetailContent({
 
           {/* Product Details Accordion */}
           <div className="space-y-4 pt-4">
-            <details open className="bg-white dark:bg-slate-800 rounded-none border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#cbd5e1] group">
+            <details open className="bg-white dark:bg-slate-800 rounded-xl border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#cbd5e1] group">
               <summary className="flex items-center justify-between p-5 cursor-pointer list-none outline-none select-none">
                 <span className="flex items-center gap-2 font-bold text-slate-800 dark:text-white uppercase tracking-wide text-sm">
                   <span className="material-symbols-outlined text-primary">info</span>
@@ -310,7 +318,7 @@ function AuctionDetailContent({
               </div>
             </details>
 
-            <details open className="bg-white dark:bg-slate-800 rounded-none border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#cbd5e1] group">
+            <details open className="bg-white dark:bg-slate-800 rounded-xl border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#cbd5e1] group">
               <summary className="flex items-center justify-between p-5 cursor-pointer list-none outline-none select-none">
                 <span className="flex items-center gap-2 font-bold text-slate-800 dark:text-white uppercase tracking-wide text-sm">
                   <span className="material-symbols-outlined text-primary">verified</span>
@@ -416,7 +424,7 @@ function AuctionDetailContent({
             <h2 className="text-xl font-bold text-slate-800 dark:text-white uppercase tracking-wide">Đấu giá tương tự</h2>
             <Link
               href="/live"
-              className="group inline-flex items-center gap-1.5 rounded-none border-2 border-primary bg-white px-3 py-1.5 text-xs font-bold text-primary shadow-[3px_3px_0px_#E2B9A1] transition-all hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#E2B9A1] dark:bg-slate-900 cursor-pointer"
+              className="group inline-flex items-center gap-1.5 rounded-xl border-2 border-primary bg-white px-3 py-1.5 text-xs font-bold text-primary shadow-[3px_3px_0px_#E2B9A1] transition-all hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#E2B9A1] dark:bg-slate-900 cursor-pointer"
             >
               Xem tất cả
               <span className="material-symbols-outlined text-sm group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
@@ -428,7 +436,7 @@ function AuctionDetailContent({
               <Link
                 key={item.id}
                 href={`/auction/${item.id}`}
-                className="group bg-white dark:bg-slate-800/60 rounded-none overflow-hidden border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] hover:-translate-y-1 hover:shadow-[6px_6px_0px_#E2B9A1] transition-all duration-300 flex flex-col"
+                className="group bg-white dark:bg-slate-800/60 rounded-xl overflow-hidden border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] hover:-translate-y-1 hover:shadow-[6px_6px_0px_#E2B9A1] transition-all duration-300 flex flex-col"
               >
                 <div className="relative aspect-[4/3] overflow-hidden bg-slate-100 dark:bg-slate-700 border-b-2 border-slate-200">
                   <Image
@@ -438,14 +446,14 @@ function AuctionDetailContent({
                     fill
                     unoptimized
                   />
-                  <span className="absolute top-2 right-2 bg-red-500/90 backdrop-blur-sm px-2 py-0.5 rounded-none border border-red-600 text-[10px] font-bold text-white flex items-center gap-1 shadow-[2px_2px_0px_#991b1b]">
+                  <span className="absolute top-2 right-2 bg-red-500/90 backdrop-blur-sm px-2 py-0.5 rounded-full border border-red-600 text-[10px] font-bold text-white flex items-center gap-1 shadow-[2px_2px_0px_#991b1b]">
                     <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                    LIVE
+                    Đang diễn ra
                   </span>
                 </div>
                 <div className="p-3 space-y-1.5 flex-1 flex flex-col">
                   <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                    {item.category?.name ?? "Đấu giá"}
+                    {(item.category?.name ?? "Đấu giá").replace(/&/g, "-")}
                   </span>
                   <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 line-clamp-2 leading-snug flex-1">
                     {item.title}

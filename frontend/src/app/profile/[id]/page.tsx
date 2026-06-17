@@ -286,7 +286,14 @@ export default function PublicProfilePage({ params }: { params: Promise<{ id: st
                 {/* Message Button */}
                 <div className="flex items-center gap-3 mt-4">
                   <button
-                    onClick={() => window.dispatchEvent(new CustomEvent("open-dm", { detail: { targetUserId: id } }))}
+                    onClick={() => {
+                      const isLoggedIn = !!authStorage.getToken();
+                      if (!isLoggedIn) {
+                        router.push("/login");
+                      } else {
+                        window.dispatchEvent(new CustomEvent("open-dm", { detail: { targetUserId: id } }));
+                      }
+                    }}
                     className="inline-flex items-center gap-2 px-5 py-2 text-sm font-bold rounded-xl border-2 border-blue-600 bg-white text-blue-600 shadow-[2px_2px_0px_#bfdbfe] hover:scale-105 active:scale-95 transition-all cursor-pointer"
                   >
                     <MessageSquare className="w-4 h-4" />
@@ -338,7 +345,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ id: st
                         <Link
                           key={item.id}
                           href={`/auction/${item.id}`}
-                          className="group bg-white dark:bg-slate-800/60 rounded-none overflow-hidden border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] hover:-translate-y-1 hover:shadow-[6px_6px_0px_#E2B9A1] transition-all duration-300 cursor-pointer block"
+                          className="group bg-white dark:bg-slate-800/60 rounded-xl overflow-hidden border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] hover:-translate-y-1 hover:shadow-[6px_6px_0px_#E2B9A1] transition-all duration-300 cursor-pointer block"
                           style={{ animationDelay: `${idx * 60}ms` }}
                         >
                           {/* Image */}

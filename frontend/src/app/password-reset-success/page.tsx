@@ -60,7 +60,7 @@ export default function PasswordResetSuccessPage() {
             </h1>
             
             <p className="mb-8 text-base text-slate-600 dark:text-slate-400">
-              Mật khẩu của bạn đã được cập nhật. Vui lòng đăng nhập bằng mật khẩu mới để tiếp tục trải nghiệm cùng COCOFLY.
+              Mật khẩu của bạn đã được cập nhật. Vui lòng đăng nhập bằng mật khẩu mới để tiếp tục trải nghiệm cùng CocoFly.
             </p>
 
             <div className="w-full space-y-4 border-t border-slate-200 pt-6 dark:border-slate-800">

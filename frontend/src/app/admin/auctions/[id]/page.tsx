@@ -250,7 +250,7 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
             {/* Information */}
             <div className="flex-1 space-y-4">
               <div>
-                <span className="text-[10px] font-extrabold bg-[#8f5c38]/10 text-[#8f5c38] px-2 py-0.5 rounded-md uppercase tracking-wider">{auction.item.category.name}</span>
+                <span className="text-[10px] font-extrabold bg-[#8f5c38]/10 text-[#8f5c38] px-2 py-0.5 rounded-md uppercase tracking-wider">{auction.item.category.name.replace(/&/g, "-")}</span>
                 <h3 className="text-lg font-bold text-slate-900 leading-snug mt-1.5">{auction.item.title}</h3>
                 <p className="text-xs text-slate-400 mt-1 font-semibold">Tình trạng: <span className="text-slate-700 capitalize">{auction.item.condition}</span> · Thương hiệu: <span className="text-slate-700">{auction.item.brand || "—"}</span></p>
               </div>

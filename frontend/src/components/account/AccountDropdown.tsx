@@ -7,11 +7,13 @@ import { useRouter } from "next/navigation";
 import {
   Star,
   Heart,
-  ArrowUpCircle,
+  Crown,
   Settings,
   LogOut,
   Gavel,
   LayoutDashboard,
+  Activity,
+  ShieldCheck,
 } from "lucide-react";
 import { authApi, userApi } from "@/lib/api";
 import { authStorage } from "@/lib/auth-storage";
@@ -36,33 +38,7 @@ const MOCK_COUNTS = {
   orders: 1,
 };
 
-// ─── Role Badge Component ────────────────────────────────────────────────────
-function RoleBadge({ role }: { role: UserRole }) {
-  /** Hiển thị label role hiện tại với màu phân biệt */
-  const config = {
-    buyer: {
-      label: "BUYER",
-      className: "bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/20",
-    },
-    seller: {
-      label: "SELLER",
-      className: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
-    },
-    admin: {
-      label: "ADMIN",
-      className: "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/20",
-    },
-  };
-  const c = config[role] || config.buyer;
 
-  return (
-    <span
-      className={`inline-flex items-center px-2 py-0.5 text-[10px] font-bold tracking-wider rounded-md border ${c.className}`}
-    >
-      {c.label}
-    </span>
-  );
-}
 
 // ─── Menu Item Component ─────────────────────────────────────────────────────
 interface MenuItemProps {
@@ -81,7 +57,7 @@ function MenuItem({ href, icon, label, badge, highlight, onClick }: MenuItemProp
       onClick={onClick}
       className={`group flex items-center gap-3 px-4 py-2.5 text-sm transition-colors duration-150
         ${highlight
-          ? "text-foreground/80 hover:bg-primary/5 hover:text-primary dark:hover:bg-primary/10"
+          ? "text-foreground/80 hover:bg-primary/5 hover:text-foreground dark:hover:bg-primary/10"
           : "text-foreground/80 hover:bg-muted dark:hover:bg-muted/50"
         }`}
     >
@@ -106,10 +82,11 @@ function MenuSeparator() {
 }
 
 // ─── Section Label ───────────────────────────────────────────────────────────
-function MenuSectionLabel({ children }: { children: React.ReactNode }) {
+function MenuSectionLabel({ icon, children }: { icon?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="px-4 pt-2 pb-1">
-      <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+    <div className="px-4 pt-2 pb-1 flex items-center gap-1.5 text-muted-foreground/60">
+      {icon && <span className="flex-shrink-0 w-3.5 h-3.5 flex items-center justify-center">{icon}</span>}
+      <span className="text-[10px] font-bold uppercase tracking-widest">
         {children}
       </span>
     </div>
@@ -290,7 +267,6 @@ export default function AccountDropdown() {
                     <p className="text-sm font-semibold text-foreground truncate">
                       {user.fullName || "Người dùng"}
                     </p>
-                    <RoleBadge role={role} />
                   </div>
 
                   {/* Reputation Score */}
@@ -313,21 +289,21 @@ export default function AccountDropdown() {
             <MenuSectionLabel>Hoạt động</MenuSectionLabel>
             <MenuItem
               href="/won-auctions"
-              icon={<Gavel className="w-4 h-4" />}
+              icon={<img src="https://img.icons8.com/color/96/law.png" className="w-4 h-4" alt="gavel" />}
               label="Sản phẩm đã đấu giá"
               onClick={closeMenu}
             />
             {role === "seller" && (
               <MenuItem
                 href="/manage-auctions"
-                icon={<LayoutDashboard className="w-4 h-4" />}
+                icon={<img src="https://img.icons8.com/color/96/dashboard.png" className="w-4 h-4" alt="dashboard" />}
                 label="Quản lý đấu giá"
                 onClick={closeMenu}
               />
             )}
             <MenuItem
               href="/watchlist"
-              icon={<Heart className="w-4 h-4" />}
+              icon={<img src="https://img.icons8.com/color/96/hearts.png" className="w-4 h-4" alt="favorite" />}
               label="Đấu giá yêu thích"
               onClick={closeMenu}
             />
@@ -339,7 +315,7 @@ export default function AccountDropdown() {
                 <MenuSectionLabel>Xác thực</MenuSectionLabel>
                 <MenuItem
                   href="/upgrade"
-                  icon={<ArrowUpCircle className="w-4 h-4" />}
+                  icon={<img src="https://img.icons8.com/color/96/crown.png" className="w-4 h-4" alt="upgrade" />}
                   label="Nâng cấp tài khoản"
                   highlight
                   onClick={closeMenu}
@@ -353,7 +329,7 @@ export default function AccountDropdown() {
             <MenuSectionLabel>Cài đặt</MenuSectionLabel>
             <MenuItem
               href="/settings"
-              icon={<Settings className="w-4 h-4" />}
+              icon={<img src="https://img.icons8.com/color/96/settings.png" className="w-4 h-4" alt="settings" />}
               label="Cài đặt & Bảo mật"
               onClick={closeMenu}
             />
@@ -365,7 +341,7 @@ export default function AccountDropdown() {
               onClick={handleLogout}
               className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-destructive hover:bg-destructive/5 transition-colors"
             >
-              <LogOut className="w-4 h-4" />
+              <img src="https://img.icons8.com/color/96/exit.png" className="w-4 h-4" alt="logout" />
               <span>Đăng xuất</span>
             </button>
 

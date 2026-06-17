@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { useLiveChat } from "@/lib/hooks/useLiveChat";
 import type { BidEntry } from "@/lib/types/auction";
 import BidHistoryList from "./BidHistoryList";
 import UserHoverCard from "@/components/shared/UserHoverCard";
+import { MessageSquare, History } from "lucide-react";
 
 function timeAgo(iso: string) {
   const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
@@ -66,7 +67,7 @@ export default function LiveChatPanel({
   const chatMessages = messages.filter(msg => msg.type !== "bid_alert");
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-none border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] flex flex-col h-[550px]">
+    <div className="bg-white dark:bg-slate-800 rounded-xl border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] flex flex-col h-[550px] overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b-2 border-slate-200 dark:border-slate-700 flex items-center justify-between shrink-0 bg-slate-50 dark:bg-slate-800">
         <div className="flex items-center gap-4">
@@ -76,7 +77,7 @@ export default function LiveChatPanel({
               activeTab === "chat" ? "text-primary" : "text-slate-400 hover:text-slate-600"
             }`}
           >
-            <span className="material-symbols-outlined">forum</span>
+            <MessageSquare className="w-4 h-4" />
             Live Chat
           </button>
           <button
@@ -85,7 +86,7 @@ export default function LiveChatPanel({
               activeTab === "bids" ? "text-primary" : "text-slate-400 hover:text-slate-600"
             }`}
           >
-            <span className="material-symbols-outlined">history</span>
+            <History className="w-4 h-4" />
             Lịch sử ({totalBids})
           </button>
         </div>
@@ -97,10 +98,7 @@ export default function LiveChatPanel({
                 <span className="material-symbols-outlined text-base">visibility</span>
                 {viewerCount}
               </div>
-              <div className="flex items-center gap-1.5 bg-green-50 text-green-600 text-[10px] font-bold px-2.5 py-1 border border-green-200 rounded-full">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                LIVE
-              </div>
+
             </>
           )}
         </div>
@@ -218,7 +216,7 @@ export default function LiveChatPanel({
               </div>
             ))}
             
-            {hasMore && (
+            {hasMore && chatMessages.length > 0 && (
               <button
                 onClick={loadMore}
                 disabled={isLoadingHistory}
@@ -305,7 +303,7 @@ export default function LiveChatPanel({
                   }
                 }}
                 maxLength={500}
-                className="flex-1 max-h-[120px] py-2 px-3 bg-white border-none rounded-none text-sm outline-none placeholder:text-slate-400 focus:ring-0 shadow-sm resize-none hide-scrollbar overflow-y-auto leading-normal"
+                className="flex-1 max-h-[120px] py-2 px-3 bg-white border-none rounded-xl text-sm outline-none placeholder:text-slate-400 focus:ring-0 shadow-sm resize-none hide-scrollbar overflow-y-auto leading-normal"
               />
               <button 
                 onClick={(e) => {

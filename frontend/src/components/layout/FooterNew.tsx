@@ -5,7 +5,7 @@ const FOOTER_LINKS = {
   about: {
     title: "Về chúng tôi",
     links: [
-      { label: "Giới thiệu COCOFLY", href: "/about" },
+      { label: "Giới thiệu CocoFly", href: "/about" },
       { label: "Điều khoản sử dụng", href: "/terms" },
       { label: "Chính sách bảo mật", href: "/privacy" },
       { label: "Quy chế hoạt động", href: "/regulations" },
@@ -32,13 +32,13 @@ export default function FooterNew() {
           <div className="sm:col-span-2 lg:col-span-1">
             <Link href="/" className="flex items-center gap-2 mb-4">
               <Image
-                src="/logo.jpeg"
-                alt="COCOFLY Logo"
+                src="/logo.png"
+                alt="CocoFly Logo"
                 width={32}
                 height={32}
                 className="rounded-lg"
               />
-              <span className="brand-text text-2xl text-white">COCOFLY</span>
+              <span className="brand-text text-2xl text-white">CocoFly</span>
             </Link>
             <p className="text-slate-400 text-sm leading-relaxed mb-4">
               Nền tảng đấu giá trực tuyến hàng đầu Việt Nam. Mua bán sản phẩm
@@ -71,12 +71,11 @@ export default function FooterNew() {
             <ul className="space-y-2.5">
               {FOOTER_LINKS.about.links.map((link) => (
                 <li key={link.label}>
-                  <Link
-                    href={link.href}
-                    className="text-sm text-slate-400 hover:text-white transition-colors"
+                  <span
+                    className="text-sm text-slate-400 hover:text-white transition-colors cursor-pointer select-none"
                   >
                     {link.label}
-                  </Link>
+                  </span>
                 </li>
               ))}
             </ul>
@@ -90,12 +89,11 @@ export default function FooterNew() {
             <ul className="space-y-2.5">
               {FOOTER_LINKS.support.links.map((link) => (
                 <li key={link.label}>
-                  <Link
-                    href={link.href}
-                    className="text-sm text-slate-400 hover:text-white transition-colors"
+                  <span
+                    className="text-sm text-slate-400 hover:text-white transition-colors cursor-pointer select-none"
                   >
                     {link.label}
-                  </Link>
+                  </span>
                 </li>
               ))}
             </ul>
@@ -111,18 +109,18 @@ export default function FooterNew() {
                 <span className="material-symbols-outlined text-primary text-lg mt-0.5">mail</span>
                 <div>
                   <p className="text-xs text-slate-500">Email</p>
-                  <a href="mailto:support@cocofly.vn" className="text-sm text-slate-300 hover:text-white transition-colors">
+                  <span className="text-sm text-slate-300 hover:text-white transition-colors cursor-pointer select-none">
                     support@cocofly.vn
-                  </a>
+                  </span>
                 </div>
               </li>
               <li className="flex items-start gap-2.5">
                 <span className="material-symbols-outlined text-primary text-lg mt-0.5">call</span>
                 <div>
                   <p className="text-xs text-slate-500">Hotline</p>
-                  <a href="tel:1900xxxx" className="text-sm text-slate-300 hover:text-white transition-colors">
+                  <span className="text-sm text-slate-300 hover:text-white transition-colors cursor-pointer select-none">
                     1900 xxxx
-                  </a>
+                  </span>
                 </div>
               </li>
               <li className="flex items-start gap-2.5">
@@ -141,7 +139,7 @@ export default function FooterNew() {
       <div className="border-t border-slate-800">
         <div className="max-w-[1400px] mx-auto px-4 lg:px-6 py-4">
           <p className="text-center text-xs text-slate-500">
-            © {new Date().getFullYear()} COCOFLY. Tất cả quyền được bảo lưu.
+            © {new Date().getFullYear()} CocoFly. Tất cả quyền được bảo lưu.
           </p>
         </div>
       </div>

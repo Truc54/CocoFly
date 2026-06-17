@@ -206,7 +206,7 @@ export default function WatchlistPage() {
                           <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                             {item.category && (
                               <span className="text-xs font-medium text-slate-400">
-                                {item.category.name}
+                                {item.category.name.replace(/&/g, "-")}
                               </span>
                             )}
                             <span className="flex items-center gap-1 text-xs font-medium text-slate-500">

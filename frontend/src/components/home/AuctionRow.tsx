@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState, useMemo } from "react";
-import { Clock, Eye, ArrowRight } from "lucide-react";
+import { Clock, ArrowRight } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -83,7 +83,7 @@ export function AuctionCard({ auction, variant, countdown, index = 0 }: AuctionC
   return (
     <Link
       href={`/auction/${auction.id}`}
-      className="group bg-white dark:bg-slate-800/60 rounded-none overflow-hidden border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] hover:-translate-y-1 hover:shadow-[6px_6px_0px_#E2B9A1] transition-all duration-300"
+      className="group bg-white dark:bg-slate-800/60 rounded-xl overflow-hidden border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] hover:-translate-y-1 hover:shadow-[6px_6px_0px_#E2B9A1] transition-all duration-300"
       style={{ animationDelay: `${index * 60}ms` }}
     >
       {/* Image */}
@@ -107,19 +107,11 @@ export function AuctionCard({ auction, variant, countdown, index = 0 }: AuctionC
         {isLive ? (
           <span className="absolute top-2 right-2 bg-red-500/90 backdrop-blur-sm px-2 py-0.5 rounded-full text-[10px] font-bold text-white flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-            LIVE
+            Đang diễn ra
           </span>
         ) : (
           <span className="absolute top-2 right-2 bg-blue-500/90 backdrop-blur-sm px-2 py-0.5 rounded-full text-[10px] font-bold text-white">
             Sắp diễn ra
-          </span>
-        )}
-
-        {/* Bids/Watchers */}
-        {isLive && auction.totalWatchers > 0 && (
-          <span className="absolute top-2 left-2 bg-white/90 dark:bg-slate-900/80 backdrop-blur-sm px-2 py-0.5 rounded-full text-[10px] font-bold text-orange-600 flex items-center gap-1">
-            <Eye className="w-3 h-3" />
-            {auction.totalWatchers} theo dõi
           </span>
         )}
       </div>
@@ -129,7 +121,7 @@ export function AuctionCard({ auction, variant, countdown, index = 0 }: AuctionC
         {/* Category */}
         {auction.category && (
           <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-            {auction.category.name}
+            {auction.category.name.replace(/&/g, "-")}
           </span>
         )}
 
@@ -225,7 +217,7 @@ export default function AuctionRow({
         </div>
         <Link
           href={viewAllHref}
-          className="group inline-flex items-center gap-1.5 rounded-none border-2 border-primary-main bg-white px-3 py-1.5 text-xs font-bold text-primary-main shadow-[3px_3px_0px_#E2B9A1] transition-all hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#E2B9A1] dark:bg-slate-900"
+          className="group inline-flex items-center gap-1.5 rounded-xl border-2 border-primary-main bg-white px-3 py-1.5 text-xs font-bold text-primary-main shadow-[3px_3px_0px_#E2B9A1] transition-all hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#E2B9A1] dark:bg-slate-900"
         >
           Xem tất cả
           <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
@@ -238,7 +230,7 @@ export default function AuctionRow({
           {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
-              className="bg-white dark:bg-slate-800 rounded-none overflow-hidden border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] animate-pulse"
+              className="bg-white dark:bg-slate-800 rounded-xl overflow-hidden border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] animate-pulse"
             >
               <div className="aspect-[4/3] bg-slate-200 dark:bg-slate-700" />
               <div className="p-3 space-y-2">

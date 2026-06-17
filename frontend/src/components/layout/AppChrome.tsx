@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 
 import HeaderNew from "@/components/layout/HeaderNew";
@@ -26,6 +27,10 @@ export default function AppChrome({ children }: AppChromeProps) {
   const isAuthPage = AUTH_PATHS.has(pathname);
   const isAdminPage = pathname.startsWith("/admin");
   const hideChrome = isAuthPage || isAdminPage;
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
 
   return (
     <>

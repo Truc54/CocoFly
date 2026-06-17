@@ -97,6 +97,10 @@ export default function BiddingPanel({
   useEffect(() => setShowBuyoutModal(false), [currentPrice]);
 
   const handleBidClick = () => {
+    if (!isLoggedIn) {
+      router.push("/login");
+      return;
+    }
     onClearError();
     setLocalError(null);
 
@@ -142,6 +146,10 @@ export default function BiddingPanel({
   };
 
   const handleBuyout = () => {
+    if (!isLoggedIn) {
+      router.push("/login");
+      return;
+    }
     setShowBuyoutModal(true);
   };
 
@@ -167,7 +175,7 @@ export default function BiddingPanel({
   const displayError = error || localError;
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-none border-2 border-slate-200 dark:border-slate-700 p-6 shadow-[4px_4px_0px_#E2B9A1] relative">
+    <div className="bg-white dark:bg-slate-800 rounded-xl border-2 border-slate-200 dark:border-slate-700 p-6 shadow-[4px_4px_0px_#E2B9A1] relative">
       {/* Full-screen Bid Confirmation Modal */}
       {showBidConfirm && pendingBid && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in" onClick={cancelBid}>
@@ -227,12 +235,12 @@ export default function BiddingPanel({
 
         <div className="mt-4 flex items-center justify-between border-t-2 border-slate-100 dark:border-slate-700 pt-4">
           <div>
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">
-              <span className="material-symbols-outlined text-[16px]">schedule</span>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+              <img src="https://img.icons8.com/color/96/alarm-clock.png" className="w-4 h-4" alt="schedule" />
               {status === "scheduled" && startTime ? (
-                <>Bắt đầu lúc {formatEndDate(startTime)}</>
+                <>{formatEndDate(startTime)}</>
               ) : (
-                <>Kết thúc lúc {formatEndDate(endTime)}</>
+                <>{formatEndDate(endTime)}</>
               )}
             </p>
             {status !== "scheduled" && isExtended && (
@@ -247,7 +255,7 @@ export default function BiddingPanel({
       </div>
 
       {/* Bid Input */}
-      {isActive && isLoggedIn && !isHost && (
+      {isActive && !isHost && (
         <div className="mb-4">
           <div className="relative mb-3">
             <input
@@ -258,7 +266,7 @@ export default function BiddingPanel({
               onKeyDown={(e) => e.key === "Enter" && !isBidDisabled && handleBidClick()}
               disabled={isBidDisabled}
               aria-label="Nhập giá đặt"
-              className={`w-full pl-4 pr-12 py-3 bg-white border-2 rounded-none text-base font-bold focus:ring-0 outline-none transition-all placeholder:text-slate-400 placeholder:font-normal shadow-[inset_2px_2px_0px_#f1f5f9] disabled:opacity-50 disabled:bg-slate-50 text-slate-800 ${
+              className={`w-full pl-4 pr-12 py-3 bg-white border-2 rounded-xl text-base font-bold focus:ring-0 outline-none transition-all placeholder:text-slate-400 placeholder:font-normal shadow-[inset_2px_2px_0px_#f1f5f9] disabled:opacity-50 disabled:bg-slate-50 text-slate-800 ${
                 displayError
                   ? "border-red-400"
                   : "border-slate-300"
@@ -286,7 +294,7 @@ export default function BiddingPanel({
             <div className="relative group flex items-center">
               <span className="material-symbols-outlined text-[16px] text-slate-400 hover:text-[#0066FF] cursor-pointer transition-colors">info</span>
               {/* Tooltip */}
-              <div className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 w-64 p-3 bg-slate-800 text-white text-xs leading-relaxed font-medium rounded-none shadow-[4px_4px_0px_#cbd5e1] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-30 pointer-events-none">
+              <div className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 w-64 p-3 bg-slate-800 text-white text-xs leading-relaxed font-medium rounded-lg shadow-[4px_4px_0px_#cbd5e1] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-30 pointer-events-none">
                 Hệ thống sẽ tự động đặt giá thay bạn từng bước một, vừa đủ để dẫn đầu, cho đến khi đạt mức giá tối đa bạn nhập vào. Không ai khác biết giới hạn thật của bạn.
                 <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
               </div>
@@ -301,19 +309,13 @@ export default function BiddingPanel({
           status === "active" ? (
             <div className="space-y-2 border-t-2 border-slate-100 dark:border-slate-700 pt-4 mt-2">
               <div className="flex justify-between items-center py-1.5">
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary text-[20px]">person</span>
-                  <span className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400">Người dẫn đầu</span>
-                </div>
+                <span className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400">Người dẫn đầu</span>
                 <span className="text-sm sm:text-base font-bold text-slate-800 dark:text-white truncate max-w-[200px]" title={leaderName || "Chưa có"}>
                   {leaderName || "Chưa có"}
                 </span>
               </div>
               <div className="flex justify-between items-center py-1.5">
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary text-[20px]">gavel</span>
-                  <span className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400">Số lượt đặt</span>
-                </div>
+                <span className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400">Số lượt đặt</span>
                 <span className="text-sm sm:text-base font-bold text-slate-800 dark:text-white">
                   {totalBids ?? 0} lượt
                 </span>
@@ -344,7 +346,7 @@ export default function BiddingPanel({
               ĐÃ KẾT THÚC
             </button>
           )
-        ) : isActive && isLoggedIn ? (
+        ) : isActive ? (
           <>
             {/* Info Texts above button */}
             {displayError && (
@@ -376,8 +378,7 @@ export default function BiddingPanel({
               disabled={isBidDisabled}
               className="w-full py-3 bg-[#0066FF] text-white font-bold text-base rounded-full border-2 border-[#0066FF] shadow-[4px_4px_0px_#bfdbfe] hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_#bfdbfe] active:translate-y-0 active:shadow-[2px_2px_0px_#bfdbfe] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-default disabled:hover:translate-y-0 disabled:hover:shadow-[4px_4px_0px_#bfdbfe]"
             >
-              <span className="material-symbols-outlined text-[20px]">{isBidDisabled ? "lock" : "gavel"}</span>
-              {isBidDisabled ? "ĐANG DẪN ĐẦU" : isProxy ? "KÍCH HOẠT PROXY BIDDING" : "ĐẶT GIÁ NGAY"}
+              {isBidDisabled ? "ĐANG DẪN ĐẦU" : isProxy ? "KÍCH HOẠT ĐẶT GIÁ TỰ ĐỘNG" : "ĐẶT GIÁ NGAY"}
             </button>
 
             <div className="flex gap-3">
@@ -386,12 +387,18 @@ export default function BiddingPanel({
                   onClick={handleBuyout}
                   className="flex-1 py-3 font-bold text-sm sm:text-base rounded-full border-2 bg-orange-500 text-white border-orange-500 shadow-[3px_3px_0px_#fed7aa] hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#fed7aa] active:translate-y-0 active:shadow-[1px_1px_0px_#fed7aa] transition-all flex items-center justify-center gap-1 cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-[18px]">shopping_cart</span>
                   MUA NGAY
                 </button>
               )}
               <button 
-                onClick={(e) => { e.stopPropagation(); onToggleWatch(); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!isLoggedIn) {
+                    router.push("/login");
+                  } else {
+                    onToggleWatch();
+                  }
+                }}
                 disabled={watchLoading}
                 className={`${buyoutPrice ? "flex-1" : "w-full"} py-3 font-bold text-sm sm:text-base rounded-full border-2 shadow-[3px_3px_0px_#cbd5e1] hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#cbd5e1] active:translate-y-0 active:shadow-[1px_1px_0px_#cbd5e1] transition-all flex items-center justify-center gap-1 cursor-pointer ${
                   isWatching
@@ -419,7 +426,14 @@ export default function BiddingPanel({
             </button>
             <div className="flex gap-3">
               <button 
-                onClick={(e) => { e.stopPropagation(); onToggleWatch(); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!isLoggedIn) {
+                    router.push("/login");
+                  } else {
+                    onToggleWatch();
+                  }
+                }}
                 disabled={watchLoading}
                 className={`w-full py-3 font-bold text-sm sm:text-base rounded-full border-2 shadow-[3px_3px_0px_#cbd5e1] hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#cbd5e1] active:translate-y-0 active:shadow-[1px_1px_0px_#cbd5e1] transition-all flex items-center justify-center gap-1 cursor-pointer ${
                   isWatching

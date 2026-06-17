@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Star, Calendar, MessageSquare, Loader2 } from "lucide-react";
@@ -25,6 +26,7 @@ interface PublicProfile {
 }
 
 export default function UserHoverCard({ userId, children }: UserHoverCardProps) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState<PublicProfile | null>(null);
@@ -150,7 +152,12 @@ export default function UserHoverCard({ userId, children }: UserHoverCardProps) 
                   type="button"
                   onClick={() => {
                     setOpen(false);
-                    window.dispatchEvent(new CustomEvent("open-dm", { detail: { targetUserId: userId } }));
+                    const isLoggedIn = !!authStorage.getToken();
+                    if (!isLoggedIn) {
+                      router.push("/login");
+                    } else {
+                      window.dispatchEvent(new CustomEvent("open-dm", { detail: { targetUserId: userId } }));
+                    }
                   }}
                   className="flex-1 bg-white hover:bg-slate-50 dark:bg-slate-700 dark:hover:bg-slate-600 text-blue-600 dark:text-blue-300 font-bold py-2 border-2 border-blue-600 dark:border-blue-400 shadow-[2px_2px_0px_#bfdbfe] hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_#bfdbfe] transition-all rounded-xl text-center text-xs flex items-center justify-center gap-1 cursor-pointer"
                 >

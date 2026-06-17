@@ -109,7 +109,7 @@ export default function ResetVerifyOtpPage() {
           <div className="space-y-3 text-center">
             <div className="mb-2 flex justify-center">
               <div className="inline-flex size-16 items-center justify-center rounded-2xl bg-primary/10 shadow-[4px_4px_0px_#E2B9A1]">
-                <Image src="/logo.jpeg" alt="COCOFLY Logo" width={34} height={34} className="rounded-md" />
+                <Image src="/logo.png" alt="CocoFly Logo" width={34} height={34} className="rounded-md" />
               </div>
             </div>
             <h1 className={`${playfairDisplay.className} text-4xl font-extrabold text-slate-900 dark:text-white`}>
@@ -162,7 +162,7 @@ export default function ResetVerifyOtpPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
               <Button
                 type="submit"
-                className="group relative h-14 w-full overflow-hidden rounded-none border-2 border-primary-main bg-primary-main text-lg font-bold text-white shadow-[4px_4px_0px_#E2B9A1] transition-all hover:-translate-y-1 hover:shadow-[6px_6px_0px_#E2B9A1] disabled:opacity-70 disabled:hover:translate-y-0 disabled:hover:shadow-[4px_4px_0px_#E2B9A1] sm:w-64"
+                className="group relative h-14 w-full overflow-hidden rounded-xl border-2 border-primary-main bg-primary-main text-lg font-bold text-white shadow-[4px_4px_0px_#E2B9A1] transition-all hover:-translate-y-1 hover:shadow-[6px_6px_0px_#E2B9A1] disabled:opacity-70 disabled:hover:translate-y-0 disabled:hover:shadow-[4px_4px_0px_#E2B9A1] sm:w-64"
                 disabled={isSubmitting || otpValue.length !== 6}
               >
                 {isSubmitting ? "Đang xử lý..." : (
@@ -175,7 +175,7 @@ export default function ResetVerifyOtpPage() {
               <Button
                 type="button"
                 onClick={() => router.push("/forgot-password")}
-                className="h-14 w-full rounded-none border-2 border-slate-300 bg-white text-lg font-bold text-slate-700 shadow-[4px_4px_0px_#cbd5e1] transition-all hover:-translate-y-1 hover:bg-slate-50 hover:shadow-[6px_6px_0px_#cbd5e1] dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300 dark:shadow-[4px_4px_0px_#334155] sm:w-36"
+                className="h-14 w-full rounded-xl border-2 border-slate-300 bg-white text-lg font-bold text-slate-700 shadow-[4px_4px_0px_#cbd5e1] transition-all hover:-translate-y-1 hover:bg-slate-50 hover:shadow-[6px_6px_0px_#cbd5e1] dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300 dark:shadow-[4px_4px_0px_#334155] sm:w-36"
               >
                 Quay lại
               </Button>

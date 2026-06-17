@@ -152,7 +152,7 @@ export default function UpgradePage() {
               <div className="space-y-3 text-center">
                 <div className="mb-2 flex justify-center">
                   <div className="inline-flex size-16 items-center justify-center rounded-2xl bg-primary/10 shadow-[4px_4px_0px_#E2B9A1]">
-                    <Image src="/logo.jpeg" alt="COCOFLY Logo" width={34} height={34} className="rounded-md" />
+                    <Image src="/logo.png" alt="CocoFly Logo" width={34} height={34} className="rounded-md" />
                   </div>
                 </div>
                 <h1 className={`${playfairDisplay.className} text-4xl font-extrabold text-slate-900 dark:text-white`}>
@@ -175,7 +175,7 @@ export default function UpgradePage() {
                     Số điện thoại (*)
                   </label>
                   <div className="flex gap-2">
-                    <span className="flex border-2 border-slate-300 shadow-[4px_4px_0px_#cbd5e1] items-center justify-center px-4 bg-slate-100 text-slate-600 font-bold dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:shadow-[4px_4px_0px_#334155]">
+                    <span className="flex border-2 border-slate-300 shadow-[4px_4px_0px_#cbd5e1] items-center justify-center px-4 bg-slate-100 text-slate-600 font-bold dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:shadow-[4px_4px_0px_#334155] rounded-l-xl">
                       +84
                     </span>
                     <input
@@ -185,7 +185,7 @@ export default function UpgradePage() {
                       placeholder="909 123 456"
                       maxLength={10}
                       required
-                      className="h-14 w-full flex-1 border-2 border-slate-300 bg-white px-4 text-lg font-medium text-slate-900 shadow-[4px_4px_0px_#cbd5e1] outline-none transition-all focus:-translate-y-1 focus:border-primary-main focus:shadow-[6px_6px_0px_#E2B9A1] focus:ring-0 dark:bg-slate-900 dark:border-slate-700 dark:text-white dark:shadow-[4px_4px_0px_#334155] dark:focus:border-primary-main"
+                      className="h-14 w-full flex-1 border-2 border-slate-300 bg-white px-4 text-lg font-medium text-slate-900 shadow-[4px_4px_0px_#cbd5e1] outline-none transition-all focus:-translate-y-1 focus:border-primary-main focus:shadow-[6px_6px_0px_#E2B9A1] focus:ring-0 dark:bg-slate-900 dark:border-slate-700 dark:text-white dark:shadow-[4px_4px_0px_#334155] dark:focus:border-primary-main rounded-r-xl"
                     />
                   </div>
                 </div>
@@ -193,20 +193,19 @@ export default function UpgradePage() {
                 <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
                   <Button
                     type="submit"
-                    className="group relative h-14 w-full overflow-hidden rounded-none border-2 border-primary-main bg-primary-main text-lg font-bold text-white shadow-[4px_4px_0px_#E2B9A1] transition-all hover:-translate-y-1 hover:shadow-[6px_6px_0px_#E2B9A1] disabled:opacity-70 disabled:hover:translate-y-0 disabled:hover:shadow-[4px_4px_0px_#E2B9A1] sm:w-64"
+                    className="group relative h-14 w-full overflow-hidden rounded-xl border-2 border-primary-main bg-primary-main text-lg font-bold text-white shadow-[4px_4px_0px_#E2B9A1] transition-all hover:-translate-y-1 hover:shadow-[6px_6px_0px_#E2B9A1] disabled:opacity-70 disabled:hover:translate-y-0 disabled:hover:shadow-[4px_4px_0px_#E2B9A1] sm:w-64"
                     disabled={isSubmitting || phone.length < 9}
                   >
                     {isSubmitting ? "Đang xử lý..." : (
                       <span className="relative z-10 flex items-center justify-center gap-2">
                         Gửi mã OTP
-                        <ArrowRight className="size-5 transition-transform group-hover:translate-x-1" />
                       </span>
                     )}
                   </Button>
                   <Button
                     type="button"
                     onClick={() => router.back()}
-                    className="h-14 w-full rounded-none border-2 border-slate-300 bg-white text-lg font-bold text-slate-700 shadow-[4px_4px_0px_#cbd5e1] transition-all hover:-translate-y-1 hover:bg-slate-50 hover:shadow-[6px_6px_0px_#cbd5e1] dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300 dark:shadow-[4px_4px_0px_#334155] sm:w-36"
+                    className="h-14 w-full rounded-xl border-2 border-slate-300 bg-white text-lg font-bold text-slate-700 shadow-[4px_4px_0px_#cbd5e1] transition-all hover:-translate-y-1 hover:bg-slate-50 hover:shadow-[6px_6px_0px_#cbd5e1] dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300 dark:shadow-[4px_4px_0px_#334155] sm:w-36"
                   >
                     Hủy
                   </Button>
@@ -221,7 +220,7 @@ export default function UpgradePage() {
               <div className="space-y-3 text-center">
                 <div className="mb-2 flex justify-center">
                   <div className="inline-flex size-16 items-center justify-center rounded-2xl bg-primary/10 shadow-[4px_4px_0px_#E2B9A1]">
-                    <Image src="/logo.jpeg" alt="COCOFLY Logo" width={34} height={34} className="rounded-md" />
+                    <Image src="/logo.png" alt="CocoFly Logo" width={34} height={34} className="rounded-md" />
                   </div>
                 </div>
                 <h1 className={`${playfairDisplay.className} text-4xl font-extrabold text-slate-900 dark:text-white`}>
@@ -273,7 +272,7 @@ export default function UpgradePage() {
                 <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
                   <Button
                     type="submit"
-                    className="group relative h-14 w-full overflow-hidden rounded-none border-2 border-primary-main bg-primary-main text-lg font-bold text-white shadow-[4px_4px_0px_#E2B9A1] transition-all hover:-translate-y-1 hover:shadow-[6px_6px_0px_#E2B9A1] disabled:opacity-70 disabled:hover:translate-y-0 disabled:hover:shadow-[4px_4px_0px_#E2B9A1] sm:w-64"
+                    className="group relative h-14 w-full overflow-hidden rounded-xl border-2 border-primary-main bg-primary-main text-lg font-bold text-white shadow-[4px_4px_0px_#E2B9A1] transition-all hover:-translate-y-1 hover:shadow-[6px_6px_0px_#E2B9A1] disabled:opacity-70 disabled:hover:translate-y-0 disabled:hover:shadow-[4px_4px_0px_#E2B9A1] sm:w-64"
                     disabled={isSubmitting || otpValue.length !== 6}
                   >
                     {isSubmitting ? "Đang xử lý..." : (
@@ -286,7 +285,7 @@ export default function UpgradePage() {
                   <Button
                     type="button"
                     onClick={() => { setStep(1); setOtpValue(""); }}
-                    className="h-14 w-full rounded-none border-2 border-slate-300 bg-white text-lg font-bold text-slate-700 shadow-[4px_4px_0px_#cbd5e1] transition-all hover:-translate-y-1 hover:bg-slate-50 hover:shadow-[6px_6px_0px_#cbd5e1] dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300 dark:shadow-[4px_4px_0px_#334155] sm:w-36"
+                    className="h-14 w-full rounded-xl border-2 border-slate-300 bg-white text-lg font-bold text-slate-700 shadow-[4px_4px_0px_#cbd5e1] transition-all hover:-translate-y-1 hover:bg-slate-50 hover:shadow-[6px_6px_0px_#cbd5e1] dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300 dark:shadow-[4px_4px_0px_#334155] sm:w-36"
                   >
                     Đổi SĐT
                   </Button>
@@ -317,13 +316,13 @@ export default function UpgradePage() {
               <div className="flex flex-col gap-4 mt-8 pt-4">
                 <Button
                   onClick={() => router.push("/create-auction")}
-                  className="group relative h-14 w-full overflow-hidden rounded-none border-2 border-primary-main bg-primary-main text-lg font-bold text-white shadow-[4px_4px_0px_#E2B9A1] transition-all hover:-translate-y-1 hover:shadow-[6px_6px_0px_#E2B9A1]"
+                  className="group relative h-14 w-full overflow-hidden rounded-xl border-2 border-primary-main bg-primary-main text-lg font-bold text-white shadow-[4px_4px_0px_#E2B9A1] transition-all hover:-translate-y-1 hover:shadow-[6px_6px_0px_#E2B9A1]"
                 >
                   <span className="relative z-10">Tạo phiên đấu giá đầu tiên</span>
                 </Button>
                 <Button
                   onClick={() => router.push("/")}
-                  className="h-14 w-full rounded-none border-2 border-slate-300 bg-white text-lg font-bold text-slate-700 shadow-[4px_4px_0px_#cbd5e1] transition-all hover:-translate-y-1 hover:bg-slate-50 hover:shadow-[6px_6px_0px_#cbd5e1] dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300 dark:shadow-[4px_4px_0px_#334155]"
+                  className="h-14 w-full rounded-xl border-2 border-slate-300 bg-white text-lg font-bold text-slate-700 shadow-[4px_4px_0px_#cbd5e1] transition-all hover:-translate-y-1 hover:bg-slate-50 hover:shadow-[6px_6px_0px_#cbd5e1] dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300 dark:shadow-[4px_4px_0px_#334155]"
                 >
                   Về trang chủ
                 </Button>

@@ -56,14 +56,14 @@ export default function AdminSidebar({ isCollapsed, setIsCollapsed }: AdminSideb
           <>
             <Link href="/admin" className="flex items-center gap-2 animate-[fadeIn_0.2s_ease-out]">
               <Image
-                src="/logo.jpeg"
-                alt="COCOFLY Logo"
+                src="/logo.png"
+                alt="CocoFly Logo"
                 width={32}
                 height={32}
                 className="rounded-lg"
               />
               <span className="brand-text text-lg font-bold text-[#8f5c38] tracking-wider">
-                COCOFLY
+                CocoFly
               </span>
 
             </Link>

@@ -84,7 +84,7 @@ export default function OtpInput({ length = 6, onComplete }: OtpInputProps) {
           onKeyDown={(e) => handleKeyDown(index, e)}
           onPaste={handlePaste}
           className="h-12 w-10 px-0 sm:h-14 sm:w-12 text-center text-xl sm:text-2xl font-bold text-primary transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 
-          shadow-[2px_2px_0px_#8f5c38] focus:shadow-[4px_4px_0px_#8f5c38] focus:-translate-y-0.5 rounded-none border-2 border-slate-300 dark:bg-slate-900 dark:border-slate-700"
+          shadow-[2px_2px_0px_#8f5c38] focus:shadow-[4px_4px_0px_#8f5c38] focus:-translate-y-0.5 rounded-xl border-2 border-slate-300 dark:bg-slate-900 dark:border-slate-700"
         />
       ))}
     </div>
