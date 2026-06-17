@@ -15,7 +15,7 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(true);
   const [payment, setPayment] = useState<any>(null);
   const [error, setError] = useState("");
-  const [selectedMethod, setSelectedMethod] = useState<"vnpay" | "momo" | "banking">("vnpay");
+  const [selectedMethod, setSelectedMethod] = useState<"vnpay" | "momo">("vnpay");
   const [processing, setProcessing] = useState(false);
   const [bankingInfo, setBankingInfo] = useState<any>(null);
 
@@ -291,18 +291,6 @@ export default function CheckoutPage() {
                     {selectedMethod === 'momo' && <CheckCircle2 className="w-6 h-6 text-[#A50064]" />}
                   </label>
 
-                  {/* Banking */}
-                  <label className={`relative flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${selectedMethod === 'banking' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}>
-                    <input type="radio" name="paymentMethod" value="banking" checked={selectedMethod === 'banking'} onChange={() => setSelectedMethod('banking')} className="sr-only" />
-                    <div className="w-12 h-12 bg-white border rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Image src="/payment_logo/cash_logo.png" alt="Cash" width={40} height={40} className="object-contain" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-foreground">Chuyển khoản ngân hàng</h3>
-                      <p className="text-sm text-muted-foreground">Thanh toán bằng hình thức chuyển khoản</p>
-                    </div>
-                    {selectedMethod === 'banking' && <CheckCircle2 className="w-6 h-6 text-primary" />}
-                  </label>
                 </div>
               </div>
             </div>
