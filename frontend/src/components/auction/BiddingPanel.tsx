@@ -235,12 +235,12 @@ export default function BiddingPanel({
 
         <div className="mt-4 flex items-center justify-between border-t-2 border-slate-100 dark:border-slate-700 pt-4">
           <div>
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">
-              <span className="material-symbols-outlined text-[16px]">schedule</span>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+              <img src="https://img.icons8.com/color/96/alarm-clock.png" className="w-4 h-4" alt="schedule" />
               {status === "scheduled" && startTime ? (
-                <>Bắt đầu lúc {formatEndDate(startTime)}</>
+                <>{formatEndDate(startTime)}</>
               ) : (
-                <>Kết thúc lúc {formatEndDate(endTime)}</>
+                <>{formatEndDate(endTime)}</>
               )}
             </p>
             {status !== "scheduled" && isExtended && (
@@ -309,19 +309,13 @@ export default function BiddingPanel({
           status === "active" ? (
             <div className="space-y-2 border-t-2 border-slate-100 dark:border-slate-700 pt-4 mt-2">
               <div className="flex justify-between items-center py-1.5">
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary text-[20px]">person</span>
-                  <span className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400">Người dẫn đầu</span>
-                </div>
+                <span className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400">Người dẫn đầu</span>
                 <span className="text-sm sm:text-base font-bold text-slate-800 dark:text-white truncate max-w-[200px]" title={leaderName || "Chưa có"}>
                   {leaderName || "Chưa có"}
                 </span>
               </div>
               <div className="flex justify-between items-center py-1.5">
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary text-[20px]">gavel</span>
-                  <span className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400">Số lượt đặt</span>
-                </div>
+                <span className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400">Số lượt đặt</span>
                 <span className="text-sm sm:text-base font-bold text-slate-800 dark:text-white">
                   {totalBids ?? 0} lượt
                 </span>
@@ -384,8 +378,7 @@ export default function BiddingPanel({
               disabled={isBidDisabled}
               className="w-full py-3 bg-[#0066FF] text-white font-bold text-base rounded-full border-2 border-[#0066FF] shadow-[4px_4px_0px_#bfdbfe] hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_#bfdbfe] active:translate-y-0 active:shadow-[2px_2px_0px_#bfdbfe] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-default disabled:hover:translate-y-0 disabled:hover:shadow-[4px_4px_0px_#bfdbfe]"
             >
-              <span className="material-symbols-outlined text-[20px]">{isBidDisabled ? "lock" : "gavel"}</span>
-              {isBidDisabled ? "ĐANG DẪN ĐẦU" : isProxy ? "KÍCH HOẠT PROXY BIDDING" : "ĐẶT GIÁ NGAY"}
+              {isBidDisabled ? "ĐANG DẪN ĐẦU" : isProxy ? "KÍCH HOẠT ĐẶT GIÁ TỰ ĐỘNG" : "ĐẶT GIÁ NGAY"}
             </button>
 
             <div className="flex gap-3">
@@ -394,7 +387,6 @@ export default function BiddingPanel({
                   onClick={handleBuyout}
                   className="flex-1 py-3 font-bold text-sm sm:text-base rounded-full border-2 bg-orange-500 text-white border-orange-500 shadow-[3px_3px_0px_#fed7aa] hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#fed7aa] active:translate-y-0 active:shadow-[1px_1px_0px_#fed7aa] transition-all flex items-center justify-center gap-1 cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-[18px]">shopping_cart</span>
                   MUA NGAY
                 </button>
               )}

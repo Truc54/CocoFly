@@ -102,13 +102,13 @@ export default function AuthCard({ mode }: AuthCardProps) {
           <CardHeader className="space-y-1.5 px-6 pb-1 pt-6 text-center">
             <div className="flex items-center justify-center gap-2.5">
               <Image
-                src="/logo.jpeg"
-                alt="COCOFLY Logo"
+                src="/logo.png"
+                alt="CocoFly Logo"
                 width={42}
                 height={42}
                 className="rounded-md"
               />
-              <span className="brand-text text-[2.2rem] leading-none text-primary">COCOFLY</span>
+              <span className="brand-text text-[2.2rem] leading-none text-primary">CocoFly</span>
             </div>
             <div className="mt-3 rounded-xl border border-primary/15 bg-primary/5 p-1">
               <div className="grid grid-cols-2 gap-1">
@@ -276,7 +276,7 @@ export default function AuthCard({ mode }: AuthCardProps) {
                       <Link href="#" className="font-semibold text-primary-main hover:text-primary hover:underline">
                         chính sách bảo mật
                       </Link>{" "}
-                      của COCOFLY
+                      của CocoFly
                     </span>
                   )}
                 </label>

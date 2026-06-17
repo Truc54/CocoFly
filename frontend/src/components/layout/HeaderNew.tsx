@@ -67,6 +67,24 @@ export default function HeaderNew() {
     }
   }, [pathname]);
 
+  const headerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!headerRef.current) return;
+    const updateHeight = () => {
+      if (headerRef.current) {
+        document.documentElement.style.setProperty(
+          "--header-height",
+          `${headerRef.current.offsetHeight}px`
+        );
+      }
+    };
+    updateHeight();
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(headerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
   useEffect(() => {
     setMounted(true);
     const checkAuth = () => {
@@ -202,7 +220,7 @@ export default function HeaderNew() {
   );
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-white dark:bg-background-dark border-b border-slate-200 dark:border-slate-700/50 shadow-sm">
+    <header ref={headerRef} className="sticky top-0 z-50 w-full bg-white dark:bg-background-dark border-b border-slate-200 dark:border-slate-700/50 shadow-sm">
       <div className="max-w-[1400px] mx-auto px-4 lg:px-6">
         <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[auto_auto] items-center gap-x-2 md:gap-x-2.5 lg:gap-x-3 gap-y-1 pt-4 pb-1">
           <div className="row-start-1 col-start-1 flex items-center gap-2 lg:gap-3 min-w-0">
@@ -218,14 +236,14 @@ export default function HeaderNew() {
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 shrink-0">
               <Image
-                src="/logo.jpeg"
-                alt="COCOFLY Logo"
+                src="/logo.png"
+                alt="CocoFly Logo"
                 width={40}
                 height={40}
                 className="rounded-lg"
               />
               <span className="brand-text text-[1.8rem] leading-none text-primary hidden sm:block">
-                COCOFLY
+                CocoFly
               </span>
             </Link>
           </div>

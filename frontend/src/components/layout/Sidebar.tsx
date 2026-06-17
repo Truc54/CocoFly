@@ -31,7 +31,7 @@ export default function Sidebar() {
   const displayedCategories = laptopIndex !== -1 ? categories.slice(0, laptopIndex + 1) : categories;
 
   return (
-    <aside className="hidden lg:block w-[240px] shrink-0 self-start sticky top-[102px]">
+    <aside className="hidden lg:block w-[240px] shrink-0 self-start sticky top-[var(--header-height,82px)]">
       <div className="bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] rounded-xl overflow-hidden">
         {/* Header */}
         <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700/50 bg-primary/5">

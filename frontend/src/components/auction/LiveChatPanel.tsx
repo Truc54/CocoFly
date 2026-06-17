@@ -5,6 +5,7 @@ import { useLiveChat } from "@/lib/hooks/useLiveChat";
 import type { BidEntry } from "@/lib/types/auction";
 import BidHistoryList from "./BidHistoryList";
 import UserHoverCard from "@/components/shared/UserHoverCard";
+import { MessageSquare, History } from "lucide-react";
 
 function timeAgo(iso: string) {
   const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
@@ -76,7 +77,7 @@ export default function LiveChatPanel({
               activeTab === "chat" ? "text-primary" : "text-slate-400 hover:text-slate-600"
             }`}
           >
-            <span className="material-symbols-outlined">forum</span>
+            <MessageSquare className="w-4 h-4" />
             Live Chat
           </button>
           <button
@@ -85,7 +86,7 @@ export default function LiveChatPanel({
               activeTab === "bids" ? "text-primary" : "text-slate-400 hover:text-slate-600"
             }`}
           >
-            <span className="material-symbols-outlined">history</span>
+            <History className="w-4 h-4" />
             Lịch sử ({totalBids})
           </button>
         </div>

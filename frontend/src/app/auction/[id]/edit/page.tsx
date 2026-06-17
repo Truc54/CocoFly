@@ -424,7 +424,7 @@ export default function EditAuctionPage() {
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark pb-20">
       {/* Header */}
-      <div className="bg-white dark:bg-slate-900/80 border-b border-primary/10 sticky top-[102px] z-40 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-900/80 border-b border-primary/10 sticky top-[var(--header-height,82px)] z-40 backdrop-blur-sm">
         <div className="max-w-4xl mx-auto px-6 py-4">
           <h1 className="text-xl font-bold mb-4">Chỉnh sửa đấu giá</h1>
           {/* Step Indicator */}
@@ -738,7 +738,7 @@ export default function EditAuctionPage() {
             <div className="bg-white dark:bg-slate-900/60 border-2 border-slate-200 dark:border-slate-800 p-6 md:p-8 shadow-[4px_4px_0px_#e2e8f0] dark:shadow-[4px_4px_0px_#1e293b] rounded-2xl">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-amber-500" /> Chống sniping
+                  <Zap className="w-5 h-5 text-amber-500" /> Tự động gia hạn
                 </h2>
                 <button
                   onClick={() => updateForm({ autoExtend: !form.autoExtend })}
@@ -853,7 +853,7 @@ export default function EditAuctionPage() {
                 <div className="flex items-center gap-2 text-sm">
                   <Zap className="w-4 h-4 text-amber-500" />
                   <span className="text-slate-600 dark:text-slate-400">
-                    Chống sniping: {form.autoExtend ? `Bật (${form.autoExtendThreshold} phút cuối ➜ +${form.autoExtendMinutes} phút)` : "Tắt"}
+                    Tự động gia hạn: {form.autoExtend ? `Bật (${form.autoExtendThreshold} phút cuối ➜ +${form.autoExtendMinutes} phút)` : "Tắt"}
                   </span>
                 </div>
 
@@ -869,7 +869,7 @@ export default function EditAuctionPage() {
           <div className={`fixed top-24 right-6 z-50 transition-all duration-300 ${
             isClosingToast ? "animate-out fade-out slide-out-to-right-8" : "animate-in fade-in slide-in-from-right-8"
           }`}>
-            <div className="bg-white dark:bg-slate-900 border-2 border-emerald-500 shadow-[4px_4px_0px_#059669] p-4 flex items-center gap-3 w-80">
+            <div className="bg-white dark:bg-slate-900 border-2 border-emerald-500 shadow-[4px_4px_0px_#059669] p-4 flex items-center gap-3 w-80 rounded-xl">
               <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center shrink-0">
                 <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-500" />
               </div>

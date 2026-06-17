@@ -115,7 +115,7 @@ export default function ChangePasswordPage() {
               <div className="space-y-3 text-center">
                 <div className="mb-2 flex justify-center">
                   <div className="inline-flex size-16 items-center justify-center rounded-2xl bg-primary/10 shadow-[4px_4px_0px_#E2B9A1]">
-                    <Image src="/logo.jpeg" alt="COCOFLY Logo" width={34} height={34} className="rounded-md" />
+                    <Image src="/logo.png" alt="CocoFly Logo" width={34} height={34} className="rounded-md" />
                   </div>
                 </div>
                 <h1 className={`${playfairDisplay.className} text-4xl font-extrabold text-slate-900 dark:text-white`}>
@@ -188,7 +188,7 @@ export default function ChangePasswordPage() {
               <div className="space-y-3 text-center">
                 <div className="mb-2 flex justify-center">
                   <div className="inline-flex size-16 items-center justify-center rounded-2xl bg-primary/10 shadow-[4px_4px_0px_#E2B9A1]">
-                    <Image src="/logo.jpeg" alt="COCOFLY Logo" width={34} height={34} className="rounded-md" />
+                    <Image src="/logo.png" alt="CocoFly Logo" width={34} height={34} className="rounded-md" />
                   </div>
                 </div>
                 <h1 className={`${playfairDisplay.className} text-4xl font-extrabold text-slate-900 dark:text-white`}>

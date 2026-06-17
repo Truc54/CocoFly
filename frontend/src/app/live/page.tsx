@@ -350,7 +350,7 @@ function LiveAuctionsPageContent() {
       <div className="flex gap-6 relative">
         {/* Filter Sidebar Wrapper */}
         <div className="hidden lg:block w-64 shrink-0">
-          <aside className="sticky top-[102px] h-fit pb-6 pr-1 z-10">
+          <aside className="sticky top-[var(--header-height,82px)] h-fit pb-6 pr-1 z-10">
           {/* Filter Panel */}
           <div className="bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] overflow-hidden rounded-xl animate-in fade-in slide-in-from-left-2 duration-500">
             {/* Header */}

@@ -312,7 +312,7 @@ export default function AccountDropdown() {
             {isBuyer && (
               <>
                 <MenuSeparator />
-                <MenuSectionLabel icon={<img src="https://img.icons8.com/color/96/checked-shield.png" className="w-3.5 h-3.5" alt="verified" />}>Xác thực</MenuSectionLabel>
+                <MenuSectionLabel>Xác thực</MenuSectionLabel>
                 <MenuItem
                   href="/upgrade"
                   icon={<img src="https://img.icons8.com/color/96/crown.png" className="w-4 h-4" alt="upgrade" />}

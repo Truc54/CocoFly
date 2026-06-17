@@ -39,13 +39,13 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 group cursor-pointer">
           <Image
-            src="/logo.jpeg"
-            alt="COCOFLY Logo"
+            src="/logo.png"
+            alt="CocoFly Logo"
             width={40}
             height={40}
             className="rounded-lg"
           />
-          <span className="brand-text text-[2rem] leading-none text-primary">COCOFLY</span>
+          <span className="brand-text text-[2rem] leading-none text-primary">CocoFly</span>
         </Link>
         
         <nav className="hidden md:flex items-center gap-8 lg:gap-10">
