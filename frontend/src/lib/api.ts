@@ -229,7 +229,10 @@ export const auctionApi = {
 };
 
 export const categoryApi = {
-  getAll: () => fetchApi('/api/categories'),
+  getAll: (params?: { featured?: boolean }) => {
+    const qs = params?.featured ? '?featured=true' : '';
+    return fetchApi(`/api/categories${qs}`);
+  },
 };
 
 export const notificationApi = {

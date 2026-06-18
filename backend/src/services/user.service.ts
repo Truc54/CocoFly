@@ -242,7 +242,7 @@ export class UserService {
 
   // ── Pin Auction ───────────────────────────────────────────────────────────
 
-  private static MAX_PINS = 3;
+  private static MAX_PINS = 4;
 
   async togglePinAuction(userId: string, auctionId: string) {
     const alreadyPinned = await this.userRepository.isPinned(userId, auctionId);

@@ -133,7 +133,7 @@ function CardSkeleton() {
 
 // ═════════════════════════════════════════════════════════════════════════════
 
-const MAX_PINS = 3;
+const MAX_PINS = 4;
 const ITEMS_PER_PAGE = 8;
 
 export default function ProfilePage() {
@@ -711,7 +711,7 @@ export default function ProfilePage() {
 
       {/* ── Toast ──────────────────────────────────────────────────────── */}
       {toast && (
-        <div className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl border-2 shadow-[3px_3px_0px_#E2B9A1] text-sm font-bold transition-all duration-300 animate-in slide-in-from-bottom-4
+        <div className={`fixed bottom-24 right-6 z-50 px-4 py-3 rounded-xl border-2 shadow-[3px_3px_0px_#E2B9A1] text-sm font-bold transition-all duration-300 animate-in slide-in-from-bottom-4
           ${toast.type === "success"
             ? "bg-emerald-50 dark:bg-emerald-900/50 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300"
             : "bg-red-50 dark:bg-red-900/50 border-red-300 dark:border-red-700 text-red-700 dark:text-red-300"

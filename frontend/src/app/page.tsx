@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { auctionApi } from "@/lib/api";
-import { mockHotAuctions, mockUpcomingAuctions, mockCategoryAuctions } from "@/lib/mockData";
+import { auctionApi, categoryApi } from "@/lib/api";
+import { mockHotAuctions, mockUpcomingAuctions } from "@/lib/mockData";
 import Sidebar from "@/components/layout/Sidebar";
 import HeroSection from "@/components/home/HeroSection";
 import AuctionRow from "@/components/home/AuctionRow";
@@ -22,9 +22,18 @@ interface AuctionItem {
   totalWatchers: number;
 }
 
+interface CategoryWithAuctions {
+  id: number;
+  name: string;
+  slug: string;
+  auctions: AuctionItem[];
+  loading: boolean;
+}
+
 export default function HomePage() {
   const [hotAuctions, setHotAuctions] = useState<AuctionItem[]>([]);
   const [upcomingAuctions, setUpcomingAuctions] = useState<AuctionItem[]>([]);
+  const [featuredCategories, setFeaturedCategories] = useState<CategoryWithAuctions[]>([]);
   const [loadingHot, setLoadingHot] = useState(true);
   const [loadingUpcoming, setLoadingUpcoming] = useState(true);
   const [paymentSuccessData, setPaymentSuccessData] = useState<any>(null);
@@ -63,6 +72,56 @@ export default function HomePage() {
       .finally(() => setLoadingUpcoming(false));
   }, []);
 
+  // Fetch Top 4 Hottest Categories and their active auctions
+  useEffect(() => {
+    categoryApi
+      .getAll({ featured: true })
+      .then((res) => {
+        if (res?.data) {
+          const isRealEstateCategory = (cat: any) =>
+            cat.slug === "bat-dong-san" || cat.name === "Bất động sản";
+
+          const top4 = res.data
+            .filter((cat: any) => !isRealEstateCategory(cat) && cat.slug !== "khac")
+            .slice(0, 4);
+
+          // Initialize categories with loading state
+          const initialCats = top4.map((cat: any) => ({
+            id: cat.id,
+            name: cat.name,
+            slug: cat.slug,
+            auctions: [],
+            loading: true,
+          }));
+          setFeaturedCategories(initialCats);
+
+          // Fetch active auctions for each hot category
+          top4.forEach((cat: any) => {
+            auctionApi
+              .getLive({ limit: 6, categoryId: cat.id })
+              .then((auctionRes) => {
+                const list = auctionRes?.data?.auctions || [];
+                setFeaturedCategories((prev) =>
+                  prev.map((item) =>
+                    item.id === cat.id ? { ...item, auctions: list, loading: false } : item
+                  )
+                );
+              })
+              .catch(() => {
+                setFeaturedCategories((prev) =>
+                  prev.map((item) =>
+                    item.id === cat.id ? { ...item, loading: false } : item
+                  )
+                );
+              });
+          });
+        }
+      })
+      .catch((err) => {
+        console.error("Error fetching featured categories with auctions:", err);
+      });
+  }, []);
+
   return (
     <div className="max-w-[1400px] mx-auto px-4 lg:px-6 py-4">
       <div className="flex gap-6">
@@ -91,40 +150,32 @@ export default function HomePage() {
             loading={loadingUpcoming}
           />
 
-          {/* Cổ vật & Sưu tầm */}
-          <AuctionRow
-            title="Cổ vật & Sưu tầm"
-            auctions={mockCategoryAuctions["Cổ vật & Sưu tầm"]}
-            viewAllHref="/live?categoryId=3"
-            showCountdown
-          />
-
-          {/* Xe & Phương tiện */}
-          <AuctionRow
-            title="Xe & Phương tiện"
-            auctions={mockCategoryAuctions["Xe & Phương tiện"]}
-            viewAllHref="/live?categoryId=5"
-            showCountdown
-          />
+          {/* Top 2 Hottest Categories with Auctions */}
+          {featuredCategories.slice(0, 2).map((cat) => (
+            <AuctionRow
+              key={cat.id}
+              title={cat.name}
+              auctions={cat.auctions}
+              viewAllHref={`/live?categoryId=${cat.id}`}
+              showCountdown
+              loading={cat.loading}
+            />
+          ))}
 
           {/* 🏷️ Khám phá danh mục */}
           <CategoryGrid />
 
-          {/* Đồng hồ & Trang sức */}
-          <AuctionRow
-            title="Đồng hồ & Trang sức"
-            auctions={mockCategoryAuctions["Đồng hồ & Trang sức"]}
-            viewAllHref="/live?categoryId=6"
-            showCountdown
-          />
-
-          {/* Rượu vang & Đồ uống */}
-          <AuctionRow
-            title="Rượu vang & Đồ uống"
-            auctions={mockCategoryAuctions["Rượu vang & Đồ uống"]}
-            viewAllHref="/live?categoryId=7"
-            showCountdown
-          />
+          {/* Next 2 Hottest Categories with Auctions */}
+          {featuredCategories.slice(2, 4).map((cat) => (
+            <AuctionRow
+              key={cat.id}
+              title={cat.name}
+              auctions={cat.auctions}
+              viewAllHref={`/live?categoryId=${cat.id}`}
+              showCountdown
+              loading={cat.loading}
+            />
+          ))}
         </div>
       </div>
 

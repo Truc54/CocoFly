@@ -56,9 +56,9 @@ const CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
     cdnUrls: [
       "https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?q=80&w=600",
       "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?q=80&w=600",
-      "https://images.unsplash.com/photo-1528823872057-9c018a7a72b5?q=80&w=600",
-      "https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?q=80&w=600",
-      "https://images.unsplash.com/photo-1569529465841-dfedd901df7b?q=80&w=600",
+      "https://images.unsplash.com/photo-1528258347432-8a3b216bb63a?q=80&w=600",
+      "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?q=80&w=600",
+      "https://images.unsplash.com/photo-1560512823-829485b8bf24?q=80&w=600",
     ],
     products: [
       { title: "Rượu vang Chateau Margaux 2015 Premium", description: "Rượu vang Pháp cao cấp Chateau Margaux niên vụ xuất sắc 2015, nồng độ đậm đà, hậu vị tinh tế, hương thơm trái chín ngọt ngào.", brand: "Chateau Margaux" },
@@ -643,12 +643,15 @@ async function main() {
     const prodIndex = Math.floor(i / categories.length) % config.products.length;
     const prodDef = config.products[prodIndex];
 
-    const imageIndex = Math.floor(i / categories.length) % config.cdnUrls.length;
-    const cdnUrl = config.cdnUrls[imageIndex];
-
-    // Build unique title
     const batchNum = Math.floor(i / (categories.length * config.products.length)) + 1;
     const itemTitle = `${prodDef.title} (Lô #${batchNum})`;
+
+    const imageIndex = Math.floor(i / categories.length) % config.cdnUrls.length;
+    let cdnUrl = config.cdnUrls[imageIndex];
+    if (batchNum > 1) {
+      const keyword = config.keywords[i % config.keywords.length] || "item";
+      cdnUrl = `https://loremflickr.com/600/450/${keyword}?lock=${i}`;
+    }
 
     // 1. Create Item
     const item = await prisma.item.create({
