@@ -378,7 +378,7 @@ export default function BiddingPanel({
               disabled={isBidDisabled}
               className="w-full py-3 bg-[#0066FF] text-white font-bold text-base rounded-full border-2 border-[#0066FF] shadow-[4px_4px_0px_#bfdbfe] hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_#bfdbfe] active:translate-y-0 active:shadow-[2px_2px_0px_#bfdbfe] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-default disabled:hover:translate-y-0 disabled:hover:shadow-[4px_4px_0px_#bfdbfe]"
             >
-              {isBidDisabled ? "ĐANG DẪN ĐẦU" : isProxy ? "KÍCH HOẠT ĐẶT GIÁ TỰ ĐỘNG" : "ĐẶT GIÁ NGAY"}
+              {isBidDisabled ? "ĐANG DẪN ĐẦU" : "ĐẶT GIÁ"}
             </button>
 
             <div className="flex gap-3">

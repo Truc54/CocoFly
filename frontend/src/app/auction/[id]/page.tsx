@@ -150,6 +150,7 @@ function AuctionDetailContent({
     currentPrice,
     totalBids,
     endTime,
+    actualEndTime,
     isExtended,
     extendCount,
     auctionStatus,
@@ -173,11 +174,13 @@ function AuctionDetailContent({
     currentPrice: auction.currentPrice,
     totalBids: auction.totalBids,
     endTime: auction.endTime,
+    actualEndTime: auction.actualEndTime,
     recentBids: auction.recentBids,
     status: auction.status,
     winnerId: auction.winnerId,
     winnerName: auction.winnerName,
     finalPrice: auction.finalPrice,
+    buyoutPrice: auction.buyoutPrice,
   });
 
   // Auto-dismiss success toast
@@ -187,6 +190,8 @@ function AuctionDetailContent({
       return () => clearTimeout(timer);
     }
   }, [bidSuccess, clearBidSuccess]);
+
+
 
   const images = auction.media.length > 0
     ? auction.media.map((m) => m.cdnUrl)
@@ -339,20 +344,22 @@ function AuctionDetailContent({
           {/* Success Toast Notification - Top Right */}
           {bidSuccess && (
             <div className="fixed top-6 right-6 z-[200] animate-slide-in-right">
-              <div className="flex items-center gap-3 bg-white border-2 border-green-300 px-5 py-3.5 rounded-xl shadow-[4px_4px_0px_#86efac] min-w-[280px]">
+              <div className="flex items-center gap-3 bg-white border-2 border-green-300 px-5 py-3.5 rounded-xl shadow-[4px_4px_0px_#86efac] min-w-[280px] dark:bg-slate-800 dark:border-green-600">
                 <div className="w-8 h-8 rounded-full bg-green-100 border-2 border-green-300 flex items-center justify-center shrink-0">
                   <span className="material-symbols-outlined text-green-600 text-lg">check</span>
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-bold text-slate-800">Đặt giá thành công!</p>
-                  <p className="text-xs text-slate-500 mt-0.5">Bạn đang dẫn đầu phiên đấu giá</p>
+                  <p className="text-sm font-bold text-slate-800 dark:text-white">Đặt giá thành công!</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Bạn đang dẫn đầu phiên đấu giá</p>
                 </div>
-                <button onClick={clearBidSuccess} className="text-slate-400 hover:text-slate-600 transition-colors shrink-0">
+                <button onClick={clearBidSuccess} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors shrink-0">
                   <span className="material-symbols-outlined text-lg">close</span>
                 </button>
               </div>
             </div>
           )}
+
+
 
           {/* Title */}
           <div className="flex flex-col gap-2">
@@ -372,7 +379,7 @@ function AuctionDetailContent({
               finalPrice={finalPrice}
               isBuyout={auctionStatus === "buyout"}
               startTime={auction.scheduledStart}
-              endTime={auction.actualEndTime || endTime || auction.endTime}
+              endTime={actualEndTime || auction.actualEndTime || endTime || auction.endTime}
               totalBids={totalBids}
             />
           ) : (

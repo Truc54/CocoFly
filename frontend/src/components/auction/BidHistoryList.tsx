@@ -98,7 +98,7 @@ export default function BidHistoryList({ auctionId, bids, totalBids }: BidHistor
                   </span>
                 )}
               </div>
-              <div className="inline-block bg-white border-2 border-orange-200 text-red-600 font-bold text-xs px-3 py-1.5 rounded-none shadow-[2px_2px_0px_#fed7aa] mt-1">
+              <div className="inline-block bg-white dark:bg-slate-700 border-2 border-orange-200 dark:border-orange-900/60 text-red-600 dark:text-red-400 font-bold text-xs px-3 py-1.5 rounded-xl shadow-[2px_2px_0px_#fed7aa] dark:shadow-[2px_2px_0px_rgba(254,215,170,0.15)] mt-1">
                 Đã đặt {formatVND(bid.amount)} VNĐ
               </div>
             </div>

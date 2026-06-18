@@ -278,6 +278,7 @@ async function handleEndAuction(data: AuctionJobPayload): Promise<void> {
       auctionId,
       winnerId: highestBid.bidderId,
       finalPrice,
+      actualEndTime: new Date().toISOString(),
     });
 
     console.log(`🏁 Auction ${auctionId} ENDED — winner: ${highestBid.bidderId}, price: ${finalPrice}`);

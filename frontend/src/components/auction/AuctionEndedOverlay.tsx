@@ -45,7 +45,7 @@ export default function AuctionEndedOverlay({
           </span>
         </div>
         <h3 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-widest">
-          {isBuyout ? "ĐÃ MUA NGAY" : winnerId ? "ĐẤU GIÁ KẾT THÚC" : "KHÔNG CÓ NGƯỜI THẮNG"}
+          {winnerId ? "ĐẤU GIÁ KẾT THÚC" : "KHÔNG CÓ NGƯỜI THẮNG"}
         </h3>
       </div>
 
