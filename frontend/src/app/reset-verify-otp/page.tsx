@@ -134,7 +134,7 @@ export default function ResetVerifyOtpPage() {
               )}
 
               <label className="mb-2 block text-sm font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-300">
-                Nhập mã bảo mật
+                Nhập mã OTP
               </label>
 
               <OtpInput
@@ -151,7 +151,7 @@ export default function ResetVerifyOtpPage() {
               </span>
               <button
                 type="button"
-                className="font-bold text-primary-main transition-colors hover:text-primary hover:underline cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="font-bold text-primary-main transition-colors hover:text-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handleResendOtp}
                 disabled={countdown > 0}
               >
@@ -168,7 +168,6 @@ export default function ResetVerifyOtpPage() {
                 {isSubmitting ? "Đang xử lý..." : (
                   <span className="relative z-10 flex items-center justify-center gap-2">
                     Xác nhận
-                    <ArrowRight className="size-5 transition-transform group-hover:translate-x-1" />
                   </span>
                 )}
               </Button>

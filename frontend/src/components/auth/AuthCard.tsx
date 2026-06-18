@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, CheckCircle2, X } from "lucide-react";
 import { Playfair_Display } from "next/font/google";
 
 import { API_URL, authApi } from "@/lib/api";
@@ -26,6 +26,42 @@ export default function AuthCard({ mode }: AuthCardProps) {
   const router = useRouter();
   const isLogin = mode === "login";
   const [showPassword, setShowPassword] = useState(false);
+  
+  const [toastConfig, setToastConfig] = useState<{ title: string; desc: string } | null>(null);
+  const [isClosingToast, setIsClosingToast] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      let title = "";
+      let desc = "";
+
+      if (params.get("verified") === "true") {
+        title = "Xác thực thành công!";
+        desc = "Tài khoản của bạn đã được xác minh. Bạn có thể đăng nhập bằng tài khoản vừa mới đăng ký.";
+      } else if (params.get("reset") === "true") {
+        title = "Đặt lại mật khẩu thành công!";
+        desc = "Mật khẩu của bạn đã được cập nhật. Bạn có thể đăng nhập bằng mật khẩu mới.";
+      }
+
+      if (title) {
+        setToastConfig({ title, desc });
+        const timerClose = setTimeout(() => setIsClosingToast(true), 7700);
+        const timerHide = setTimeout(() => {
+          setToastConfig(null);
+          setIsClosingToast(false);
+        }, 8000);
+
+        const newUrl = window.location.pathname;
+        window.history.replaceState({ path: newUrl }, "", newUrl);
+
+        return () => {
+          clearTimeout(timerClose);
+          clearTimeout(timerHide);
+        };
+      }
+    }
+  }, []);
   
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -78,6 +114,35 @@ export default function AuthCard({ mode }: AuthCardProps) {
 
   return (
     <section className="relative box-border flex min-h-dvh items-start justify-center overflow-hidden px-6 pb-3 pt-5 lg:pb-4 lg:pt-6">
+      {/* Success Toast */}
+      {toastConfig && (
+        <div className={`fixed top-6 right-6 z-50 transition-all duration-300 ${
+          isClosingToast ? "animate-out fade-out slide-out-to-right-8" : "animate-in fade-in slide-in-from-right-8"
+        }`}>
+          <div className="bg-white dark:bg-slate-900 border-2 border-emerald-500 shadow-[4px_4px_0px_#059669] p-4 flex items-center gap-3 w-80 rounded-xl">
+            <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-500" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">{toastConfig.title}</h4>
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">{toastConfig.desc}</p>
+            </div>
+            <button 
+              onClick={() => {
+                setIsClosingToast(true);
+                setTimeout(() => {
+                  setToastConfig(null);
+                  setIsClosingToast(false);
+                }, 300);
+              }}
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors shrink-0"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-primary/10 via-background-light to-background-light dark:from-primary/20 dark:via-background-dark dark:to-background-dark" />
       <div className="pointer-events-none absolute -top-20 -left-10 -z-10 h-64 w-64 rounded-full bg-accent-main/30 blur-3xl" />
       <div className="pointer-events-none absolute -right-10 bottom-0 -z-10 h-72 w-72 rounded-full bg-primary/20 blur-3xl" />

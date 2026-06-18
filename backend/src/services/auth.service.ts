@@ -5,6 +5,7 @@ import { UserRepository } from '../repositories/user.repository';
 import { TokenService } from './token.service';
 import { EmailService } from './email.service';
 import { AppError } from '../utils/AppError';
+import { validateEmailRealness } from '../utils/emailValidator';
 
 const BCRYPT_COST = 12;
 const OTP_TTL = 600;        // 10 minutes
@@ -20,6 +21,7 @@ export class AuthService {
   // 1. REGISTER
   // ──────────────────────────────────────────
   async register(email: string, password: string, fullName: string) {
+    await validateEmailRealness(email);
     const existingUser = await this.userRepository.findByEmail(email);
 
     if (existingUser) {

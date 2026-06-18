@@ -55,9 +55,8 @@ export default function VerifyOtpPage() {
     setIsSubmitting(true);
     try {
       await authApi.verifyOtp({ email, otp: otpValue });
-      // Xóa email khỏi localStorage sau khi thành công (tuỳ chọn)
       localStorage.removeItem("verification_email");
-      router.push("/verification-success");
+      router.push("/login?verified=true");
     } catch (err: any) {
       setErrorMsg(err.message || "Xác thực thất bại.");
     } finally {
@@ -134,7 +133,7 @@ export default function VerifyOtpPage() {
               )}
               
               <label className="mb-2 block text-sm font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-300">
-                Nhập mã bảo mật
+                Nhập mã OTP
               </label>
 
               <OtpInput
@@ -151,7 +150,7 @@ export default function VerifyOtpPage() {
               </span>
               <button
                 type="button"
-                className="font-bold text-primary-main transition-colors hover:text-primary hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                className="font-bold text-primary-main transition-colors hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handleResendOtp}
                 disabled={countdown > 0}
               >
@@ -169,7 +168,6 @@ export default function VerifyOtpPage() {
                   <>
                     <span className="relative z-10 flex items-center justify-center gap-2">
                       Xác nhận
-                      <ArrowRight className="size-5 transition-transform group-hover:translate-x-1" />
                     </span>
                   </>
                 )}

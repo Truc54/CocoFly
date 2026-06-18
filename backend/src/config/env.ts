@@ -21,8 +21,10 @@ const envSchema = z.object({
   FACEBOOK_APP_SECRET: z.string().min(1),
   FACEBOOK_CALLBACK_URL: z.string().url(),
 
-  RESEND_API_KEY: z.string().min(1),
-  RESEND_FROM_EMAIL: z.string().email(),
+  SMTP_HOST: z.string().default('smtp.gmail.com'),
+  SMTP_PORT: z.coerce.number().default(587),
+  SMTP_USER: z.string().email(),
+  SMTP_PASS: z.string().min(1),
 
   FRONTEND_URL: z.string().url().default('http://localhost:3000'),
 
