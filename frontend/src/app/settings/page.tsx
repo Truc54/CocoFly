@@ -5,6 +5,7 @@ import Image from "next/image";
 import { userApi, mediaApi } from "@/lib/api";
 import { authStorage } from "@/lib/auth-storage";
 import Link from "next/link";
+import { useToast } from "@/context/ToastContext";
 import {
   User,
   Lock,
@@ -203,6 +204,7 @@ function FieldInput({ label, icon, type = "text", value, onChange, disabled, suf
 
 // ═════════════════════════════════════════════════════════════════════════════
 export default function SettingsPage() {
+  const { toast } = useToast();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -224,6 +226,11 @@ export default function SettingsPage() {
     if (!files || files.length === 0) return;
     const file = files[0];
     if (!file.type.startsWith("image/")) return;
+    
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Ảnh đại diện vượt quá dung lượng cho phép (tối đa 5MB).");
+      return;
+    }
     
     setIsUploadingAvatar(true);
     try {
@@ -252,7 +259,7 @@ export default function SettingsPage() {
       }
     } catch (err: any) {
       console.error("Upload thất bại:", err);
-      alert("Tải ảnh lên thất bại. Vui lòng tắt trình chặn quảng cáo (Adblock) hoặc thử lại.");
+      toast.error("Tải ảnh lên thất bại. Vui lòng tắt trình chặn quảng cáo (Adblock) hoặc thử lại.");
     } finally {
       setIsUploadingAvatar(false);
     }

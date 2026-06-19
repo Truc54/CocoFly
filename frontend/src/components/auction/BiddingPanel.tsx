@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { auctionApi } from "@/lib/api";
 import CountdownTimer from "./CountdownTimer";
+import { useToast } from "@/context/ToastContext";
 
 function formatVND(n: number) {
   return n.toLocaleString("vi-VN");
@@ -68,6 +69,7 @@ export default function BiddingPanel({
   startTime,
 }: BiddingPanelProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
@@ -79,7 +81,7 @@ export default function BiddingPanel({
       // Redirect to home "/" after deletion from details page
       router.push("/");
     } catch (err: any) {
-      alert(err.message || "Không thể xóa phiên đấu giá");
+      toast.error(err.message || "Không thể xóa phiên đấu giá");
     } finally {
       setDeleteLoading(false);
     }

@@ -229,6 +229,9 @@ function AuctionDetailContent({
     ? auction.media.map((m) => m.cdnUrl)
     : ["https://placehold.co/800x600/f1f5f9/94a3b8?text=No+Image"];
 
+  const activeMediaItem = auction.media.length > 0 ? auction.media[activeImageIdx] : null;
+  const isVideo = activeMediaItem?.type === "video" || activeMediaItem?.cdnUrl?.includes("/video/upload") || activeMediaItem?.cdnUrl?.endsWith(".mp4");
+
   const isEnded = auctionStatus === "ended" || auctionStatus === "buyout";
 
   // Use socket winnerName first, then API winnerName, then try to find from bids
@@ -255,13 +258,21 @@ function AuctionDetailContent({
           {/* Photo Gallery */}
           <div className="space-y-4">
             <div className="relative aspect-[4/3] bg-white dark:bg-slate-800 rounded-xl border-2 border-slate-200 dark:border-slate-700 overflow-hidden shadow-[4px_4px_0px_#E2B9A1] group">
-              <Image
-                src={images[activeImageIdx]}
-                alt={auction.title}
-                fill
-                className="object-contain p-4"
-                unoptimized
-              />
+              {isVideo && activeMediaItem ? (
+                <video
+                  src={activeMediaItem.cdnUrl}
+                  controls
+                  className="w-full h-full object-contain p-4"
+                />
+              ) : (
+                <Image
+                  src={images[activeImageIdx]}
+                  alt={auction.title}
+                  fill
+                  className="object-contain p-4"
+                  unoptimized
+                />
+              )}
               {images.length > 1 && (
                 <>
                   <button
@@ -286,19 +297,29 @@ function AuctionDetailContent({
             {/* Thumbnails */}
             {images.length > 1 && (
               <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-2 pt-1">
-                {images.map((img, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setActiveImageIdx(idx)}
-                    className={`relative w-[72px] h-[72px] shrink-0 rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
-                      activeImageIdx === idx
-                        ? "border-primary shadow-[3px_3px_0px_#8f5c38] scale-100"
-                        : "border-slate-200 opacity-80 hover:opacity-100 hover:shadow-[3px_3px_0px_#cbd5e1] scale-95 hover:scale-100"
-                    }`}
-                  >
-                    <Image src={img} alt={`Thumb ${idx}`} fill className="object-cover" unoptimized />
-                  </button>
-                ))}
+                {images.map((img, idx) => {
+                  const isThumbVideo = auction.media[idx]?.type === "video" || auction.media[idx]?.cdnUrl?.includes("/video/upload");
+                  const thumbUrl = isThumbVideo ? auction.media[idx].cdnUrl.replace(/\.[^/.]+$/, ".jpg") : img;
+                  
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => setActiveImageIdx(idx)}
+                      className={`relative w-[72px] h-[72px] shrink-0 rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
+                        activeImageIdx === idx
+                          ? "border-primary shadow-[3px_3px_0px_#8f5c38] scale-100"
+                          : "border-slate-200 opacity-80 hover:opacity-100 hover:shadow-[3px_3px_0px_#cbd5e1] scale-95 hover:scale-100"
+                      }`}
+                    >
+                      <Image src={thumbUrl} alt={`Thumb ${idx}`} fill className="object-cover" unoptimized />
+                      {isThumbVideo && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/35">
+                          <span className="material-symbols-outlined text-white text-xl">play_circle</span>
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>

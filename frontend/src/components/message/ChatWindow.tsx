@@ -7,6 +7,7 @@ import { mediaApi } from "@/lib/api";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import MessageBubble from "./MessageBubble";
+import { useToast } from "@/context/ToastContext";
 
 interface ChatWindowProps {
   conversation: Conversation;
@@ -44,6 +45,7 @@ export default function ChatWindow({
   showDialogButton,
   onShowDialog,
 }: ChatWindowProps) {
+  const { toast } = useToast();
   const [inputText, setInputText] = useState("");
   const [replyingMessage, setReplyingMessage] = useState<DirectMessage | null>(null);
   
@@ -58,6 +60,7 @@ export default function ChatWindow({
   
   // Image lightbox state
   const [zoomedMediaIndex, setZoomedMediaIndex] = useState<number | null>(null);
+  const [showScrollButton, setShowScrollButton] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -168,7 +171,7 @@ export default function ChatWindow({
   // Shared file upload helper
   const uploadFiles = async (files: FileList) => {
     if (attachedFiles.length + files.length > 5) {
-      alert("Tối đa chỉ được chọn 5 tệp đính kèm!");
+      toast.warning("Tối đa chỉ được chọn 5 tệp đính kèm!");
       return;
     }
 
@@ -182,7 +185,19 @@ export default function ChatWindow({
         const isVideo = file.type.startsWith("video/");
         
         if (!isImage && !isVideo) {
-          alert(`Tệp ${file.name} không được hỗ trợ. Chỉ hỗ trợ ảnh/video.`);
+          toast.error(`Tệp ${file.name} không được hỗ trợ. Chỉ hỗ trợ ảnh/video.`);
+          continue;
+        }
+
+        const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+        const MAX_VIDEO_SIZE = 25 * 1024 * 1024; // 25MB
+
+        if (isImage && file.size > MAX_IMAGE_SIZE) {
+          toast.error(`Tệp ảnh ${file.name} vượt quá dung lượng cho phép (tối đa 10MB).`);
+          continue;
+        }
+        if (isVideo && file.size > MAX_VIDEO_SIZE) {
+          toast.error(`Tệp video ${file.name} vượt quá dung lượng cho phép (tối đa 25MB).`);
           continue;
         }
 
@@ -217,7 +232,7 @@ export default function ChatWindow({
       setAttachedFiles(newAttached);
     } catch (err) {
       console.error("Failed to upload file to Cloudinary", err);
-      alert("Tải tệp lên thất bại. Vui lòng thử lại!");
+      toast.error("Tải tệp lên thất bại. Vui lòng thử lại!");
     } finally {
       setIsUploading(false);
     }
@@ -252,8 +267,20 @@ export default function ChatWindow({
     setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const scrollToBottom = () => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTo({ top: 0, behavior: "smooth" });
+      setShowScrollButton(false);
+    }
+  };
+
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const target = e.currentTarget;
+    
+    // Detect if scrolled up (absolute value of scrollTop is > 100px)
+    const isScrolled = Math.abs(target.scrollTop) > 100;
+    setShowScrollButton(isScrolled);
+
     if (target.scrollTop === 0 && hasMoreMessages && !isLoadingMessages) {
       loadMoreMessages();
     }
@@ -327,13 +354,14 @@ export default function ChatWindow({
         </button>
       </div>
 
-      {/* Messages Stream */}
-      <div
-        ref={messagesContainerRef}
-        onScroll={handleScroll}
-        className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-1 min-h-0 flex flex-col-reverse"
-      >
-        <div ref={messagesEndRef} />
+      {/* Messages Stream Wrapper */}
+      <div className="flex-1 min-h-0 relative">
+        <div
+          ref={messagesContainerRef}
+          onScroll={handleScroll}
+          className="w-full h-full overflow-y-auto overflow-x-hidden p-4 space-y-1 flex flex-col-reverse"
+        >
+          <div ref={messagesEndRef} />
 
         {/* Typing indicator */}
         {typingUsers.length > 0 && (
@@ -443,10 +471,20 @@ export default function ChatWindow({
           return elements;
         })()}
 
-        {isLoadingMessages && (
-          <div className="py-2 text-center shrink-0">
-            <Loader2 className="w-5 h-5 text-primary animate-spin mx-auto" />
-          </div>
+          {isLoadingMessages && (
+            <div className="py-2 text-center shrink-0">
+              <Loader2 className="w-5 h-5 text-primary animate-spin mx-auto" />
+            </div>
+          )}
+        </div>
+
+        {showScrollButton && (
+          <button
+            onClick={scrollToBottom}
+            className="absolute bottom-4 left-1/2 -translate-x-1/2 w-9 h-9 bg-green-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-green-600 hover:scale-110 active:scale-95 transition-all z-10 p-0 m-0 cursor-pointer animate-in fade-in slide-in-from-bottom-2 duration-200"
+          >
+            <span className="material-symbols-outlined text-[20px] leading-none m-0 p-0 flex items-center justify-center">arrow_downward</span>
+          </button>
         )}
       </div>
 

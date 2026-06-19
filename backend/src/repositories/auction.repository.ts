@@ -116,7 +116,7 @@ export class AuctionRepository {
         data: input.media.map((m) => ({
           itemId: item.id,
           uploaderId: sellerId,
-          type: 'image' as const,
+          type: (m.type === 'video' || m.mimeType?.startsWith('video/') ? 'video' : 'image') as any,
           purpose: m.sortOrder === 0 ? 'thumbnail' as const : 'gallery' as const,
           storageKey: m.storageKey,
           cdnUrl: m.cdnUrl,
@@ -645,7 +645,7 @@ export class AuctionRepository {
           data: data.media.map((m: any, index: number) => ({
             itemId: auction.itemId,
             uploaderId: sellerId,
-            type: 'image' as const,
+            type: (m.type === 'video' || m.mimeType?.startsWith('video/') ? 'video' : 'image') as any,
             purpose: m.sortOrder === 0 ? 'thumbnail' as const : 'gallery' as const,
             storageKey: m.storageKey,
             cdnUrl: m.cdnUrl,

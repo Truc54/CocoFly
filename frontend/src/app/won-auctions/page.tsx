@@ -19,6 +19,7 @@ import {
 import { Star } from "lucide-react";
 
 import { userApi, paymentApi, auctionApi } from "@/lib/api";
+import { useToast } from "@/context/ToastContext";
 
 // ─── Types & Config ──────────────────────────────────────────────────────────
 type OrderTab = "bidding" | "won" | "delivering" | "received";
@@ -80,6 +81,7 @@ function useCountdown(endTimes: string[]) {
 // ═════════════════════════════════════════════════════════════════════════════
 function WonAuctionsContent() {
   const router = useRouter();
+  const { toast } = useToast();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab") as OrderTab | null;
   const initialTab = tabParam && ["bidding", "won", "delivering", "received"].includes(tabParam)
@@ -176,7 +178,7 @@ function WonAuctionsContent() {
       setDeliveryConfirmTarget(null);
       fetchAuctions(); // refetch to update status
     } catch (err: any) {
-      alert(err.message || "Có lỗi xảy ra khi xác nhận");
+      toast.error(err.message || "Có lỗi xảy ra khi xác nhận");
     } finally {
       setDeliveryConfirmLoading(false);
     }
@@ -196,7 +198,7 @@ function WonAuctionsContent() {
       setReviewComment("");
       fetchAuctions();
     } catch (err: any) {
-      alert(err.message || "Có lỗi xảy ra khi gửi đánh giá");
+      toast.error(err.message || "Có lỗi xảy ra khi gửi đánh giá");
     } finally {
       setReviewLoading(false);
     }
@@ -205,7 +207,7 @@ function WonAuctionsContent() {
   const handleDispute = async () => {
     if (!disputeTarget || !disputeReason.trim()) return;
     if (disputeReason.trim().length < 10) {
-      alert("Lý do khiếu nại phải dài ít nhất 10 ký tự");
+      toast.warning("Lý do khiếu nại phải dài ít nhất 10 ký tự");
       return;
     }
     setDisputeLoading(true);
@@ -216,7 +218,7 @@ function WonAuctionsContent() {
       setDisputeReason("");
       fetchAuctions();
     } catch (err: any) {
-      alert(err.message || "Có lỗi xảy ra khi gửi khiếu nại");
+      toast.error(err.message || "Có lỗi xảy ra khi gửi khiếu nại");
     } finally {
       setDisputeLoading(false);
     }
@@ -358,7 +360,7 @@ function WonAuctionsContent() {
                                     if (order.paymentId) {
                                       setDeliveryConfirmTarget(order.paymentId);
                                     } else {
-                                      alert("Không tìm thấy thông tin thanh toán");
+                                      toast.error("Không tìm thấy thông tin thanh toán");
                                     }
                                   }}
                                   className="inline-flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-lg border-2 border-blue-500 bg-blue-500 text-white shadow-[2px_2px_0px_#2563eb] hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_#2563eb] transition-all min-w-[120px]"
@@ -371,7 +373,7 @@ function WonAuctionsContent() {
                                     if (order.paymentId) {
                                       setDisputeTarget(order.paymentId);
                                     } else {
-                                      alert("Không tìm thấy thông tin thanh toán");
+                                      toast.error("Không tìm thấy thông tin thanh toán");
                                     }
                                   }}
                                   className="inline-flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-lg border-2 border-red-500 bg-white text-red-500 hover:bg-red-50 transition-all min-w-[120px]"
@@ -432,7 +434,7 @@ function WonAuctionsContent() {
                                     if (order.paymentId) {
                                       setDisputeTarget(order.paymentId);
                                     } else {
-                                      alert("Không tìm thấy thông tin thanh toán");
+                                      toast.error("Không tìm thấy thông tin thanh toán");
                                     }
                                   }}
                                   className="inline-flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-lg border-2 border-red-500 bg-white text-red-500 hover:bg-red-50 transition-all min-w-[120px]"
