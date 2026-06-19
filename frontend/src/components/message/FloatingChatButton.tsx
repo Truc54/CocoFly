@@ -5,8 +5,10 @@ import { MessageSquare, X } from "lucide-react";
 import { useUnreadDM } from "@/lib/hooks/useUnreadDM";
 import { authStorage } from "@/lib/auth-storage";
 import ChatWidget from "./ChatWidget";
+import { useToast } from "@/context/ToastContext";
 
 export default function FloatingChatButton() {
+  const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
@@ -36,7 +38,7 @@ export default function FloatingChatButton() {
       try {
         const token = authStorage.getToken();
         if (!token) {
-          alert("Vui lòng đăng nhập để gửi tin nhắn!");
+          toast.warning("Vui lòng đăng nhập để gửi tin nhắn!");
           return;
         }
 

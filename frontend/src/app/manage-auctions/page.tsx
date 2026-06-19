@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { auctionApi, paymentApi } from "@/lib/api";
+import { useToast } from "@/context/ToastContext";
 import {
   Activity,
   Calendar,
@@ -213,6 +214,7 @@ const LIMIT = 10;
 // ═════════════════════════════════════════════════════════════════════════════
 export default function ManageAuctionsPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<AuctionTab>("ongoing");
   const [isInitialized, setIsInitialized] = useState(false);
   const [page, setPage] = useState(1);
@@ -281,7 +283,7 @@ export default function ManageAuctionsPage() {
       setDeleteTarget(null);
       fetchAuctions(activeTab, page);
     } catch (err: any) {
-      alert(err.message || "Không thể xóa phiên đấu giá");
+      toast.error(err.message || "Không thể xóa phiên đấu giá");
     } finally {
       setDeleteLoading(false);
     }
@@ -296,7 +298,7 @@ export default function ManageAuctionsPage() {
       fetchAuctions(activeTab, page);
       setShippingTarget(null);
     } catch (err: any) {
-      alert(err.message || "Không thể xác nhận giao hàng");
+      toast.error(err.message || "Không thể xác nhận giao hàng");
     } finally {
       setShippingLoadingId(null);
     }

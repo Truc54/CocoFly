@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Bell, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -69,10 +70,16 @@ export default function NotificationDropdown() {
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
 
+  const [activePushToast, setActivePushToast] = useState<NotificationItem | null>(null);
+  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const [isClient, setIsClient] = useState(false);
 
   // Initial fetch for count
   useEffect(() => {
+    setIsClient(true);
     notificationApi.getUnreadCount().then(setUnreadCount).catch(console.error);
   }, []);
 
@@ -88,6 +95,17 @@ export default function NotificationDropdown() {
           return [data, ...prev];
         });
         setUnreadCount(prev => prev + 1);
+
+        // Intercept auction_won type for victory push toast
+        if (data.type === "auction_won") {
+          if (toastTimeoutRef.current) {
+            clearTimeout(toastTimeoutRef.current);
+          }
+          setActivePushToast(data);
+          toastTimeoutRef.current = setTimeout(() => {
+            setActivePushToast(null);
+          }, 8000);
+        }
       };
 
       const handleUnreadCount = (data: { count: number }) => {
@@ -100,6 +118,9 @@ export default function NotificationDropdown() {
       return () => {
         socket.off("notification:new", handleNewNotification);
         socket.off("notification:unread_count", handleUnreadCount);
+        if (toastTimeoutRef.current) {
+          clearTimeout(toastTimeoutRef.current);
+        }
       };
     } catch (err) {
       console.error("Socket not initialized for notifications:", err);
@@ -214,6 +235,17 @@ export default function NotificationDropdown() {
       }
     } else {
       router.push(`/notifications`);
+    }
+  };
+
+  const handlePushToastClick = async () => {
+    if (!activePushToast) return;
+    if (!activePushToast.isRead) {
+      handleMarkAsRead(activePushToast.id);
+    }
+    setActivePushToast(null);
+    if (activePushToast.auctionId) {
+      router.push(`/auction/${activePushToast.auctionId}`);
     }
   };
 
@@ -358,6 +390,57 @@ export default function NotificationDropdown() {
           </div>
 
         </div>
+      )}
+
+      {isClient && activePushToast && createPortal(
+        <div 
+          onClick={handlePushToastClick}
+          className="fixed bottom-24 right-6 z-[10000] animate-slide-in-right cursor-pointer"
+        >
+          <div className="flex items-center gap-4 bg-white border-2 border-orange-400 p-4 rounded-xl shadow-[4px_4px_0px_#fed7aa] min-w-[360px] max-w-[420px] dark:bg-slate-800 dark:border-orange-500 hover:scale-[1.02] active:scale-[0.98] transition-all relative overflow-hidden group">
+            {/* Close Button */}
+            <button 
+              onClick={(e) => {
+                e.stopPropagation(); // prevent triggering redirect
+                setActivePushToast(null);
+              }} 
+              className="absolute top-1/2 -translate-y-1/2 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors shrink-0 p-1 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700"
+              aria-label="Đóng"
+            >
+              <span className="material-symbols-outlined text-lg block">close</span>
+            </button>
+
+            {/* Thumbnail */}
+            <div className="shrink-0 w-16 h-16 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 flex items-center justify-center">
+              {activePushToast.auction?.item?.media?.[0]?.cdnUrl ? (
+                <img 
+                  src={activePushToast.auction.item.media[0].cdnUrl} 
+                  alt={activePushToast.auction.item.title || "Vật phẩm"}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="material-symbols-outlined text-slate-400 text-2xl">image</span>
+              )}
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 min-w-0 pr-8">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <span className="material-symbols-outlined text-orange-500 text-[18px]">workspace_premium</span>
+                <p className="text-xs font-extrabold uppercase tracking-wider text-orange-500">
+                  {activePushToast.title || "Chiến thắng!"}
+                </p>
+              </div>
+              <p className="text-sm font-bold text-slate-800 dark:text-white truncate">
+                {activePushToast.auction?.item?.title || "Phiên đấu giá"}
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed">
+                {activePushToast.message}
+              </p>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

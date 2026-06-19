@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useEffect, useCallback, use } from "react";
+import { useState, useEffect, useCallback, use, useMemo } from "react";
 import { auctionApi } from "@/lib/api";
 import { authStorage } from "@/lib/auth-storage";
 import type { AuctionDetail, RelatedAuction } from "@/lib/types/auction";
@@ -13,11 +13,42 @@ import BiddingPanel from "@/components/auction/BiddingPanel";
 import LiveChatPanel from "@/components/auction/LiveChatPanel";
 import AuctionEndedOverlay from "@/components/auction/AuctionEndedOverlay";
 import UserHoverCard from "@/components/shared/UserHoverCard";
+import { AuctionCard } from "@/components/home/AuctionRow";
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 
 function formatVND(n: number) {
   return n.toLocaleString("vi-VN");
+}
+
+function useCountdown(endTimes: string[]) {
+  const [timeLefts, setTimeLefts] = useState<string[]>([]);
+  const endTimesKey = JSON.stringify(endTimes);
+
+  useEffect(() => {
+    const times: string[] = JSON.parse(endTimesKey);
+    if (times.length === 0) { setTimeLefts([]); return; }
+
+    function calc() {
+      return times.map((endTime: string) => {
+        const diff = new Date(endTime).getTime() - Date.now();
+        if (diff <= 0) return "00:00:00";
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const h = String(Math.floor((diff % (1000 * 60 * 60 * 24)) / 3600000)).padStart(2, "0");
+        const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2, "0");
+        const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, "0");
+        if (days > 0) {
+          return `${days}d ${h}:${m}:${s}`;
+        }
+        return `${h}:${m}:${s}`;
+      });
+    }
+    setTimeLefts(calc());
+    const timer = setInterval(() => setTimeLefts(calc()), 1000);
+    return () => clearInterval(timer);
+  }, [endTimesKey]);
+
+  return timeLefts;
 }
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
@@ -67,10 +98,10 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
 
         if (data.category?.id) {
           try {
-            const relRes = await auctionApi.getLive({ categoryId: data.category.id, limit: 4 });
+            const relRes = await auctionApi.getLive({ categoryId: data.category.id, limit: 50 });
             if (!cancelled) {
               const items = (relRes.data?.auctions ?? []).filter((a: any) => a.id !== data.id);
-              setRelated(items.slice(0, 4));
+              setRelated(items);
             }
           } catch { /* non-critical */ }
         }
@@ -150,6 +181,7 @@ function AuctionDetailContent({
     currentPrice,
     totalBids,
     endTime,
+    actualEndTime,
     isExtended,
     extendCount,
     auctionStatus,
@@ -173,11 +205,13 @@ function AuctionDetailContent({
     currentPrice: auction.currentPrice,
     totalBids: auction.totalBids,
     endTime: auction.endTime,
+    actualEndTime: auction.actualEndTime,
     recentBids: auction.recentBids,
     status: auction.status,
     winnerId: auction.winnerId,
     winnerName: auction.winnerName,
     finalPrice: auction.finalPrice,
+    buyoutPrice: auction.buyoutPrice,
   });
 
   // Auto-dismiss success toast
@@ -188,9 +222,15 @@ function AuctionDetailContent({
     }
   }, [bidSuccess, clearBidSuccess]);
 
+  const endTimes = useMemo(() => related.map(r => r.endTime), [related]);
+  const timeLefts = useCountdown(endTimes);
+
   const images = auction.media.length > 0
     ? auction.media.map((m) => m.cdnUrl)
     : ["https://placehold.co/800x600/f1f5f9/94a3b8?text=No+Image"];
+
+  const activeMediaItem = auction.media.length > 0 ? auction.media[activeImageIdx] : null;
+  const isVideo = activeMediaItem?.type === "video" || activeMediaItem?.cdnUrl?.includes("/video/upload") || activeMediaItem?.cdnUrl?.endsWith(".mp4");
 
   const isEnded = auctionStatus === "ended" || auctionStatus === "buyout";
 
@@ -218,13 +258,21 @@ function AuctionDetailContent({
           {/* Photo Gallery */}
           <div className="space-y-4">
             <div className="relative aspect-[4/3] bg-white dark:bg-slate-800 rounded-xl border-2 border-slate-200 dark:border-slate-700 overflow-hidden shadow-[4px_4px_0px_#E2B9A1] group">
-              <Image
-                src={images[activeImageIdx]}
-                alt={auction.title}
-                fill
-                className="object-contain p-4"
-                unoptimized
-              />
+              {isVideo && activeMediaItem ? (
+                <video
+                  src={activeMediaItem.cdnUrl}
+                  controls
+                  className="w-full h-full object-contain p-4"
+                />
+              ) : (
+                <Image
+                  src={images[activeImageIdx]}
+                  alt={auction.title}
+                  fill
+                  className="object-contain p-4"
+                  unoptimized
+                />
+              )}
               {images.length > 1 && (
                 <>
                   <button
@@ -249,19 +297,29 @@ function AuctionDetailContent({
             {/* Thumbnails */}
             {images.length > 1 && (
               <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-2 pt-1">
-                {images.map((img, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setActiveImageIdx(idx)}
-                    className={`relative w-[72px] h-[72px] shrink-0 rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
-                      activeImageIdx === idx
-                        ? "border-primary shadow-[3px_3px_0px_#8f5c38] scale-100"
-                        : "border-slate-200 opacity-80 hover:opacity-100 hover:shadow-[3px_3px_0px_#cbd5e1] scale-95 hover:scale-100"
-                    }`}
-                  >
-                    <Image src={img} alt={`Thumb ${idx}`} fill className="object-cover" unoptimized />
-                  </button>
-                ))}
+                {images.map((img, idx) => {
+                  const isThumbVideo = auction.media[idx]?.type === "video" || auction.media[idx]?.cdnUrl?.includes("/video/upload");
+                  const thumbUrl = isThumbVideo ? auction.media[idx].cdnUrl.replace(/\.[^/.]+$/, ".jpg") : img;
+                  
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => setActiveImageIdx(idx)}
+                      className={`relative w-[72px] h-[72px] shrink-0 rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
+                        activeImageIdx === idx
+                          ? "border-primary shadow-[3px_3px_0px_#8f5c38] scale-100"
+                          : "border-slate-200 opacity-80 hover:opacity-100 hover:shadow-[3px_3px_0px_#cbd5e1] scale-95 hover:scale-100"
+                      }`}
+                    >
+                      <Image src={thumbUrl} alt={`Thumb ${idx}`} fill className="object-cover" unoptimized />
+                      {isThumbVideo && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/35">
+                          <span className="material-symbols-outlined text-white text-xl">play_circle</span>
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -339,20 +397,22 @@ function AuctionDetailContent({
           {/* Success Toast Notification - Top Right */}
           {bidSuccess && (
             <div className="fixed top-6 right-6 z-[200] animate-slide-in-right">
-              <div className="flex items-center gap-3 bg-white border-2 border-green-300 px-5 py-3.5 rounded-xl shadow-[4px_4px_0px_#86efac] min-w-[280px]">
+              <div className="flex items-center gap-3 bg-white border-2 border-green-300 px-5 py-3.5 rounded-xl shadow-[4px_4px_0px_#86efac] min-w-[280px] dark:bg-slate-800 dark:border-green-600">
                 <div className="w-8 h-8 rounded-full bg-green-100 border-2 border-green-300 flex items-center justify-center shrink-0">
                   <span className="material-symbols-outlined text-green-600 text-lg">check</span>
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-bold text-slate-800">Đặt giá thành công!</p>
-                  <p className="text-xs text-slate-500 mt-0.5">Bạn đang dẫn đầu phiên đấu giá</p>
+                  <p className="text-sm font-bold text-slate-800 dark:text-white">Đặt giá thành công!</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Bạn đang dẫn đầu phiên đấu giá</p>
                 </div>
-                <button onClick={clearBidSuccess} className="text-slate-400 hover:text-slate-600 transition-colors shrink-0">
+                <button onClick={clearBidSuccess} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors shrink-0">
                   <span className="material-symbols-outlined text-lg">close</span>
                 </button>
               </div>
             </div>
           )}
+
+
 
           {/* Title */}
           <div className="flex flex-col gap-2">
@@ -372,7 +432,7 @@ function AuctionDetailContent({
               finalPrice={finalPrice}
               isBuyout={auctionStatus === "buyout"}
               startTime={auction.scheduledStart}
-              endTime={auction.actualEndTime || endTime || auction.endTime}
+              endTime={actualEndTime || auction.actualEndTime || endTime || auction.endTime}
               totalBids={totalBids}
             />
           ) : (
@@ -432,40 +492,14 @@ function AuctionDetailContent({
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {related.map((item) => (
-              <Link
+            {related.map((item, idx) => (
+              <AuctionCard
                 key={item.id}
-                href={`/auction/${item.id}`}
-                className="group bg-white dark:bg-slate-800/60 rounded-xl overflow-hidden border-2 border-slate-200 dark:border-slate-700 shadow-[4px_4px_0px_#E2B9A1] hover:-translate-y-1 hover:shadow-[6px_6px_0px_#E2B9A1] transition-all duration-300 flex flex-col"
-              >
-                <div className="relative aspect-[4/3] overflow-hidden bg-slate-100 dark:bg-slate-700 border-b-2 border-slate-200">
-                  <Image
-                    className="object-cover group-hover:scale-105 transition-transform duration-500"
-                    alt={item.title}
-                    src={item.thumbnailUrl || "https://placehold.co/400x300/f1f5f9/94a3b8?text=No+Image"}
-                    fill
-                    unoptimized
-                  />
-                  <span className="absolute top-2 right-2 bg-red-500/90 backdrop-blur-sm px-2 py-0.5 rounded-full border border-red-600 text-[10px] font-bold text-white flex items-center gap-1 shadow-[2px_2px_0px_#991b1b]">
-                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                    Đang diễn ra
-                  </span>
-                </div>
-                <div className="p-3 space-y-1.5 flex-1 flex flex-col">
-                  <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                    {(item.category?.name ?? "Đấu giá").replace(/&/g, "-")}
-                  </span>
-                  <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 line-clamp-2 leading-snug flex-1">
-                    {item.title}
-                  </h3>
-                  <div className="space-y-2 mt-2">
-                    <div className="min-w-0">
-                      <p className="text-[10px] text-slate-500 font-medium">Giá hiện tại</p>
-                      <p className="text-sm font-bold text-primary">{formatVND(item.currentPrice)}đ</p>
-                    </div>
-                  </div>
-                </div>
-              </Link>
+                auction={item as any}
+                variant="live"
+                countdown={timeLefts[idx]}
+                index={idx}
+              />
             ))}
           </div>
         </section>

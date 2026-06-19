@@ -6,10 +6,12 @@ import { CreditCard, Landmark, ArrowRight, Loader2, CheckCircle2, AlertCircle, S
 import Image from "next/image";
 
 import { paymentApi, userApi } from "@/lib/api";
+import { useToast } from "@/context/ToastContext";
 
 export default function CheckoutPage() {
   const params = useParams();
   const router = useRouter();
+  const { toast } = useToast();
   const auctionId = params.id as string;
 
   const [loading, setLoading] = useState(true);
@@ -88,7 +90,7 @@ export default function CheckoutPage() {
         try {
           await userApi.saveAddress(address, phone);
         } catch (saveErr: any) {
-          alert(`Lỗi lưu địa chỉ: ${saveErr.message}`);
+          toast.error(`Lỗi lưu địa chỉ: ${saveErr.message}`);
           setProcessing(false);
           return; // Dừng thanh toán nếu không lưu được địa chỉ
         }
@@ -112,11 +114,11 @@ export default function CheckoutPage() {
           setProcessing(false);
         }
       } else {
-        alert(json.message || "Khởi tạo thanh toán thất bại");
+        toast.error(json.message || "Khởi tạo thanh toán thất bại");
         setProcessing(false);
       }
     } catch (err: any) {
-      alert(err.message || "Khởi tạo thanh toán thất bại");
+      toast.error(err.message || "Khởi tạo thanh toán thất bại");
       setProcessing(false);
     }
   };

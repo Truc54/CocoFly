@@ -126,7 +126,7 @@ export function AuctionCard({ auction, variant, countdown, index = 0 }: AuctionC
         )}
 
         {/* Title */}
-        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 line-clamp-2 leading-snug">
+        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 line-clamp-1 leading-snug">
           {auction.title}
         </h3>
 
@@ -136,7 +136,7 @@ export function AuctionCard({ auction, variant, countdown, index = 0 }: AuctionC
             <p className="text-[10px] text-slate-500 font-medium">
               {isLive ? "Giá hiện tại" : "Giá khởi điểm"}
             </p>
-            <p className="text-sm font-bold text-primary">
+            <p className="text-sm font-bold text-orange-600 dark:text-orange-500">
               {formatVND(isLive ? auction.currentPrice : auction.startingPrice)}
             </p>
           </div>

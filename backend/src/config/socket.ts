@@ -230,12 +230,14 @@ export function initSocket(server: HttpServer): Server {
           buyerId: userId,
           buyerName: result.buyerName,
           price: result.finalPrice,
+          actualEndTime: new Date().toISOString(),
         });
         io!.to(`auction:${data.auctionId}`).emit('auction:ended', {
           auctionId: data.auctionId,
           winnerId: userId,
           winnerName: result.buyerName,
           finalPrice: result.finalPrice,
+          actualEndTime: new Date().toISOString(),
         });
 
         // Chat integration

@@ -3,6 +3,7 @@ import { z } from 'zod';
 const mediaItemSchema = z.object({
   cdnUrl: z.string().url('URL ảnh không hợp lệ'),
   storageKey: z.string().min(1, 'Storage key là bắt buộc'),
+  type: z.enum(['image', 'video']).optional(),
   mimeType: z.string().optional(),
   fileSize: z.number().int().nonnegative().optional(),
   width: z.number().int().nonnegative().optional(),

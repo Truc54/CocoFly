@@ -2,32 +2,64 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { auctionApi } from "@/lib/api";
 
-const hotAuctions = [
-  { id: 1, name: "Rolex Submariner", price: "350.000.000đ", image: "https://images.unsplash.com/photo-1523170335258-f5ed11844a49?q=80&w=800&auto=format&fit=crop" },
-  { id: 2, name: "Túi xách Hermes Birkin", price: "280.000.000đ", image: "https://images.unsplash.com/photo-1584916201218-f4242ceb4809?q=80&w=800&auto=format&fit=crop" },
-  { id: 3, name: "Bức tranh sơn dầu cổ", price: "120.000.000đ", image: "https://images.unsplash.com/photo-1579541018335-7d84b553e4b7?q=80&w=800&auto=format&fit=crop" },
-  { id: 4, name: "Vespa 946 Christian Dior", price: "950.000.000đ", image: "https://images.unsplash.com/photo-1598286237841-53e7f67ad8cc?q=80&w=800&auto=format&fit=crop" },
-  { id: 5, name: "MacBook Pro M3 Max", price: "80.000.000đ", image: "https://images.unsplash.com/photo-1603808033192-082d6919d3e1?q=80&w=800&auto=format&fit=crop" },
+const DEFAULT_HOT_AUCTIONS = [
+  { id: "1", name: "Rolex Submariner", price: "350.000.000 đ", image: "https://images.unsplash.com/photo-1523170335258-f5ed11844a49?q=80&w=800&auto=format&fit=crop" },
+  { id: "2", name: "Túi xách Hermes Birkin", price: "280.000.000 đ", image: "https://images.unsplash.com/photo-1584916201218-f4242ceb4809?q=80&w=800&auto=format&fit=crop" },
+  { id: "3", name: "Bức tranh sơn dầu cổ", price: "120.000.000 đ", image: "https://images.unsplash.com/photo-1579541018335-7d84b553e4b7?q=80&w=800&auto=format&fit=crop" },
+  { id: "4", name: "Vespa 946 Christian Dior", price: "950.000.000 đ", image: "https://images.unsplash.com/photo-1598286237841-53e7f67ad8cc?q=80&w=800&auto=format&fit=crop" },
+  { id: "5", name: "MacBook Pro M3 Max", price: "80.000.000 đ", image: "https://images.unsplash.com/photo-1603808033192-082d6919d3e1?q=80&w=800&auto=format&fit=crop" },
 ];
 
 export default function HeroSection() {
+  const [hotAuctions, setHotAuctions] = useState<any[]>(DEFAULT_HOT_AUCTIONS);
   const [activeIndex, setActiveIndex] = useState(2);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    auctionApi
+      .getLive({ limit: 5, sort: "most_bids" })
+      .then((res) => {
+        const liveList = res?.data?.auctions;
+        if (liveList && liveList.length > 0) {
+          const mapped = liveList.map((auc: any) => ({
+            id: auc.id,
+            name: auc.title,
+            price: Number(auc.currentPrice).toLocaleString("vi-VN") + " đ",
+            image: auc.thumbnailUrl || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=600",
+          }));
+          setHotAuctions(mapped);
+          setActiveIndex(Math.min(2, Math.floor(mapped.length / 2)));
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load hot auctions for hero slider:", err);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
 
   const handleNext = useCallback(() => {
+    if (hotAuctions.length === 0) return;
     setActiveIndex((prev) => (prev + 1) % hotAuctions.length);
-  }, []);
+  }, [hotAuctions.length]);
 
   const handlePrev = useCallback(() => {
+    if (hotAuctions.length === 0) return;
     setActiveIndex((prev) => (prev - 1 + hotAuctions.length) % hotAuctions.length);
-  }, []);
+  }, [hotAuctions.length]);
 
   // Auto-play every 4s
   useEffect(() => {
     const timer = setInterval(handleNext, 4000);
     return () => clearInterval(timer);
   }, [handleNext]);
+
+  if (hotAuctions.length === 0) return null;
 
   return (
     <section className="relative w-full h-[280px] md:h-[320px] flex items-center justify-center overflow-hidden rounded-xl mb-6">
@@ -88,8 +120,9 @@ export default function HeroSection() {
               const opacity = isVisible ? (isCenter ? 1 : 0.5) : 0;
 
               return (
-                <div
+                <Link
                   key={item.id}
+                  href={`/auction/${item.id}`}
                   className="absolute w-[160px] md:w-[200px] lg:w-[220px] aspect-[3/4] transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] rounded-xl overflow-hidden shadow-2xl group cursor-pointer"
                   style={{
                     transform: `translateX(${translateX}) scale(${scale})`,
@@ -113,7 +146,7 @@ export default function HeroSection() {
                       <p className="text-white font-bold text-sm">{item.price}</p>
                     </div>
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>

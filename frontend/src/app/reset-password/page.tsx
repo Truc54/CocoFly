@@ -41,6 +41,12 @@ export default function ResetPasswordPage() {
       return;
     }
 
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>_~`+\-=\[\]\\{}|;':",.\/<>?]).{8,}$/;
+    if (!passwordRegex.test(newPassword)) {
+      setErrorMsg("Mật khẩu tối thiểu 8 ký tự, gồm ít nhất 1 chữ hoa, 1 chữ thường, 1 số và 1 ký tự đặc biệt.");
+      return;
+    }
+
     const email = localStorage.getItem("reset_email");
     const token = localStorage.getItem("reset_token");
     if (!email || !token) {
@@ -53,7 +59,7 @@ export default function ResetPasswordPage() {
       await authApi.resetPassword({ email, token, newPassword });
       localStorage.removeItem("reset_email");
       localStorage.removeItem("reset_token");
-      router.push("/password-reset-success");
+      router.push("/login?reset=true");
     } catch (err: any) {
       setErrorMsg(err.message || "Có lỗi xảy ra.");
     } finally {
@@ -91,7 +97,7 @@ export default function ResetPasswordPage() {
               Đặt mật khẩu mới
             </h1>
             <p className="text-base text-slate-600 dark:text-slate-400">
-              Tạo mật khẩu mới cho tài khoản của bạn. Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường và số.
+              Tạo mật khẩu mới cho tài khoản của bạn. Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt.
             </p>
           </div>
 

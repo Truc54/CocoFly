@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import HeaderNew from "@/components/layout/HeaderNew";
 import FooterNew from "@/components/layout/FooterNew";
 import FloatingChatButton from "@/components/message/FloatingChatButton";
+import { ToastProvider } from "@/context/ToastContext";
 
 type AppChromeProps = {
   children: React.ReactNode;
@@ -33,11 +34,11 @@ export default function AppChrome({ children }: AppChromeProps) {
   }, [pathname]);
 
   return (
-    <>
+    <ToastProvider>
       {!hideChrome && <HeaderNew />}
       <main className={hideChrome ? "min-h-dvh" : "grow"}>{children}</main>
       {!hideChrome && <FooterNew />}
       {!hideChrome && <FloatingChatButton />}
-    </>
+    </ToastProvider>
   );
 }

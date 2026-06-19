@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>_~`+\-=\[\]\\{}|;':",.\/<>?]).{8,}$/;
 
 export const registerSchema = z.object({
   email: z
@@ -12,7 +12,7 @@ export const registerSchema = z.object({
     .string({ message: 'Mật khẩu là bắt buộc' })
     .regex(
       passwordRegex,
-      'Mật khẩu tối thiểu 8 ký tự, gồm ít nhất 1 chữ hoa, 1 chữ thường và 1 số',
+      'Mật khẩu tối thiểu 8 ký tự, gồm ít nhất 1 chữ hoa, 1 chữ thường, 1 số và 1 ký tự đặc biệt',
     ),
   fullName: z
     .string({ message: 'Họ tên là bắt buộc' })
@@ -70,6 +70,7 @@ export const resetPasswordSchema = z.object({
     .string({ message: 'Mật khẩu mới là bắt buộc' })
     .regex(
       passwordRegex,
-      'Mật khẩu tối thiểu 8 ký tự, gồm ít nhất 1 chữ hoa, 1 chữ thường và 1 số',
+      'Mật khẩu tối thiểu 8 ký tự, gồm ít nhất 1 chữ hoa, 1 chữ thường, 1 số và 1 ký tự đặc biệt',
     ),
+  oldPassword: z.string().optional(),
 });

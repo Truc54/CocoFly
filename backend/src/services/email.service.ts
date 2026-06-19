@@ -1,13 +1,21 @@
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 import { env } from '../config/env';
 
-const resend = new Resend(env.RESEND_API_KEY);
+const transporter = nodemailer.createTransport({
+  host: env.SMTP_HOST,
+  port: env.SMTP_PORT,
+  secure: env.SMTP_PORT === 465, // true for 465, false for other ports
+  auth: {
+    user: env.SMTP_USER,
+    pass: env.SMTP_PASS,
+  },
+});
 
 export class EmailService {
   async sendOtpEmail(to: string, code: string): Promise<void> {
     try {
-      const result = await resend.emails.send({
-        from: env.RESEND_FROM_EMAIL,
+      const result = await transporter.sendMail({
+        from: `"CocoFly" <${env.SMTP_USER}>`,
         to,
         subject: 'CocoFly - Mã xác minh tài khoản',
         html: `
@@ -22,12 +30,7 @@ export class EmailService {
         `,
       });
 
-      if (result.error) {
-        console.error('[EmailService] Resend API error:', result.error);
-        throw new Error(`Không thể gửi email đến ${to}: ${result.error.message}`);
-      }
-
-      console.log(`[EmailService] OTP email sent to ${to}, id: ${result.data?.id}`);
+      console.log(`[EmailService] OTP email sent to ${to}, messageId: ${result.messageId}`);
     } catch (err: any) {
       console.error('[EmailService] Failed to send OTP email:', err.message || err);
       throw err;
@@ -36,8 +39,8 @@ export class EmailService {
 
   async sendPasswordResetOtpEmail(to: string, code: string): Promise<void> {
     try {
-      const result = await resend.emails.send({
-        from: env.RESEND_FROM_EMAIL,
+      const result = await transporter.sendMail({
+        from: `"CocoFly" <${env.SMTP_USER}>`,
         to,
         subject: 'CocoFly - Đặt lại mật khẩu',
         html: `
@@ -52,12 +55,7 @@ export class EmailService {
         `,
       });
 
-      if (result.error) {
-        console.error('[EmailService] Resend API error:', result.error);
-        throw new Error(`Không thể gửi email đến ${to}: ${result.error.message}`);
-      }
-
-      console.log(`[EmailService] Password reset OTP email sent to ${to}, id: ${result.data?.id}`);
+      console.log(`[EmailService] Password reset OTP email sent to ${to}, messageId: ${result.messageId}`);
     } catch (err: any) {
       console.error('[EmailService] Failed to send password reset OTP email:', err.message || err);
       throw err;
@@ -65,17 +63,23 @@ export class EmailService {
   }
 
   async sendSecurityAlertEmail(to: string, ip: string): Promise<void> {
-    await resend.emails.send({
-      from: env.RESEND_FROM_EMAIL,
-      to,
-      subject: 'CocoFly - Cảnh báo đăng nhập bất thường',
-      html: `
-        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
-          <h2 style="color: #d32f2f;">⚠️ Đăng nhập từ IP lạ</h2>
-          <p style="color: #555;">Tài khoản CocoFly của bạn vừa được đăng nhập từ địa chỉ IP: <strong>${ip}</strong></p>
-          <p style="color: #888; font-size: 13px;">Nếu đây không phải bạn, hãy đổi mật khẩu ngay lập tức.</p>
-        </div>
-      `,
-    });
+    try {
+      const result = await transporter.sendMail({
+        from: `"CocoFly" <${env.SMTP_USER}>`,
+        to,
+        subject: 'CocoFly - Cảnh báo đăng nhập bất thường',
+        html: `
+          <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
+            <h2 style="color: #d32f2f;">⚠️ Đăng nhập từ IP lạ</h2>
+            <p style="color: #555;">Tài khoản CocoFly của bạn vừa được đăng nhập từ địa chỉ IP: <strong>${ip}</strong></p>
+            <p style="color: #888; font-size: 13px;">Nếu đây không phải bạn, hãy đổi mật khẩu ngay lập tức.</p>
+          </div>
+        `,
+      });
+      console.log(`[EmailService] Security alert email sent to ${to}, messageId: ${result.messageId}`);
+    } catch (err: any) {
+      console.error('[EmailService] Failed to send security alert email:', err.message || err);
+      throw err;
+    }
   }
 }

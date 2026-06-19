@@ -130,10 +130,10 @@ function LiveAuctionsPageContent() {
     }).catch(() => {});
   }, []);
 
-  const fetchAuctions = useCallback(async (page: number, append = false) => {
+  const fetchAuctions = useCallback(async (page: number) => {
     try {
       if (page === 1) {
-        if (!append && !loading) setIsRefetching(true);
+        if (!loading) setIsRefetching(true);
         else setLoading(true);
       } else {
         setLoadingMore(true);
@@ -142,15 +142,20 @@ function LiveAuctionsPageContent() {
 
       const res = await auctionApi.getLive({
         page,
-        limit: 20,
+        limit: 15,
         categoryId: activeCategoryId,
         sort,
         search: searchKeyword || undefined,
       });
 
       const { auctions: data, pagination: pag } = res.data;
-      setAuctions((prev) => (append ? [...prev, ...data] : data));
+      setAuctions(data);
       setPagination(pag);
+
+      // Scroll smoothly back to top of listings on page change
+      if (page > 1) {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
     } catch (err: any) {
       setError(err.message || "Không thể tải danh sách đấu giá");
     } finally {
@@ -158,11 +163,11 @@ function LiveAuctionsPageContent() {
       setIsRefetching(false);
       setLoadingMore(false);
     }
-  }, [activeCategoryId, sort, searchKeyword]);
+  }, [activeCategoryId, sort, searchKeyword, loading]);
 
   useEffect(() => {
     fetchAuctions(1);
-  }, [fetchAuctions]);
+  }, [activeCategoryId, sort, searchKeyword]);
 
   const endTimes = useMemo(() => auctions.map((a) => a.endTime), [auctions]);
   const timeLefts = useCountdown(endTimes);
@@ -192,10 +197,92 @@ function LiveAuctionsPageContent() {
     });
   }, [auctions, ratingFilter, minPrice, maxPrice, hoursLeft]);
 
-  const handleLoadMore = () => {
-    if (pagination && pagination.page < pagination.totalPages) {
-      fetchAuctions(pagination.page + 1, true);
+  const renderPagination = () => {
+    if (!pagination || pagination.totalPages <= 1) return null;
+
+    const { page, totalPages } = pagination;
+    const pages = [];
+
+    const range = 2;
+    let start = Math.max(1, page - range);
+    let end = Math.min(totalPages, page + range);
+
+    if (page <= range) {
+      end = Math.min(totalPages, range * 2 + 1);
     }
+    if (page > totalPages - range) {
+      start = Math.max(1, totalPages - range * 2);
+    }
+
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+
+    return (
+      <div className="flex items-center justify-center gap-1.5 mt-10">
+        <button
+          onClick={() => page > 1 && fetchAuctions(page - 1)}
+          disabled={page === 1 || loadingMore || isRefetching}
+          className="flex items-center justify-center w-10 h-10 border-2 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-xl hover:border-orange-400 hover:text-orange-500 disabled:opacity-40 disabled:cursor-default disabled:hover:border-slate-200 disabled:hover:text-slate-600 transition-all cursor-pointer font-bold"
+        >
+          <span className="material-symbols-outlined text-lg">chevron_left</span>
+        </button>
+
+        {start > 1 && (
+          <>
+            <button
+              onClick={() => fetchAuctions(1)}
+              className="flex items-center justify-center w-10 h-10 border-2 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-xl hover:border-orange-400 hover:text-orange-500 transition-all cursor-pointer font-bold"
+            >
+              1
+            </button>
+            {start > 2 && (
+              <span className="w-8 text-center text-slate-400 dark:text-slate-600 font-bold">...</span>
+            )}
+          </>
+        )}
+
+        {pages.map((p) => {
+          const isActive = p === page;
+          return (
+            <button
+              key={p}
+              onClick={() => !isActive && fetchAuctions(p)}
+              disabled={loadingMore || isRefetching}
+              className={`flex items-center justify-center w-10 h-10 border-2 rounded-xl transition-all cursor-pointer font-bold ${
+                isActive
+                  ? "border-orange-400 bg-orange-400/10 text-orange-600 shadow-[3px_3px_0px_#fed7aa]"
+                  : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-orange-400 hover:text-orange-500"
+              }`}
+            >
+              {p}
+            </button>
+          );
+        })}
+
+        {end < totalPages && (
+          <>
+            {end < totalPages - 1 && (
+              <span className="w-8 text-center text-slate-400 dark:text-slate-600 font-bold">...</span>
+            )}
+            <button
+              onClick={() => fetchAuctions(totalPages)}
+              className="flex items-center justify-center w-10 h-10 border-2 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-xl hover:border-orange-400 hover:text-orange-500 transition-all cursor-pointer font-bold"
+            >
+              {totalPages}
+            </button>
+          </>
+        )}
+
+        <button
+          onClick={() => page < totalPages && fetchAuctions(page + 1)}
+          disabled={page === totalPages || loadingMore || isRefetching}
+          className="flex items-center justify-center w-10 h-10 border-2 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-xl hover:border-orange-400 hover:text-orange-500 disabled:opacity-40 disabled:cursor-default disabled:hover:border-slate-200 disabled:hover:text-slate-600 transition-all cursor-pointer font-bold"
+        >
+          <span className="material-symbols-outlined text-lg">chevron_right</span>
+        </button>
+      </div>
+    );
   };
 
   const handleResetFilters = () => {
@@ -637,13 +724,13 @@ function LiveAuctionsPageContent() {
                         <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
                           {(auction.category?.name ?? "Khác").replace(/&/g, "-")}
                         </span>
-                        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 line-clamp-2 leading-snug">
+                        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 line-clamp-1 leading-snug">
                           {auction.title}
                         </h3>
                         <div className="space-y-1">
                           <div>
                             <p className="text-[10px] text-slate-500 font-medium">Giá hiện tại</p>
-                            <p className="text-sm font-bold text-primary">{formatVND(auction.currentPrice)}</p>
+                            <p className="text-sm font-bold text-orange-600 dark:text-orange-500">{formatVND(auction.currentPrice)}</p>
                           </div>
                           <div className="flex items-center justify-between">
                             <p className="text-[10px] text-slate-500 font-medium">Còn lại</p>
@@ -659,28 +746,8 @@ function LiveAuctionsPageContent() {
                 </div>
               )}
 
-              {/* Load more */}
-              {pagination && pagination.page < pagination.totalPages && (
-                <div className="flex justify-center mt-10">
-                  <button
-                    onClick={handleLoadMore}
-                    disabled={loadingMore}
-                    className="px-8 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-primary font-bold rounded-xl hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                  >
-                    {loadingMore ? (
-                      <>
-                        <span className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-                        Đang tải...
-                      </>
-                    ) : (
-                      <>
-                        <span className="material-symbols-outlined text-lg">expand_more</span>
-                        Xem thêm ({pagination.totalItems - auctions.length} phiên còn lại)
-                      </>
-                    )}
-                  </button>
-                </div>
-              )}
+              {/* Pagination */}
+              {renderPagination()}
             </>
           )}
         </div>

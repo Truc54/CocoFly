@@ -115,7 +115,7 @@ export const authApi = {
   logout: () => fetchApi("/auth/logout", { method: "POST", credentials: "include" }),
   forgotPassword: (data: { email: string }) => fetchApi("/auth/forgot-password", { method: "POST", body: JSON.stringify(data) }),
   verifyResetOtp: (data: { email: string; otp: string }) => fetchApi("/auth/verify-reset-otp", { method: "POST", body: JSON.stringify({ email: data.email, code: data.otp }) }),
-  resetPassword: (data: { email: string; token: string; newPassword: string }) => fetchApi("/auth/reset-password", { method: "POST", body: JSON.stringify(data) }),
+  resetPassword: (data: { email: string; token: string; newPassword: string; oldPassword?: string }) => fetchApi("/auth/reset-password", { method: "POST", body: JSON.stringify(data) }),
 };
 
 export const userApi = {
@@ -229,7 +229,10 @@ export const auctionApi = {
 };
 
 export const categoryApi = {
-  getAll: () => fetchApi('/api/categories'),
+  getAll: (params?: { featured?: boolean }) => {
+    const qs = params?.featured ? '?featured=true' : '';
+    return fetchApi(`/api/categories${qs}`);
+  },
 };
 
 export const notificationApi = {

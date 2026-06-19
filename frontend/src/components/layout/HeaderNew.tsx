@@ -101,7 +101,7 @@ export default function HeaderNew() {
   // Fetch categories for shortcuts
   useEffect(() => {
     categoryApi
-      .getAll()
+      .getAll({ featured: true })
       .then((res) => {
         if (res?.data) {
           const filtered = res.data.filter((cat: CategoryLink) => !isRealEstateCategory(cat));

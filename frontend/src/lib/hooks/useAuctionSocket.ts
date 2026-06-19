@@ -10,6 +10,7 @@ interface AuctionSocketState {
   currentPrice: number;
   totalBids: number;
   endTime: string;
+  actualEndTime: string | null;
   isExtended: boolean;
   extendCount: number;
   auctionStatus: "active" | "ended" | "buyout" | "scheduled";
@@ -47,11 +48,13 @@ export function useAuctionSocket(
     currentPrice: number;
     totalBids: number;
     endTime: string;
+    actualEndTime?: string | null;
     recentBids: BidEntry[];
     status: string;
     winnerId?: string | null;
     winnerName?: string | null;
     finalPrice?: number | null;
+    buyoutPrice?: number | null;
   },
 ): UseAuctionSocketReturn {
   const [state, setState] = useState<AuctionSocketState>(() => {
@@ -72,12 +75,15 @@ export function useAuctionSocket(
     let statusMap: AuctionSocketState["auctionStatus"] = isEnded ? "ended" : "active";
     if (initialData.status === "scheduled") {
       statusMap = "scheduled";
+    } else if (isEnded && initialData.finalPrice && initialData.buyoutPrice && Number(initialData.finalPrice) === Number(initialData.buyoutPrice)) {
+      statusMap = "buyout";
     }
 
     return {
       currentPrice: initialData.currentPrice,
       totalBids: initialData.totalBids,
       endTime: initialData.endTime,
+      actualEndTime: initialData.actualEndTime ?? null,
       isExtended: false,
       extendCount: 0,
       auctionStatus: statusMap,
@@ -205,26 +211,36 @@ export function useAuctionSocket(
     };
 
     // ── Auction ended ─────────────────────────────────────────────────────
-    const onEnded = (data: { auctionId: string; winnerId: string | null; winnerName?: string | null; finalPrice: number | null }) => {
+    const onEnded = (data: { auctionId: string; winnerId: string | null; winnerName?: string | null; finalPrice: number | null; actualEndTime?: string }) => {
       if (!mountedRef.current || data.auctionId !== auctionId) return;
+
+      const user = authStorage.getUser() as { id?: string } | null;
+      const isWinner = !!(user?.id && data.winnerId === user.id);
+
       setState((prev) => ({
         ...prev,
         auctionStatus: "ended",
         winnerId: data.winnerId,
         finalPrice: data.finalPrice,
+        actualEndTime: data.actualEndTime || new Date().toISOString(),
         ...(data.winnerName !== undefined ? { winnerName: data.winnerName } : {}),
       }));
     };
 
     // ── Buyout ────────────────────────────────────────────────────────────
-    const onBuyout = (data: { auctionId: string; buyerId: string; buyerName?: string | null; price: number }) => {
+    const onBuyout = (data: { auctionId: string; buyerId: string; buyerName?: string | null; price: number; actualEndTime?: string }) => {
       if (!mountedRef.current || data.auctionId !== auctionId) return;
+
+      const user = authStorage.getUser() as { id?: string } | null;
+      const isWinner = !!(user?.id && data.buyerId === user.id);
+
       setState((prev) => ({
         ...prev,
         auctionStatus: "buyout",
         currentPrice: data.price,
         winnerId: data.buyerId,
         finalPrice: data.price,
+        actualEndTime: data.actualEndTime || new Date().toISOString(),
         ...(data.buyerName !== undefined ? { winnerName: data.buyerName } : {}),
       }));
     };
@@ -256,6 +272,8 @@ export function useAuctionSocket(
       setState((prev) => ({ ...prev, viewerCount: data.count }));
     };
 
+
+
     // Register all listeners using named references (safer cleanup)
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
@@ -268,6 +286,7 @@ export function useAuctionSocket(
     socket.on("bid:success", onBidSuccess);
     socket.on("bid:error", onBidError);
     socket.on("auction:viewer_count", onViewerCount);
+
 
     return () => {
       mountedRef.current = false;
@@ -284,6 +303,7 @@ export function useAuctionSocket(
       socket.off("bid:success", onBidSuccess);
       socket.off("bid:error", onBidError);
       socket.off("auction:viewer_count", onViewerCount);
+
     };
   }, [auctionId]);
 
@@ -319,6 +339,8 @@ export function useAuctionSocket(
   const clearBidSuccess = useCallback(() => {
     setState((prev) => ({ ...prev, bidSuccess: false }));
   }, []);
+
+
 
   return {
     ...state,

@@ -17,10 +17,12 @@ import {
   Zap,
   Loader2,
   AlertCircle,
+  Play,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { mediaApi, auctionApi, categoryApi } from "@/lib/api";
 import { CustomSelect, CustomDateTimePicker } from "./custom-inputs";
+import { useToast } from "@/context/ToastContext";
 
 const playfairDisplay = Playfair_Display({
   subsets: ["latin", "vietnamese"],
@@ -53,6 +55,7 @@ interface MediaItem {
   height: number;
   sortOrder: number;
   preview: string;
+  type?: string;
 }
 
 interface FormData {
@@ -105,6 +108,7 @@ function parseVND(value: string): number | "" {
 
 export default function CreateAuctionPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [step, setStep] = useState(0);
   const [maxStepReached, setMaxStepReached] = useState(0);
   const [form, setForm] = useState<FormData>(initialFormData);
@@ -210,7 +214,39 @@ export default function CreateAuctionPage() {
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        if (!file.type.startsWith("image/")) continue;
+        const isImage = file.type.startsWith("image/");
+        const isVideo = file.type.startsWith("video/");
+
+        if (!isImage && !isVideo) {
+          toast.error(`Tệp ${file.name} không phải là ảnh hoặc video hợp lệ.`);
+          continue;
+        }
+
+        const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+        const MAX_VIDEO_SIZE = 25 * 1024 * 1024; // 25MB
+
+        if (isImage && file.size > MAX_IMAGE_SIZE) {
+          toast.error(`Ảnh ${file.name} vượt quá dung lượng cho phép (tối đa 10MB).`);
+          continue;
+        }
+        if (isVideo && file.size > MAX_VIDEO_SIZE) {
+          toast.error(`Video ${file.name} vượt quá dung lượng cho phép (tối đa 25MB).`);
+          continue;
+        }
+
+        if (isVideo) {
+          const existingVideoCount = form.media.filter(m => m.mimeType?.startsWith("video/") || m.type === "video").length;
+          const newVideoCount = newMedia.filter(m => m.mimeType?.startsWith("video/") || m.type === "video").length;
+          if (existingVideoCount + newVideoCount >= 1) {
+            toast.error("Mỗi đấu giá chỉ được phép tải lên tối đa 1 video.");
+            continue;
+          }
+        }
+
+        if (form.media.length === 0 && newMedia.length === 0 && isVideo) {
+          toast.warning("Ảnh đầu tiên của phiên đấu giá phải là hình ảnh (thumbnail). Vui lòng tải lên một hình ảnh trước khi tải video.");
+          continue;
+        }
 
         const formData = new window.FormData();
         formData.append("file", file);
@@ -219,8 +255,9 @@ export default function CreateAuctionPage() {
         formData.append("signature", signature);
         formData.append("folder", folder);
 
+        const resourceType = isVideo ? "video" : "image";
         const uploadRes = await fetch(
-          `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+          `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`,
           { method: "POST", body: formData }
         );
         const uploadData = await uploadRes.json();
@@ -235,6 +272,7 @@ export default function CreateAuctionPage() {
             height: uploadData.height || 0,
             sortOrder: form.media.length + i,
             preview: uploadData.secure_url,
+            type: isVideo ? "video" : "image",
           });
         }
       }
@@ -271,6 +309,15 @@ export default function CreateAuctionPage() {
       const reordered = [...form.media];
       const [moved] = reordered.splice(dragIndex, 1);
       reordered.splice(dragOverIndex, 0, moved);
+      
+      const firstItem = reordered[0];
+      if (firstItem && (firstItem.mimeType?.startsWith("video/") || firstItem.type === "video")) {
+        toast.warning("Hình đại diện đầu tiên bắt buộc phải là hình ảnh, không thể là video. Vui lòng sắp xếp lại.");
+        setDragIndex(null);
+        setDragOverIndex(null);
+        return;
+      }
+
       const updated = reordered.map((m, i) => ({ ...m, sortOrder: i }));
       updateForm({ media: updated });
     }
@@ -499,15 +546,15 @@ export default function CreateAuctionPage() {
                   <div className="flex flex-col items-center gap-3">
                     <Upload className="w-10 h-10 text-slate-400 group-hover:text-primary transition-colors" />
                     <p className="text-sm font-medium text-slate-500">
-                      Kéo thả ảnh vào đây hoặc <span className="text-primary font-bold">nhấn để chọn</span>
+                      Kéo thả ảnh/video vào đây hoặc <span className="text-primary font-bold">nhấn để chọn</span>
                     </p>
-                    <p className="text-xs text-slate-400">PNG, JPG, WEBP (tối đa 10 ảnh)</p>
+                    <p className="text-xs text-slate-400">Ảnh (PNG, JPG, WEBP) tối đa 10 tệp & tối đa 1 video (25MB)</p>
                   </div>
                 )}
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/*"
+                  accept="image/*,video/*"
                   multiple
                   className="hidden"
                   onChange={(e) => handleImageUpload(e.target.files)}
@@ -529,13 +576,27 @@ export default function CreateAuctionPage() {
                         ${dragOverIndex === i && dragIndex !== i ? "border-primary ring-2 ring-primary/30 scale-105" : "border-slate-200 dark:border-slate-700"}
                       `}
                     >
-                      <img
-                        src={m.preview}
-                        alt={`Ảnh ${i + 1}`}
-                        className="w-full h-full object-cover pointer-events-none select-none"
-                      />
+                      {m.mimeType?.startsWith("video/") || m.type === "video" ? (
+                        <div className="relative w-full h-full bg-black">
+                          <video
+                            src={m.preview}
+                            className="w-full h-full object-cover pointer-events-none select-none"
+                            muted
+                            playsInline
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                            <Play className="w-6 h-6 text-white" />
+                          </div>
+                        </div>
+                      ) : (
+                        <img
+                          src={m.preview}
+                          alt={`Ảnh ${i + 1}`}
+                          className="w-full h-full object-cover pointer-events-none select-none"
+                        />
+                      )}
                       {i === 0 && (
-                        <span className="absolute top-1.5 left-1.5 bg-primary text-white text-[10px] font-bold px-2 py-0.5 uppercase tracking-wider rounded-br-lg">
+                        <span className="absolute top-1.5 left-1.5 bg-primary text-white text-[10px] font-bold px-2 py-0.5 uppercase tracking-wider rounded-lg">
                           Thumbnail
                         </span>
                       )}
