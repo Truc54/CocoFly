@@ -211,6 +211,7 @@ export class UserService {
       pinnedCount,
       balance: finalBalance,
       totalTransactions,
+      hasPassword: !!(user as any).passwordHash,
     };
   }
 

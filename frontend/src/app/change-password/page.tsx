@@ -1,15 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Playfair_Display } from "next/font/google";
-import { ArrowRight, ArrowLeft, CheckCircle2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import OtpInput from "@/components/auth/OtpInput";
+import { authStorage } from "@/lib/auth-storage";
+import { authApi, userApi } from "@/lib/api";
 
 const playfairDisplay = Playfair_Display({
   subsets: ["latin", "vietnamese"],
@@ -18,18 +18,47 @@ const playfairDisplay = Playfair_Display({
 
 export default function ChangePasswordPage() {
   const router = useRouter();
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(2); // Start directly at step 2 (OTP verification)
   const [email, setEmail] = useState("");
   const [otpValue, setOtpValue] = useState("");
   
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [resetToken, setResetToken] = useState("");
+  const [hasPassword, setHasPassword] = useState(true);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
-  const [countdown, setCountdown] = useState(60);
+  const [countdown, setCountdown] = useState(0);
+
+  // Retrieve user email and auto-send OTP on mount
+  useEffect(() => {
+    const initPage = async () => {
+      const currentUser = authStorage.getUser() as { email?: string } | null;
+      const regEmail = currentUser?.email || "truc@gmail.com";
+      setEmail(regEmail);
+
+      setIsSubmitting(true);
+      setErrorMsg("");
+      setSuccessMsg("");
+      try {
+        // Fetch user profile to detect if password exists (OAuth2 check)
+        const profileRes = await userApi.getMyProfile();
+        if (profileRes?.data) {
+          setHasPassword(!!profileRes.data.hasPassword);
+        }
+        await authApi.forgotPassword({ email: regEmail });
+        setCountdown(60);
+      } catch (err) {
+        setErrorMsg((err as Error).message || "Không thể tự động gửi mã OTP. Vui lòng thử lại.");
+      } finally {
+        setIsSubmitting(false);
+      }
+    };
+    initPage();
+  }, []);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -41,38 +70,43 @@ export default function ChangePasswordPage() {
     return () => clearInterval(timer);
   }, [countdown, step]);
 
-  const handleSendOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg("");
-    if (!email.trim()) {
-      setErrorMsg("Vui lòng nhập email.");
-      return;
-    }
-    setIsSubmitting(true);
-    // Simulate API call
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setStep(2);
-      setCountdown(60);
-    }, 1000);
-  };
-
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
+    setSuccessMsg("");
     if (otpValue.length !== 6) return;
     setIsSubmitting(true);
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const res = await authApi.verifyResetOtp({ email, otp: otpValue });
+      if (res?.resetToken) {
+        setResetToken(res.resetToken);
+        setStep(3); // Go to change password form
+      } else {
+        throw new Error("Không nhận được mã thông báo đặt lại mật khẩu.");
+      }
+    } catch (err) {
+      setErrorMsg((err as Error).message || "Mã OTP không đúng hoặc đã hết hạn.");
+    } finally {
       setIsSubmitting(false);
-      setStep(3); // Go to change password form
-    }, 1000);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setErrorMsg("");
+    setSuccessMsg("");
+    try {
+      await authApi.forgotPassword({ email });
+      setCountdown(60);
+      setSuccessMsg("Đã gửi lại mã OTP thành công.");
+    } catch (err) {
+      setErrorMsg((err as Error).message || "Gửi lại mã OTP thất bại.");
+    }
   };
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
-    if (!oldPassword || !newPassword || !confirmPassword) {
+    if ((hasPassword && !oldPassword) || !newPassword || !confirmPassword) {
       setErrorMsg("Vui lòng nhập đầy đủ thông tin.");
       return;
     }
@@ -81,11 +115,20 @@ export default function ChangePasswordPage() {
       return;
     }
     setIsSubmitting(true);
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      await authApi.resetPassword({
+        email,
+        token: resetToken,
+        newPassword,
+        ...(hasPassword ? { oldPassword } : {})
+      });
+      // Redirect back to settings page with password_changed=true param
+      router.push("/settings?password_changed=true");
+    } catch (err) {
+      setErrorMsg((err as Error).message || "Đặt lại mật khẩu thất bại. Vui lòng thử lại.");
+    } finally {
       setIsSubmitting(false);
-      setStep(4); // Success step
-    }, 1500);
+    }
   };
 
   const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
@@ -109,83 +152,10 @@ export default function ChangePasswordPage() {
         <div className="w-full max-w-md space-y-8 relative">
           <div className="absolute -top-12 -right-6 h-20 w-20 border-r-4 border-t-4 border-primary-main/20 hidden md:block" />
 
-          {/* STEP 1: Enter Email */}
-          {step === 1 && (
-            <>
-              <div className="space-y-3 text-center">
-                <div className="mb-2 flex justify-center">
-                  <div className="inline-flex size-16 items-center justify-center rounded-2xl bg-primary/10 shadow-[4px_4px_0px_#E2B9A1]">
-                    <Image src="/logo.png" alt="CocoFly Logo" width={34} height={34} className="rounded-md" />
-                  </div>
-                </div>
-                <h1 className={`${playfairDisplay.className} text-4xl font-extrabold text-slate-900 dark:text-white`}>
-                  Đổi mật khẩu
-                </h1>
-                <p className="text-base text-slate-600 dark:text-slate-400">
-                  Nhập email xác thực tài khoản của bạn để nhận mã OTP.
-                </p>
-              </div>
-
-              <form onSubmit={handleSendOtp} className="space-y-6">
-                {errorMsg && (
-                  <div className="rounded-md bg-red-50 p-3 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
-                    {errorMsg}
-                  </div>
-                )}
-                <label className="block space-y-2">
-                  <span className="mb-2 block text-sm font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-300">
-                    Email tài khoản
-                  </span>
-                  <div className="relative">
-                    <Image
-                      src="/auth/mail-icon.svg"
-                      alt="Mail"
-                      width={18}
-                      height={18}
-                      className="pointer-events-none absolute left-3 top-1/2 size-4.5 -translate-y-1/2"
-                    />
-                    <Input
-                      type="email"
-                      placeholder="you@example.com"
-                      className="h-12 pl-10 text-base border-2 border-slate-300 shadow-[4px_4px_0px_#cbd5e1] focus-visible:ring-0 focus-visible:border-primary-main rounded-none"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      autoFocus
-                    />
-                  </div>
-                </label>
-
-                <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
-                  <Button
-                    type="submit"
-                    className="group relative h-14 w-full overflow-hidden rounded-none border-2 border-primary-main bg-primary-main text-lg font-bold text-white shadow-[4px_4px_0px_#E2B9A1] transition-all hover:-translate-y-1 hover:shadow-[6px_6px_0px_#E2B9A1] disabled:opacity-70 disabled:hover:translate-y-0 sm:w-64"
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? "Đang gửi..." : (
-                      <span className="relative z-10 flex items-center justify-center gap-2">
-                        Gửi mã OTP
-                        <ArrowRight className="size-5 transition-transform group-hover:translate-x-1" />
-                      </span>
-                    )}
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => router.back()}
-                    className="h-14 w-full rounded-none border-2 border-slate-300 bg-white text-lg font-bold text-slate-700 shadow-[4px_4px_0px_#cbd5e1] transition-all hover:-translate-y-1 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300 sm:w-36"
-                  >
-                    <ArrowLeft className="mr-1 size-5" />
-                    Quay lại
-                  </Button>
-                </div>
-              </form>
-            </>
-          )}
-
           {/* STEP 2: Input OTP */}
           {step === 2 && (
             <>
-              <div className="space-y-3 text-center">
+              <div className="space-y-3 text-center animate-in fade-in duration-300">
                 <div className="mb-2 flex justify-center">
                   <div className="inline-flex size-16 items-center justify-center rounded-2xl bg-primary/10 shadow-[4px_4px_0px_#E2B9A1]">
                     <Image src="/logo.png" alt="CocoFly Logo" width={34} height={34} className="rounded-md" />
@@ -202,12 +172,12 @@ export default function ChangePasswordPage() {
               <form onSubmit={handleVerifyOtp} className="space-y-8">
                 <div className="space-y-4">
                   {errorMsg && (
-                    <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">
+                    <div className="rounded-xl bg-red-50 p-3 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
                       {errorMsg}
                     </div>
                   )}
                   {successMsg && (
-                    <div className="rounded-md bg-green-50 p-3 text-sm text-green-600">
+                    <div className="rounded-xl bg-green-50 p-3 text-sm text-green-600 dark:bg-green-900/20 dark:text-green-400">
                       {successMsg}
                     </div>
                   )}
@@ -225,8 +195,8 @@ export default function ChangePasswordPage() {
                   <button
                     type="button"
                     className="font-bold text-primary-main hover:underline disabled:opacity-50"
-                    onClick={() => { setCountdown(60); setSuccessMsg("Đã gửi lại mã OTP."); }}
-                    disabled={countdown > 0}
+                    onClick={handleResendOtp}
+                    disabled={countdown > 0 || isSubmitting}
                   >
                     {countdown > 0 ? `Đợi ${formatTime(countdown)}` : "Gửi lại mã"}
                   </button>
@@ -235,17 +205,17 @@ export default function ChangePasswordPage() {
                 <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
                   <Button
                     type="submit"
-                    className="group relative h-14 w-full overflow-hidden rounded-none border-2 border-primary-main bg-primary-main text-lg font-bold text-white shadow-[4px_4px_0px_#E2B9A1] transition-all hover:-translate-y-1 hover:shadow-[6px_6px_0px_#E2B9A1] disabled:opacity-70 disabled:hover:translate-y-0 sm:w-64"
+                    className="group relative h-14 w-full overflow-hidden rounded-xl border-2 border-primary-main bg-primary-main text-lg font-bold text-white shadow-[4px_4px_0px_#E2B9A1] transition-all hover:-translate-y-1 hover:shadow-[6px_6px_0px_#E2B9A1] disabled:opacity-70 disabled:hover:translate-y-0 sm:w-64"
                     disabled={isSubmitting || otpValue.length !== 6}
                   >
                     {isSubmitting ? "Đang xử lý..." : "Xác nhận OTP"}
                   </Button>
                   <Button
                     type="button"
-                    onClick={() => setStep(1)}
-                    className="h-14 w-full rounded-none border-2 border-slate-300 bg-white text-lg font-bold text-slate-700 shadow-[4px_4px_0px_#cbd5e1] transition-all hover:-translate-y-1 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300 sm:w-36"
+                    onClick={() => router.back()}
+                    className="h-14 w-full rounded-xl border-2 border-slate-300 bg-white text-lg font-bold text-slate-700 shadow-[4px_4px_0px_#cbd5e1] transition-all hover:-translate-y-1 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300 sm:w-36"
                   >
-                    Đổi Email
+                    Hủy
                   </Button>
                 </div>
               </form>
@@ -255,39 +225,43 @@ export default function ChangePasswordPage() {
           {/* STEP 3: Enter New Passwords */}
           {step === 3 && (
             <>
-              <div className="space-y-3 text-center">
+              <div className="space-y-3 text-center animate-in fade-in duration-300">
                 <h1 className={`${playfairDisplay.className} text-4xl font-extrabold text-slate-900 dark:text-white`}>
                   Cập nhật mật khẩu
                 </h1>
                 <p className="text-base text-slate-600 dark:text-slate-400">
-                  Vui lòng nhập mật khẩu cũ và đặt mật khẩu mới cho tài khoản của bạn.
+                  {hasPassword
+                    ? "Vui lòng nhập mật khẩu hiện tại và đặt mật khẩu mới cho tài khoản của bạn."
+                    : "Tài khoản liên kết Google/Facebook của bạn chưa thiết lập mật khẩu. Vui lòng đặt mật khẩu mới."}
                 </p>
               </div>
 
               <form onSubmit={handleChangePassword} className="space-y-6">
                 {errorMsg && (
-                  <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">
+                  <div className="rounded-xl bg-red-50 p-3 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
                     {errorMsg}
                   </div>
                 )}
 
                 <div className="space-y-4">
-                  <label className="block space-y-2">
-                    <span className="mb-2 block text-sm font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-300">Mật khẩu hiện tại</span>
-                    <Input
-                      type="password"
-                      className="h-12 text-base border-2 border-slate-300 shadow-[4px_4px_0px_#cbd5e1] focus-visible:ring-0 focus-visible:border-primary-main rounded-none"
-                      value={oldPassword}
-                      onChange={(e) => setOldPassword(e.target.value)}
-                      required
+                  {hasPassword && (
+                    <label className="block space-y-2">
+                      <span className="mb-2 block text-sm font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-300">Mật khẩu hiện tại</span>
+                      <Input
+                        type="password"
+                        className="h-12 text-base border-2 border-slate-300 shadow-[4px_4px_0px_#cbd5e1] focus-visible:ring-0 focus-visible:border-primary-main rounded-xl"
+                        value={oldPassword}
+                        onChange={(e) => setOldPassword(e.target.value)}
+                        required
                     />
                   </label>
+                  )}
 
                   <label className="block space-y-2">
                     <span className="mb-2 block text-sm font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-300">Mật khẩu mới</span>
                     <Input
                       type="password"
-                      className="h-12 text-base border-2 border-slate-300 shadow-[4px_4px_0px_#cbd5e1] focus-visible:ring-0 focus-visible:border-primary-main rounded-none"
+                      className="h-12 text-base border-2 border-slate-300 shadow-[4px_4px_0px_#cbd5e1] focus-visible:ring-0 focus-visible:border-primary-main rounded-xl"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       required
@@ -298,7 +272,7 @@ export default function ChangePasswordPage() {
                     <span className="mb-2 block text-sm font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-300">Xác nhận mật khẩu mới</span>
                     <Input
                       type="password"
-                      className="h-12 text-base border-2 border-slate-300 shadow-[4px_4px_0px_#cbd5e1] focus-visible:ring-0 focus-visible:border-primary-main rounded-none"
+                      className="h-12 text-base border-2 border-slate-300 shadow-[4px_4px_0px_#cbd5e1] focus-visible:ring-0 focus-visible:border-primary-main rounded-xl"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       required
@@ -309,7 +283,7 @@ export default function ChangePasswordPage() {
                 <div className="flex flex-col gap-4 pt-2">
                   <Button
                     type="submit"
-                    className="h-14 w-full rounded-none border-2 border-primary-main bg-primary-main text-lg font-bold text-white shadow-[4px_4px_0px_#E2B9A1] transition-all hover:-translate-y-1 hover:shadow-[6px_6px_0px_#E2B9A1] disabled:opacity-70 disabled:hover:translate-y-0"
+                    className="h-14 w-full rounded-xl border-2 border-primary-main bg-primary-main text-lg font-bold text-white shadow-[4px_4px_0px_#E2B9A1] transition-all hover:-translate-y-1 hover:shadow-[6px_6px_0px_#E2B9A1] disabled:opacity-70 disabled:hover:translate-y-0"
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? "Đang xử lý..." : "Đổi Mật Khẩu"}
@@ -317,36 +291,6 @@ export default function ChangePasswordPage() {
                 </div>
               </form>
             </>
-          )}
-
-          {/* STEP 4: Success */}
-          {step === 4 && (
-            <div className="space-y-6 text-center animate-in fade-in zoom-in-95 duration-500">
-              <div className="mb-6 flex justify-center">
-                <div className="relative w-24 h-24">
-                  <div className="absolute inset-0 rounded-full bg-emerald-500/20 animate-ping" />
-                  <div className="relative flex h-full w-full items-center justify-center rounded-full bg-emerald-500 shadow-[6px_6px_0px_#059669]">
-                    <CheckCircle2 className="h-12 w-12 text-white" />
-                  </div>
-                </div>
-              </div>
-
-              <h1 className={`${playfairDisplay.className} text-4xl font-extrabold text-slate-900 dark:text-white`}>
-                Thành công!
-              </h1>
-              <p className="text-lg text-slate-600 dark:text-slate-400">
-                Mật khẩu của bạn đã được cập nhật an toàn.
-              </p>
-
-              <div className="flex flex-col gap-4 mt-8 pt-4">
-                <Button
-                  onClick={() => router.push("/profile")}
-                  className="h-14 w-full rounded-none border-2 border-slate-300 bg-white text-lg font-bold text-slate-700 shadow-[4px_4px_0px_#cbd5e1] transition-all hover:-translate-y-1 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300"
-                >
-                  Trở lại Hồ sơ
-                </Button>
-              </div>
-            </div>
           )}
 
         </div>

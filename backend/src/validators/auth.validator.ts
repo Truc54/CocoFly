@@ -72,4 +72,5 @@ export const resetPasswordSchema = z.object({
       passwordRegex,
       'Mật khẩu tối thiểu 8 ký tự, gồm ít nhất 1 chữ hoa, 1 chữ thường, 1 số và 1 ký tự đặc biệt',
     ),
+  oldPassword: z.string().optional(),
 });

@@ -127,8 +127,8 @@ export class AuthController {
 
   async resetPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { email, token, newPassword } = req.body;
-      const result = await authService.resetPassword(email, token, newPassword);
+      const { email, token, newPassword, oldPassword } = req.body;
+      const result = await authService.resetPassword(email, token, newPassword, oldPassword);
       res.status(200).json({ success: true, ...result });
     } catch (err) {
       next(err);

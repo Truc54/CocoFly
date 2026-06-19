@@ -278,7 +278,7 @@ export class AuthService {
   // ──────────────────────────────────────────
   // 9. RESET PASSWORD
   // ──────────────────────────────────────────
-  async resetPassword(email: string, token: string, newPassword: string) {
+  async resetPassword(email: string, token: string, newPassword: string, oldPassword?: string) {
     const user = await this.userRepository.findByEmail(email);
     if (!user) {
       throw new AppError('Email không tồn tại', 404);
@@ -287,6 +287,16 @@ export class AuthService {
     const storedToken = await redis.get(`reset:token:${email}`);
     if (!storedToken || storedToken !== token) {
       throw new AppError('Phiên đặt lại mật khẩu không hợp lệ hoặc đã hết hạn', 400);
+    }
+
+    if (oldPassword) {
+      if (!user.passwordHash) {
+        throw new AppError('Không thể xác thực mật khẩu hiện tại.', 400);
+      }
+      const isPasswordValid = await bcrypt.compare(oldPassword, user.passwordHash);
+      if (!isPasswordValid) {
+        throw new AppError('Mật khẩu hiện tại không đúng', 400);
+      }
     }
 
     const passwordHash = await bcrypt.hash(newPassword, BCRYPT_COST);

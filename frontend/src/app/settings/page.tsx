@@ -212,6 +212,7 @@ export default function SettingsPage() {
   
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [notificationSettings, setNotificationSettings] = useState(INITIAL_NOTIFICATION_SETTINGS);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -286,6 +287,21 @@ export default function SettingsPage() {
       }
     };
     fetchProfile();
+  }, []);
+
+  // Detect if password was successfully changed from query param
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("password_changed") === "true") {
+        setPasswordSuccess(true);
+        // Clear search params
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, "", newUrl);
+        const timer = setTimeout(() => setPasswordSuccess(false), 4000);
+        return () => clearTimeout(timer);
+      }
+    }
   }, []);
 
   const handleSaveProfile = async () => {
@@ -373,6 +389,21 @@ export default function SettingsPage() {
               <div className="flex-1 min-w-0">
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">Thành công!</h4>
                 <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">Đã lưu thông tin tài khoản.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Password Success Toast ────────────────────────────────────── */}
+        {passwordSuccess && (
+          <div className="fixed top-24 right-6 z-50 animate-in fade-in slide-in-from-right-8 duration-300">
+            <div className="bg-white dark:bg-slate-900 border-2 border-emerald-500 shadow-[4px_4px_0px_#059669] p-4 flex items-center gap-3 w-80 rounded-xl">
+              <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center shrink-0">
+                <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">Thành công!</h4>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">Mật khẩu của bạn đã được cập nhật an toàn.</p>
               </div>
             </div>
           </div>

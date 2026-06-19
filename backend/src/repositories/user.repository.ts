@@ -241,6 +241,7 @@ export class UserRepository {
         accountStatus: true,
         balance: true,
         notificationSettings: true,
+        passwordHash: true,
         _count: {
           select: { reviewsReceived: true }
         }
