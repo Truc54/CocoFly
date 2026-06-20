@@ -1,21 +1,40 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { getSocket, connectSocket } from "../socket";
+import { connectSocket } from "../socket";
 import { messageApi } from "../api";
 import { authStorage } from "../auth-storage";
 import { playChatSound } from "../sounds";
+import type { DirectMessage } from "../types/message";
 
 export function useUnreadDM() {
   const [unreadCount, setUnreadCount] = useState(0);
+  const [token, setToken] = useState<string | null>(() => 
+    typeof window !== "undefined" ? authStorage.getToken() : null
+  );
 
   const playNotificationSound = useCallback(() => {
     playChatSound("receive");
   }, []);
 
+  // Sync token state with localStorage & listen to changes
   useEffect(() => {
-    const token = authStorage.getToken();
-    if (!token) return;
+    const handleAuthChange = () => {
+      setToken(authStorage.getToken());
+    };
+
+    window.addEventListener("auth-change", handleAuthChange);
+    return () => {
+      window.removeEventListener("auth-change", handleAuthChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!token) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setUnreadCount(0);
+      return;
+    }
 
     // Fetch initial unread count
     messageApi.getUnreadCount()
@@ -25,7 +44,7 @@ export function useUnreadDM() {
     let socket;
     try {
       socket = connectSocket();
-    } catch (err) {
+    } catch {
       return;
     }
 
@@ -33,8 +52,8 @@ export function useUnreadDM() {
       setUnreadCount(data.count);
     };
 
-    const onMessageReceived = (msg: any) => {
-      const currentUser = authStorage.getUser() as any;
+    const onMessageReceived = (msg: DirectMessage) => {
+      const currentUser = authStorage.getUser() as { id: string } | null;
       if (currentUser && msg.senderId !== currentUser.id) {
         // Play sound if not the sender
         playNotificationSound();
@@ -48,7 +67,7 @@ export function useUnreadDM() {
       socket.off("dm:unread_update", onUnreadUpdate);
       socket.off("dm:message", onMessageReceived);
     };
-  }, [playNotificationSound]);
+  }, [token, playNotificationSound]);
 
   return {
     unreadCount,

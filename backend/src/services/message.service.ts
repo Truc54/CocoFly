@@ -140,48 +140,59 @@ export class MessageService {
       nextCursor = nextItem!.conversationId;
     }
 
-    const conversationsList = await Promise.all(
-      participants.map(async (p) => {
-        const otherParticipant = p.conversation.participants[0];
-        const lastMsg = p.conversation.messages[0] || null;
+    const conversationIds = participants.map((p) => p.conversationId);
+    let unreadCounts: { conversation_id: string; count: number }[] = [];
 
-        // Calculate unread messages in this conversation
-        const unreadCount = await prisma.directMessage.count({
-          where: {
-            conversationId: p.conversationId,
-            createdAt: { gt: p.lastReadAt },
-            senderId: { not: userId }
-          }
-        });
+    if (conversationIds.length > 0) {
+      unreadCounts = await prisma.$queryRaw<{ conversation_id: string; count: number }[]>`
+        SELECT cp.conversation_id, COUNT(dm.id)::int as count
+        FROM conversation_participants cp
+        JOIN direct_messages dm ON cp.conversation_id = dm.conversation_id
+        WHERE cp.user_id = ${userId}::uuid
+          AND cp.conversation_id = ANY(${conversationIds}::uuid[])
+          AND dm.sender_id != ${userId}::uuid
+          AND dm.created_at > cp.last_read_at
+        GROUP BY cp.conversation_id
+      `;
+    }
 
-        return {
-          id: p.conversationId,
-          participant: otherParticipant
-            ? {
-                id: otherParticipant.user.id,
-                fullName: otherParticipant.user.fullName || 'Người dùng CocoFly',
-                avatarUrl: otherParticipant.user.avatarUrl
-              }
-            : {
-                id: '',
-                fullName: 'Người dùng cũ',
-                avatarUrl: null
-              },
-          lastMessage: lastMsg
-            ? {
-                content: lastMsg.status === 'recalled' 
-                  ? 'Tin nhắn đã bị thu hồi' 
-                  : (lastMsg.content || getMediaPreviewText(lastMsg.media)),
-                senderName: lastMsg.senderId === userId ? 'Bạn' : (lastMsg.sender?.fullName || 'Người dùng'),
-                createdAt: lastMsg.createdAt.toISOString(),
-                status: lastMsg.status
-              }
-            : null,
-          unreadCount,
-          isMuted: p.isMuted
-        };
-      })
-    );
+    const unreadMap = new Map<string, number>();
+    unreadCounts.forEach((row) => {
+      unreadMap.set(row.conversation_id, Number(row.count));
+    });
+
+    const conversationsList = participants.map((p) => {
+      const otherParticipant = p.conversation.participants[0];
+      const lastMsg = p.conversation.messages[0] || null;
+      const unreadCount = unreadMap.get(p.conversationId) || 0;
+
+      return {
+        id: p.conversationId,
+        participant: otherParticipant
+          ? {
+              id: otherParticipant.user.id,
+              fullName: otherParticipant.user.fullName || 'Người dùng CocoFly',
+              avatarUrl: otherParticipant.user.avatarUrl
+            }
+          : {
+              id: '',
+              fullName: 'Người dùng cũ',
+              avatarUrl: null
+            },
+        lastMessage: lastMsg
+          ? {
+              content: lastMsg.status === 'recalled' 
+                ? 'Tin nhắn đã bị thu hồi' 
+                : (lastMsg.content || getMediaPreviewText(lastMsg.media)),
+              senderName: lastMsg.senderId === userId ? 'Bạn' : (lastMsg.sender?.fullName || 'Người dùng'),
+              createdAt: lastMsg.createdAt.toISOString(),
+              status: lastMsg.status
+            }
+          : null,
+        unreadCount,
+        isMuted: p.isMuted
+      };
+    });
 
     return {
       conversations: conversationsList,
@@ -605,23 +616,16 @@ export class MessageService {
    * Gets total unread count for a user across all active conversations.
    */
   async getUnreadCount(userId: string) {
-    const participants = await prisma.conversationParticipant.findMany({
-      where: { userId }
-    });
-
-    let totalUnread = 0;
-    for (const p of participants) {
-      const count = await prisma.directMessage.count({
-        where: {
-          conversationId: p.conversationId,
-          createdAt: { gt: p.lastReadAt },
-          senderId: { not: userId }
-        }
-      });
-      totalUnread += count;
-    }
-
-    return totalUnread;
+    const result = await prisma.$queryRaw<[{ count: bigint | number }]>`
+      SELECT COUNT(dm.id) as count
+      FROM conversation_participants cp
+      JOIN direct_messages dm ON cp.conversation_id = dm.conversation_id
+      WHERE cp.user_id = ${userId}::uuid
+        AND dm.sender_id != ${userId}::uuid
+        AND dm.created_at > cp.last_read_at
+    `;
+    const count = result[0]?.count ? Number(result[0].count) : 0;
+    return count;
   }
 
   /**
