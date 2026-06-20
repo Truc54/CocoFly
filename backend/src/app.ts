@@ -3,6 +3,7 @@ import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import cors from 'cors';
 import { env } from './config/env';
+import { globalRateLimit } from './middlewares/rateLimiter';
 import { authRoutes } from './routes/auth.routes';
 import { oauthRoutes } from './routes/oauth.routes';
 import { auctionRoutes } from './routes/auction.routes';
@@ -26,14 +27,17 @@ app.use(cors({
   credentials: true,
 }));
 
-// Body parsing
-app.use(express.json());
+// Body parsing with size limit to prevent OOM attacks
+app.use(express.json({ limit: '1mb' }));
 
 // Cookie parsing (for refresh token)
 app.use(cookieParser());
 
 // Trust proxy for accurate IP (behind nginx/reverse proxy)
 app.set('trust proxy', 1);
+
+// Global rate limit: 300 requests per 15 minutes per IP
+app.use(globalRateLimit);
 
 // ── Routes ──
 app.use('/auth', authRoutes);

@@ -17,6 +17,25 @@ const chatService = new ChatService();
 const notificationService = new NotificationService();
 const messageService = new MessageService();
 
+// Helper to rate limit socket events using Redis
+async function isSocketRateLimited(userId: string, event: string, limit: number, ttlSeconds: number): Promise<boolean> {
+  const key = `ratelimit:socket:${event}:${userId}`;
+  const current = await redis.get(key);
+  const count = current ? parseInt(current, 10) : 0;
+
+  if (count >= limit) {
+    return true;
+  }
+
+  const multi = redis.multi();
+  multi.incr(key);
+  if (!current) {
+    multi.expire(key, ttlSeconds);
+  }
+  await multi.exec();
+  return false;
+}
+
 export function getIO(): Server {
   if (!io) throw new Error('Socket.IO not initialized');
   return io;
@@ -62,7 +81,7 @@ export function initSocket(server: HttpServer): Server {
     socket.on('auction:join', async ({ auctionId }: { auctionId: string }) => {
       if (!auctionId) return;
       socket.join(`auction:${auctionId}`);
-      
+
       // Viewer tracking
       await redis.sadd(`viewers:auction:${auctionId}`, userId);
       const count = await redis.scard(`viewers:auction:${auctionId}`);
@@ -73,7 +92,7 @@ export function initSocket(server: HttpServer): Server {
     socket.on('auction:leave', async ({ auctionId }: { auctionId: string }) => {
       if (!auctionId) return;
       socket.leave(`auction:${auctionId}`);
-      
+
       // Viewer tracking cleanup
       // Use a slight delay to allow any immediately following "join" events to process first
       setTimeout(async () => {
@@ -83,7 +102,7 @@ export function initSocket(server: HttpServer): Server {
           // Here the socket has already left, so if we find any socket with this userId, 
           // it means the user has another tab open OR they re-joined instantly.
           const userStillInRoom = socketsInRoom.some(s => s.data.userId === userId);
-          
+
           if (!userStillInRoom) {
             await redis.srem(`viewers:auction:${auctionId}`, userId);
             const count = await redis.scard(`viewers:auction:${auctionId}`);
@@ -98,6 +117,16 @@ export function initSocket(server: HttpServer): Server {
     // ── Place bid ─────────────────────────────────────────────────────────
     socket.on('bid:place', async (data: { auctionId: string; amount: number; maxAutoBid?: number; requestId?: string }) => {
       try {
+        // Rate limit: 5 bids per 10 seconds per user
+        const isLimited = await isSocketRateLimited(userId, 'bid', 5, 5);
+        if (isLimited) {
+          socket.emit('bid:error', {
+            message: 'Bạn đang đặt giá quá nhanh. Vui lòng đợi vài giây.',
+            code: 429,
+          });
+          return;
+        }
+
         // Idempotency guard: reject duplicate requests within 10s
         if (data.requestId) {
           const idempotencyKey = `bid_idem:${userId}:${data.requestId}`;
@@ -195,7 +224,7 @@ export function initSocket(server: HttpServer): Server {
               type: 'system',
             });
             io!.to(`auction:${data.auctionId}`).emit('chat:message', alertMsg);
-          } catch (e) {}
+          } catch (e) { }
         }
       } catch (err: any) {
         socket.emit('bid:error', {
@@ -249,7 +278,7 @@ export function initSocket(server: HttpServer): Server {
             type: 'system',
           });
           io!.to(`auction:${data.auctionId}`).emit('chat:message', alertMsg);
-        } catch (e) {}
+        } catch (e) { }
       } catch (err: any) {
         socket.emit('bid:error', {
           message: err.message || 'Mua ngay thất bại',
@@ -261,6 +290,7 @@ export function initSocket(server: HttpServer): Server {
     // ── Chat Events ────────────────────────────────────────────────────────
     socket.on('chat:send', async (data: { auctionId: string; message: string; parentId?: string }) => {
       try {
+
         const room = await chatService.getOrCreateRoom(data.auctionId);
         const msg = await chatService.sendMessage({
           roomId: room.id,
@@ -285,19 +315,19 @@ export function initSocket(server: HttpServer): Server {
           userId,
         });
         socket.emit('chat:history', history);
-      } catch (err) {}
+      } catch (err) { }
     });
 
     socket.on('chat:like', async (data: { auctionId: string; messageId: string }) => {
       try {
         const result = await chatService.toggleLike(data.messageId, userId);
-        
+
         // Broadcast to everyone (they just get the count)
         io!.to(`auction:${data.auctionId}`).emit('chat:like_updated', {
           messageId: data.messageId,
           likeCount: result.likeCount,
         });
-        
+
         // Tell the user who liked it about their specific state
         socket.emit('chat:like_updated', {
           messageId: data.messageId,
@@ -312,6 +342,13 @@ export function initSocket(server: HttpServer): Server {
     // ── Direct Message Events ──────────────────────────────────────────────
     socket.on('dm:send', async (data: { conversationId: string; content?: string; parentId?: string; media?: any[] }) => {
       try {
+        // Rate limit: 10 messages per 10 seconds per user
+        const isLimited = await isSocketRateLimited(userId, 'dm', 10, 1);
+        if (isLimited) {
+          socket.emit('dm:error', { message: 'Bạn đang gửi tin nhắn quá nhanh. Vui lòng thử lại sau.' });
+          return;
+        }
+
         const message = await messageService.sendMessage({
           conversationId: data.conversationId,
           senderId: userId,
@@ -419,7 +456,7 @@ export function initSocket(server: HttpServer): Server {
             readAt: result.readAt
           });
         }
-      } catch (err) {}
+      } catch (err) { }
     });
 
     socket.on('dm:typing', async (data: { conversationId: string }) => {
@@ -435,7 +472,7 @@ export function initSocket(server: HttpServer): Server {
             userId
           });
         }
-      } catch (err) {}
+      } catch (err) { }
     });
 
     socket.on('dm:stop_typing', async (data: { conversationId: string }) => {
@@ -451,7 +488,7 @@ export function initSocket(server: HttpServer): Server {
             userId
           });
         }
-      } catch (err) {}
+      } catch (err) { }
     });
 
     socket.on('disconnecting', async () => {

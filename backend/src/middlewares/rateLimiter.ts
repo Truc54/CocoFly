@@ -30,7 +30,68 @@ function createRateLimiter(config: RateLimitConfig) {
   };
 }
 
-// Registration rate limit removed — validation errors should not count against the user
+// Reusable Redis-based rate limiter generator
+function createRedisRateLimiter(prefix: string, max: number, ttlSeconds: number, message: string) {
+  return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const ip = req.ip || req.socket.remoteAddress || 'unknown';
+      // For authenticated routes (like upload), we can key by userId, otherwise IP
+      const userId = (req as any).user?.id;
+      const keySuffix = userId ? `user:${userId}` : `ip:${ip}`;
+      const key = `ratelimit:${prefix}:${keySuffix}`;
+
+      const current = await redis.get(key);
+      const count = current ? parseInt(current, 10) : 0;
+
+      if (count >= max) {
+        throw new AppError(message, 429);
+      }
+
+      const multi = redis.multi();
+      multi.incr(key);
+      if (!current) {
+        multi.expire(key, ttlSeconds);
+      }
+      await multi.exec();
+
+      next();
+    } catch (err) {
+      next(err);
+    }
+  };
+}
+
+// Global rate limit: 300 requests per 15 minutes per IP
+export const globalRateLimit = createRedisRateLimiter(
+  'global',
+  300,
+  900, // 15 minutes
+  'Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau 15 phút'
+);
+
+// Auth routes rate limit: 20 requests per 15 minutes per IP
+export const authRateLimit = createRedisRateLimiter(
+  'auth',
+  20,
+  900, // 15 minutes
+  'Quá nhiều yêu cầu xác thực từ IP này. Vui lòng thử lại sau 15 phút'
+);
+
+// OTP routes rate limit: 3 requests per 3 minutes per IP
+export const otpRateLimit = createRedisRateLimiter(
+  'otp',
+  3,
+  180, // 3 minutes
+  'Vui lòng đợi 3 phút trước khi yêu cầu hoặc xác thực mã OTP mới'
+);
+
+// Upload routes rate limit: 20 uploads per 15 minutes per user/IP
+export const uploadRateLimit = createRedisRateLimiter(
+  'upload',
+  20,
+  900, // 15 minutes
+  'Bạn đã vượt quá giới hạn tải lên ảnh (tối đa 20 ảnh mỗi 15 phút). Vui lòng thử lại sau.'
+);
 
 // Rate limit: 5 login fails per 15min per email + 20 per hour per IP
 export const loginRateLimit = async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
