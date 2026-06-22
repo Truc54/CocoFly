@@ -25,5 +25,9 @@ export function errorHandler(err: Error, _req: Request, res: Response, _next: Ne
   res.status(500).json({
     success: false,
     message: 'Lỗi hệ thống. Vui lòng thử lại sau',
+    error: {
+      message: err.message,
+      stack: err.stack,
+    }
   });
 }
