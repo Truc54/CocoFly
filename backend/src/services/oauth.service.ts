@@ -69,58 +69,7 @@ export class OAuthService {
     }, 'google');
   }
 
-  // ──────────────────────────────────────────
-  // FACEBOOK
-  // ──────────────────────────────────────────
-  getFacebookAuthUrl(): string {
-    const params = new URLSearchParams({
-      client_id: env.FACEBOOK_APP_ID,
-      redirect_uri: env.FACEBOOK_CALLBACK_URL,
-      scope: 'email public_profile',
-      response_type: 'code',
-    });
-    return `https://www.facebook.com/v19.0/dialog/oauth?${params.toString()}`;
-  }
 
-  async handleFacebookCallback(code: string) {
-    // Exchange code for access token
-    const tokenParams = new URLSearchParams({
-      client_id: env.FACEBOOK_APP_ID,
-      client_secret: env.FACEBOOK_APP_SECRET,
-      redirect_uri: env.FACEBOOK_CALLBACK_URL,
-      code,
-    });
-
-    const tokenRes = await fetch(`https://graph.facebook.com/v19.0/oauth/access_token?${tokenParams.toString()}`);
-
-    if (!tokenRes.ok) {
-      throw new AppError('Không thể xác thực với Facebook', 401);
-    }
-
-    const tokenData = await tokenRes.json() as { access_token: string };
-
-    // Get user info
-    const userRes = await fetch(
-      `https://graph.facebook.com/me?fields=id,name,email,picture.type(large)&access_token=${tokenData.access_token}`,
-    );
-
-    if (!userRes.ok) {
-      throw new AppError('Không thể lấy thông tin từ Facebook', 401);
-    }
-
-    const fbUser = await userRes.json() as { id: string; email: string; name: string; picture?: { data?: { url?: string } } };
-
-    if (!fbUser.email) {
-      throw new AppError('Tài khoản Facebook không có email. Vui lòng thêm email vào Facebook', 400);
-    }
-
-    return this.findOrCreateUser({
-      email: fbUser.email,
-      name: fbUser.name,
-      avatar: fbUser.picture?.data?.url,
-      providerId: fbUser.id,
-    }, 'facebook');
-  }
 
   // ──────────────────────────────────────────
   // TH1 / TH2 / TH3 — Find or create user

@@ -1,11 +1,8 @@
 import { Queue } from 'bullmq';
-import { env } from '../config/env';
+import { getBullMQConnection } from '../config/bullmq-connection';
 
 export const auctionQueue = new Queue('auction-lifecycle', {
-  connection: {
-    host: new URL(env.REDIS_URL).hostname || 'localhost',
-    port: parseInt(new URL(env.REDIS_URL).port || '6379', 10),
-  },
+  connection: getBullMQConnection(),
   defaultJobOptions: {
     removeOnComplete: 100,
     removeOnFail: 200,

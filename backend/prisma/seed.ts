@@ -1,5 +1,8 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const prisma = new PrismaClient();
 
@@ -122,9 +125,10 @@ async function main() {
   console.log('🌱 Seeding Admin User...');
   const adminEmail = 'admin@cocofly.vn';
   const adminExists = await prisma.user.findUnique({ where: { email: adminEmail } });
+  const adminPassword = process.env.ADMIN_PASSWORD || 'CocoFly#Admin@2026';
+  const passwordHash = await bcrypt.hash(adminPassword, 12);
 
   if (!adminExists) {
-    const passwordHash = await bcrypt.hash('Admin@12345', 12);
     const adminUser = await prisma.user.create({
       data: {
         email: adminEmail,
@@ -134,14 +138,14 @@ async function main() {
         accountStatus: 'active',
       },
     });
-    console.log(`  User: Created admin account: ${adminEmail} (password: Admin@12345)`);
+    console.log(`  User: Created admin account: ${adminEmail}`);
   } else {
-    // Force role to admin if it was created differently
+    // Force role to admin and update password hash to match the configured admin password
     await prisma.user.update({
       where: { email: adminEmail },
-      data: { role: 'admin', accountStatus: 'active' },
+      data: { role: 'admin', accountStatus: 'active', passwordHash },
     });
-    console.log(`  User: Admin account already exists: ${adminEmail}`);
+    console.log(`  User: Admin account updated (role and password): ${adminEmail}`);
   }
 
   // 4b. Seed Buyer and Seller Users

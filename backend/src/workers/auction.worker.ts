@@ -1,5 +1,5 @@
 import { Worker, Job } from 'bullmq';
-import { env } from '../config/env';
+import { getBullMQConnection } from '../config/bullmq-connection';
 import { AuctionStatus } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 import prisma from '../config/prisma';
@@ -26,10 +26,7 @@ interface AuctionJobPayload {
   auctionId: string;
 }
 
-const REDIS_CONNECTION = {
-  host: new URL(env.REDIS_URL).hostname || 'localhost',
-  port: parseInt(new URL(env.REDIS_URL).port || '6379', 10),
-};
+
 
 let auctionWorker: Worker | null = null;
 
@@ -152,7 +149,7 @@ export async function startAuctionWorker(): Promise<void> {
       }
     },
     {
-      connection: REDIS_CONNECTION,
+      connection: getBullMQConnection(),
       concurrency: 10,
     },
   );

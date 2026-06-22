@@ -13,13 +13,9 @@ const envSchema = z.object({
   ACCESS_TOKEN_SECRET: z.string().min(32),
   REFRESH_TOKEN_SECRET: z.string().min(32),
 
-  GOOGLE_CLIENT_ID: z.string().min(1),
-  GOOGLE_CLIENT_SECRET: z.string().min(1),
-  GOOGLE_CALLBACK_URL: z.string().url(),
-
-  FACEBOOK_APP_ID: z.string().min(1),
-  FACEBOOK_APP_SECRET: z.string().min(1),
-  FACEBOOK_CALLBACK_URL: z.string().url(),
+  GOOGLE_CLIENT_ID: z.string().optional().default(''),
+  GOOGLE_CLIENT_SECRET: z.string().optional().default(''),
+  GOOGLE_CALLBACK_URL: z.string().optional().default('http://localhost:8000/auth/google/callback'),
 
   SMTP_HOST: z.string().default('smtp.gmail.com'),
   SMTP_PORT: z.coerce.number().default(587),
