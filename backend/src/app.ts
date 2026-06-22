@@ -1,14 +1,64 @@
 import express from 'express';
+import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
+import cors from 'cors';
+import { env } from './config/env';
+import { globalRateLimit } from './middlewares/rateLimiter';
+import { healthRoutes } from './routes/health.routes';
+import { authRoutes } from './routes/auth.routes';
+import { oauthRoutes } from './routes/oauth.routes';
 import { auctionRoutes } from './routes/auction.routes';
+import { categoryRoutes } from './routes/category.routes';
+import { userRoutes } from './routes/user.routes';
+import { mediaRoutes } from './routes/media.routes';
+import { paymentRoutes } from './routes/payment.routes';
+import { notificationRoutes } from './routes/notification.routes';
+import { messageRoutes } from './routes/message.routes';
+import { adminRoutes } from './routes/admin.routes';
+import { errorHandler } from './middlewares/errorHandler';
 
 const app = express();
 
-app.use(express.json());
+// Security headers
+app.use(helmet());
 
-// Main API Routes
+// CORS — allow both dev local and production Vercel
+app.use(cors({
+  origin: [
+    env.FRONTEND_URL,
+    'http://localhost:3000',
+  ].filter(Boolean),
+  credentials: true,
+}));
+
+// Body parsing with size limit to prevent OOM attacks
+app.use(express.json({ limit: '1mb' }));
+
+// Cookie parsing (for refresh token)
+app.use(cookieParser());
+
+// Trust proxy for accurate IP (behind nginx/reverse proxy)
+app.set('trust proxy', 1);
+
+// Health check (BEFORE rate limit — must always respond)
+app.use(healthRoutes);
+
+// Global rate limit: 300 requests per 15 minutes per IP
+app.use(globalRateLimit);
+
+// ── Routes ──
+app.use('/auth', authRoutes);
+app.use('/auth', oauthRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api/auctions', auctionRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/media', mediaRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/messages', messageRoutes);
 
-// Global Error Handler placeholder
-// app.use(errorHandler);
+// Global Error Handler (must be last)
+app.use(errorHandler);
 
 export default app;

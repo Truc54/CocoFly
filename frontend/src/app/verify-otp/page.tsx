@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -9,6 +9,7 @@ import { ArrowRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import OtpInput from "@/components/auth/OtpInput";
+import { authApi } from "@/lib/api";
 
 const playfairDisplay = Playfair_Display({
   subsets: ["latin", "vietnamese"],
@@ -19,16 +20,66 @@ export default function VerifyOtpPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [otpValue, setOtpValue] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+  const [userEmail, setUserEmail] = useState("");
+  const [countdown, setCountdown] = useState(60);
 
-  const handleSubmit = (e?: React.FormEvent) => {
+  useEffect(() => {
+    const stored = localStorage.getItem("verification_email");
+    if (stored) setUserEmail(stored);
+  }, []);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (countdown > 0) {
+      timer = setInterval(() => {
+        setCountdown((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [countdown]);
+
+  const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (otpValue.length !== 6) return;
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    const email = localStorage.getItem("verification_email");
+    if (!email) {
+      setErrorMsg("Không tìm thấy email xác thực. Vui lòng đăng ký lại.");
+      return;
+    }
 
     setIsSubmitting(true);
-    // Mock API call delay
-    setTimeout(() => {
-      router.push("/verification-success");
-    }, 800);
+    try {
+      await authApi.verifyOtp({ email, otp: otpValue });
+      localStorage.removeItem("verification_email");
+      router.push("/login?verified=true");
+    } catch (err: any) {
+      setErrorMsg(err.message || "Xác thực thất bại.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setErrorMsg("");
+    setSuccessMsg("");
+    const email = localStorage.getItem("verification_email");
+    if (!email) {
+      setErrorMsg("Không tìm thấy email xác thực. Vui lòng đăng ký lại.");
+      return;
+    }
+
+    try {
+      await authApi.resendOtp({ email });
+      setSuccessMsg("Đã gửi lại mã OTP đến email của bạn.");
+      setCountdown(60);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Lỗi khi gửi lại OTP.");
+    }
   };
 
   return (
@@ -56,21 +107,33 @@ export default function VerifyOtpPage() {
           <div className="space-y-3 text-center">
             <div className="mb-2 flex justify-center">
               <div className="inline-flex size-16 items-center justify-center rounded-2xl bg-primary/10 shadow-[4px_4px_0px_#E2B9A1]">
-                <Image src="/logo.jpeg" alt="COCOFLY Logo" width={34} height={34} className="rounded-md" />
+                <Image src="/logo.png" alt="CocoFly Logo" width={34} height={34} className="rounded-md" />
               </div>
             </div>
             <h1 className={`${playfairDisplay.className} text-4xl font-extrabold text-slate-900 dark:text-white`}>
               Xác thực OTP
             </h1>
             <p className="text-base text-slate-600 dark:text-slate-400">
-              Để bảo vệ tài khoản, vui lòng nhập mã gồm 6 chữ số đã được gửi đến email của bạn.
+              Để bảo vệ tài khoản, vui lòng nhập mã gồm 6 chữ số đã được
+              gửi đến{userEmail ? <> <span className="font-semibold text-slate-800 dark:text-slate-200">{userEmail}</span></> : " email của bạn"}.
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-8">
             <div className="space-y-4">
+              {errorMsg && (
+                <div className="rounded-md bg-red-50 p-3 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
+                  {errorMsg}
+                </div>
+              )}
+              {successMsg && (
+                <div className="rounded-md bg-green-50 p-3 text-sm text-green-600 dark:bg-green-900/20 dark:text-green-400">
+                  {successMsg}
+                </div>
+              )}
+              
               <label className="mb-2 block text-sm font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-300">
-                Nhập mã bảo mật
+                Nhập mã OTP
               </label>
 
               <OtpInput
@@ -87,24 +150,24 @@ export default function VerifyOtpPage() {
               </span>
               <button
                 type="button"
-                className="font-bold text-primary-main transition-colors hover:text-primary hover:underline"
-                onClick={() => alert("Đã gửi lại mã OTP!")}
+                className="font-bold text-primary-main transition-colors hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleResendOtp}
+                disabled={countdown > 0}
               >
-                Gửi lại mã
+                {countdown > 0 ? `Gửi lại mã (${countdown}s)` : "Gửi lại mã"}
               </button>
             </div>
 
             <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
               <Button
                 type="submit"
-                className="group relative h-14 w-full overflow-hidden rounded-none border-2 border-primary-main bg-primary-main text-lg font-bold text-white shadow-[4px_4px_0px_#E2B9A1] transition-all hover:-translate-y-1 hover:shadow-[6px_6px_0px_#E2B9A1] disabled:opacity-70 disabled:hover:translate-y-0 disabled:hover:shadow-[4px_4px_0px_#E2B9A1] sm:w-64"
+                className="group relative h-14 w-full overflow-hidden rounded-xl border-2 border-primary-main bg-primary-main text-lg font-bold text-white shadow-[4px_4px_0px_#E2B9A1] transition-all hover:-translate-y-1 hover:shadow-[6px_6px_0px_#E2B9A1] disabled:opacity-70 disabled:hover:translate-y-0 disabled:hover:shadow-[4px_4px_0px_#E2B9A1] sm:w-64"
                 disabled={isSubmitting || otpValue.length !== 6}
               >
                 {isSubmitting ? "Đang xử lý..." : (
                   <>
                     <span className="relative z-10 flex items-center justify-center gap-2">
                       Xác nhận
-                      <ArrowRight className="size-5 transition-transform group-hover:translate-x-1" />
                     </span>
                   </>
                 )}
@@ -112,7 +175,7 @@ export default function VerifyOtpPage() {
               <Button
                 type="button"
                 onClick={() => router.back()}
-                className="h-14 w-full rounded-none border-2 border-slate-300 bg-white text-lg font-bold text-slate-700 shadow-[4px_4px_0px_#cbd5e1] transition-all hover:-translate-y-1 hover:bg-slate-50 hover:shadow-[6px_6px_0px_#cbd5e1] dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300 dark:shadow-[4px_4px_0px_#334155] sm:w-36"
+                className="h-14 w-full rounded-xl border-2 border-slate-300 bg-white text-lg font-bold text-slate-700 shadow-[4px_4px_0px_#cbd5e1] transition-all hover:-translate-y-1 hover:bg-slate-50 hover:shadow-[6px_6px_0px_#cbd5e1] dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300 dark:shadow-[4px_4px_0px_#334155] sm:w-36"
               >
                 Hủy bỏ
               </Button>
