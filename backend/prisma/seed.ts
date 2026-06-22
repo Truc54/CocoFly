@@ -144,6 +144,47 @@ async function main() {
     console.log(`  User: Admin account already exists: ${adminEmail}`);
   }
 
+  // 4b. Seed Buyer and Seller Users
+  console.log('🌱 Seeding Buyer and Seller Users...');
+  const buyerEmail = 'buyer@cocofly.vn';
+  const sellerEmail = 'seller@cocofly.vn';
+
+  const buyerExists = await prisma.user.findUnique({ where: { email: buyerEmail } });
+  if (!buyerExists) {
+    const passwordHash = await bcrypt.hash('Buyer@12345', 12);
+    await prisma.user.create({
+      data: {
+        email: buyerEmail,
+        passwordHash,
+        fullName: 'CocoFly Buyer Demo',
+        role: 'buyer',
+        accountStatus: 'active',
+        phone: '0987654321',
+      },
+    });
+    console.log(`  User: Created buyer account: ${buyerEmail} (password: Buyer@12345)`);
+  } else {
+    console.log(`  User: Buyer account already exists: ${buyerEmail}`);
+  }
+
+  const sellerExists = await prisma.user.findUnique({ where: { email: sellerEmail } });
+  if (!sellerExists) {
+    const passwordHash = await bcrypt.hash('Seller@12345', 12);
+    await prisma.user.create({
+      data: {
+        email: sellerEmail,
+        passwordHash,
+        fullName: 'CocoFly Seller Demo',
+        role: 'seller',
+        accountStatus: 'active',
+        phone: '0912345678',
+      },
+    });
+    console.log(`  User: Created seller account: ${sellerEmail} (password: Seller@12345)`);
+  } else {
+    console.log(`  User: Seller account already exists: ${sellerEmail}`);
+  }
+
   // 5. Seed System Configurations
   console.log('🌱 Seeding System Configurations...');
   let configsCreated = 0;

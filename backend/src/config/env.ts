@@ -40,9 +40,9 @@ const envSchema = z.object({
   VNPAY_RETURN_URL: z.string().url().default('http://localhost:8000/api/payments/vnpay/return'),
 
   // MoMo Sandbox
-  MOMO_PARTNER_CODE: z.string().default('MOMO'),
-  MOMO_ACCESS_KEY: z.string().default('F8BBA842ECF85'),
-  MOMO_SECRET_KEY: z.string().default('K951B6PE1waDMi640xX08PD3vg6EkVlz'),
+  MOMO_PARTNER_CODE: z.string().min(1),
+  MOMO_ACCESS_KEY: z.string().min(1),
+  MOMO_SECRET_KEY: z.string().min(1),
   MOMO_API_URL: z.string().url().default('https://test-payment.momo.vn/v2/gateway/api/create'),
   MOMO_RETURN_URL: z.string().url().default('http://localhost:8000/api/payments/momo/return'),
   MOMO_NOTIFY_URL: z.string().url().default('http://localhost:8000/api/payments/momo/ipn'),

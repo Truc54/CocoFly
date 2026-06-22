@@ -4,7 +4,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { categoryApi } from "@/lib/api";
-import { mockFeaturedCategories } from "@/lib/mockData";
 import { getCategoryImageUrl } from "@/lib/categoryImages";
 
 interface FeaturedCategory {
@@ -30,7 +29,7 @@ export default function CategoryGrid() {
           setCategories(featured);
         }
       })
-      .catch(() => setCategories(mockFeaturedCategories))
+      .catch(() => setCategories([]))
       .finally(() => setLoading(false));
   }, []);
 

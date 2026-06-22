@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { auctionApi, categoryApi } from "@/lib/api";
-import { mockHotAuctions, mockUpcomingAuctions } from "@/lib/mockData";
+
 import Sidebar from "@/components/layout/Sidebar";
 import HeroSection from "@/components/home/HeroSection";
 import AuctionRow from "@/components/home/AuctionRow";
@@ -54,9 +54,9 @@ export default function HomePage() {
       .getLive({ limit: 6, sort: "most_bids" })
       .then((res) => {
         const data = res?.data?.auctions;
-        setHotAuctions(data?.length > 0 ? data : mockHotAuctions);
+        if (data?.length > 0) setHotAuctions(data);
       })
-      .catch(() => setHotAuctions(mockHotAuctions))
+      .catch(() => setHotAuctions([]))
       .finally(() => setLoadingHot(false));
   }, []);
 
@@ -66,9 +66,9 @@ export default function HomePage() {
       .getUpcoming({ limit: 6 })
       .then((res) => {
         const data = res?.data?.auctions;
-        setUpcomingAuctions(data?.length > 0 ? data : mockUpcomingAuctions);
+        if (data?.length > 0) setUpcomingAuctions(data);
       })
-      .catch(() => setUpcomingAuctions(mockUpcomingAuctions))
+      .catch(() => setUpcomingAuctions([]))
       .finally(() => setLoadingUpcoming(false));
   }, []);
 

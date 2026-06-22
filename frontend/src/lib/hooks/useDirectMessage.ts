@@ -6,8 +6,10 @@ import { messageApi } from "../api";
 import { authStorage } from "../auth-storage";
 import { playChatSound } from "../sounds";
 import type { Conversation, DirectMessage, ReactionGroup } from "../types/message";
+import { useToast } from "../../context/ToastContext";
 
 export function useDirectMessage(activeConversationId: string | null) {
+  const { toast } = useToast();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   
@@ -303,11 +305,16 @@ export function useDirectMessage(activeConversationId: string | null) {
       });
     };
 
+    const onDmError = (data: { message: string }) => {
+      toast.error(data.message || "Lỗi gửi tin nhắn");
+    };
+
     socket.on("dm:message", onMessage);
     socket.on("dm:message_recalled", onMessageRecalled);
     socket.on("dm:reaction_updated", onReactionUpdated);
     socket.on("dm:user_typing", onUserTyping);
     socket.on("dm:user_stop_typing", onUserStopTyping);
+    socket.on("dm:error", onDmError);
 
     return () => {
       socket.off("dm:message", onMessage);
@@ -315,6 +322,7 @@ export function useDirectMessage(activeConversationId: string | null) {
       socket.off("dm:reaction_updated", onReactionUpdated);
       socket.off("dm:user_typing", onUserTyping);
       socket.off("dm:user_stop_typing", onUserStopTyping);
+      socket.off("dm:error", onDmError);
     };
   }, [loadConversations, markAsRead]);
 
