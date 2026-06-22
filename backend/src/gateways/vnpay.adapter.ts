@@ -39,14 +39,17 @@ function sortObjectVerify(obj: Record<string, string>): Record<string, string> {
 }
 
 function formatVNPayDate(date: Date): string {
+  // Convert date to GMT+7 timezone by adjusting timezone offset
+  const tzOffset = 7 * 60; // GMT+7 offset in minutes
+  const gmt7Date = new Date(date.getTime() + (tzOffset + date.getTimezoneOffset()) * 60000);
   const pad = (n: number) => n.toString().padStart(2, '0');
   return (
-    date.getFullYear().toString() +
-    pad(date.getMonth() + 1) +
-    pad(date.getDate()) +
-    pad(date.getHours()) +
-    pad(date.getMinutes()) +
-    pad(date.getSeconds())
+    gmt7Date.getFullYear().toString() +
+    pad(gmt7Date.getMonth() + 1) +
+    pad(gmt7Date.getDate()) +
+    pad(gmt7Date.getHours()) +
+    pad(gmt7Date.getMinutes()) +
+    pad(gmt7Date.getSeconds())
   );
 }
 
