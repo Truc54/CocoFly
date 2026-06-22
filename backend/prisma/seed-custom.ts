@@ -434,6 +434,133 @@ const CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
   },
 };
 
+const EXTRA_UNSPLASH_IMAGES: Record<string, string[]> = {
+  "dong-ho-trang-suc": [
+    "https://images.unsplash.com/photo-1522312346375-d1a52e2b99b3?q=80&w=600",
+    "https://images.unsplash.com/photo-1542496658-e33a6d0d50f6?q=80&w=600",
+    "https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?q=80&w=600",
+    "https://images.unsplash.com/photo-1603561591411-07134e71a2a9?q=80&w=600",
+    "https://images.unsplash.com/photo-1573408301185-9146fe634ad0?q=80&w=600"
+  ],
+  "ruou-vang-do-uong": [
+    "https://images.unsplash.com/photo-1553184920-f9e045c01b25?q=80&w=600",
+    "https://images.unsplash.com/photo-1578985545062-69928b1d9587?q=80&w=600",
+    "https://images.unsplash.com/photo-1527018601619-a508a2be00cd?q=80&w=600",
+    "https://images.unsplash.com/photo-1569937756430-c45b5d2c5c74?q=80&w=600",
+    "https://images.unsplash.com/photo-1584916201218-f4242ceb4809?q=80&w=600"
+  ],
+  "bat-dong-san": [
+    "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?q=80&w=600",
+    "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?q=80&w=600",
+    "https://images.unsplash.com/photo-1512915922686-57c11dde9b6b?q=80&w=600",
+    "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?q=80&w=600",
+    "https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?q=80&w=600"
+  ],
+  "nhac-cu": [
+    "https://images.unsplash.com/photo-1510915361894-db8b60106cb1?q=80&w=600",
+    "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?q=80&w=600",
+    "https://images.unsplash.com/photo-1552422535-c45813c61732?q=80&w=600",
+    "https://images.unsplash.com/photo-1612222869049-d8ec122c66b4?q=80&w=600",
+    "https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=600"
+  ],
+  "the-thao-outdoor": [
+    "https://images.unsplash.com/photo-1541614101331-1a5a3a194e92?q=80&w=600",
+    "https://images.unsplash.com/photo-1471506480208-91b3a4cc78be?q=80&w=600",
+    "https://images.unsplash.com/photo-1505330622279-bf7d7fc9d8f4?q=80&w=600",
+    "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?q=80&w=600",
+    "https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?q=80&w=600"
+  ],
+  "sach-tai-lieu-quy": [
+    "https://images.unsplash.com/photo-1476275466078-4007374efbbe?q=80&w=600",
+    "https://images.unsplash.com/photo-1532012197267-da84d127e765?q=80&w=600",
+    "https://images.unsplash.com/photo-1516979187457-637abb4f9353?q=80&w=600",
+    "https://images.unsplash.com/photo-1509021436665-8f07dbf5bf1d?q=80&w=600",
+    "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?q=80&w=600"
+  ],
+  "noi-that-decor": [
+    "https://images.unsplash.com/photo-1592078615290-033ee584e267?q=80&w=600",
+    "https://images.unsplash.com/photo-1505691938895-1758d7feb511?q=80&w=600",
+    "https://images.unsplash.com/photo-1513694203232-719a280e022f?q=80&w=600",
+    "https://images.unsplash.com/photo-1595428774223-ef52624120d2?q=80&w=600",
+    "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?q=80&w=600"
+  ],
+  "may-anh-ong-kinh": [
+    "https://images.unsplash.com/photo-1512790182412-b19e6d62bc39?q=80&w=600",
+    "https://images.unsplash.com/photo-1502982720700-bfff97f2ecac?q=80&w=600",
+    "https://images.unsplash.com/photo-1617005082133-548c4dd27f35?q=80&w=600",
+    "https://images.unsplash.com/photo-1620802657476-8800dc051d95?q=80&w=600",
+    "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?q=80&w=600"
+  ],
+  "do-choi-mo-hinh": [
+    "https://images.unsplash.com/photo-1585366119957-e5733f3c6396?q=80&w=600",
+    "https://images.unsplash.com/photo-1531589172605-e320f721d03e?q=80&w=600",
+    "https://images.unsplash.com/photo-1606813907291-d86efa9b94db?q=80&w=600",
+    "https://images.unsplash.com/photo-1594787318286-3d835c1d207f?q=80&w=600",
+    "https://images.unsplash.com/photo-1472457897821-70d3819a0e24?q=80&w=600"
+  ],
+  "dien-thoai-may-tinh-bang": [
+    "https://images.unsplash.com/photo-1565849906661-ca9608c0c478?q=80&w=600",
+    "https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?q=80&w=600",
+    "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?q=80&w=600",
+    "https://images.unsplash.com/photo-1580910051390-a521440263f3?q=80&w=600",
+    "https://images.unsplash.com/photo-1589739900243-4b52cd9b104e?q=80&w=600"
+  ],
+  "laptop-may-vi-tinh": [
+    "https://images.unsplash.com/photo-1593642632823-8f785ba67e45?q=80&w=600",
+    "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&w=600",
+    "https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?q=80&w=600",
+    "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?q=80&w=600",
+    "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=600"
+  ],
+  "hang-hieu-do-xa-xi": [
+    "https://images.unsplash.com/photo-1566150905458-1bf1fc15a490?q=80&w=600",
+    "https://images.unsplash.com/photo-1584917865442-de89df76afd3?q=80&w=600",
+    "https://images.unsplash.com/photo-1621605815971-fbc98d665033?q=80&w=600",
+    "https://images.unsplash.com/photo-1614252335133-c901e18d61cc?q=80&w=600",
+    "https://images.unsplash.com/photo-1598532163257-ae3c6b2524b6?q=80&w=600"
+  ],
+  "dien-gia-dung": [
+    "https://images.unsplash.com/photo-1517048676732-d65bc937f952?q=80&w=600",
+    "https://images.unsplash.com/photo-1581092921461-eab62e97a780?q=80&w=600",
+    "https://images.unsplash.com/photo-1621972750749-0fbb1abb7736?q=80&w=600",
+    "https://images.unsplash.com/photo-1574269909862-7e1d70bb8078?q=80&w=600",
+    "https://images.unsplash.com/photo-1585238342024-78d387f4a707?q=80&w=600"
+  ],
+  "cong-nghe": [
+    "https://images.unsplash.com/photo-1546868871-7041f2a55e12?q=80&w=600",
+    "https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?q=80&w=600",
+    "https://images.unsplash.com/photo-1622979135225-d2ba269cf1ac?q=80&w=600",
+    "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?q=80&w=600",
+    "https://images.unsplash.com/photo-1545454675-3531b543be5d?q=80&w=600"
+  ],
+  "thoi-trang-phu-kien": [
+    "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=600",
+    "https://images.unsplash.com/photo-1551028719-00167b16eac5?q=80&w=600",
+    "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?q=80&w=600",
+    "https://images.unsplash.com/photo-1584917865442-de89df76afd3?q=80&w=600",
+    "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?q=80&w=600"
+  ],
+  "co-vat-suu-tam": [
+    "https://images.unsplash.com/photo-1501700493788-fa1a4fc9fe62?q=80&w=600",
+    "https://images.unsplash.com/photo-1572945281869-8733d7458ab9?q=80&w=600",
+    "https://images.unsplash.com/photo-1584790870736-b42907474402?q=80&w=600",
+    "https://images.unsplash.com/photo-1447069387593-a5de0862481e?q=80&w=600",
+    "https://images.unsplash.com/photo-1590073844006-33379778ae09?q=80&w=600"
+  ],
+  "xe-co": [
+    "https://images.unsplash.com/photo-1558981806-ec527fa84c39?q=80&w=600",
+    "https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?q=80&w=600",
+    "https://images.unsplash.com/photo-1532298229144-0ec0c57515c7?q=80&w=600",
+    "https://images.unsplash.com/photo-1485965120184-e220f721d03e?q=80&w=600",
+    "https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=600"
+  ],
+  "khac": [
+    "https://images.unsplash.com/photo-1513201099705-a9746e1e201f?q=80&w=600",
+    "https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?q=80&w=600",
+    "https://images.unsplash.com/photo-1583209814683-c023de294402?q=80&w=600"
+  ]
+};
+
 // Pricing Helper
 function roundToNiceNumber(value: number): number {
   if (value >= 1000000000) {
@@ -649,8 +776,8 @@ async function main() {
     const imageIndex = Math.floor(i / categories.length) % config.cdnUrls.length;
     let cdnUrl = config.cdnUrls[imageIndex];
     if (batchNum > 1) {
-      const keyword = config.keywords[i % config.keywords.length] || "item";
-      cdnUrl = `https://loremflickr.com/600/450/${keyword}?lock=${i}`;
+      const extraList = EXTRA_UNSPLASH_IMAGES[category.slug] || EXTRA_UNSPLASH_IMAGES["khac"];
+      cdnUrl = extraList[prodIndex % extraList.length];
     }
 
     // 1. Create Item

@@ -79,6 +79,7 @@ interface AuctionCardProps {
 export function AuctionCard({ auction, variant, countdown, index = 0 }: AuctionCardProps) {
   const isLive = variant === "live";
   const scheduleLabel = auction.scheduledStart || auction.endTime;
+  const [imgError, setImgError] = useState(false);
 
   return (
     <Link
@@ -88,7 +89,7 @@ export function AuctionCard({ auction, variant, countdown, index = 0 }: AuctionC
     >
       {/* Image */}
       <div className="relative aspect-[4/3] overflow-hidden bg-slate-100 dark:bg-slate-700">
-        {auction.thumbnailUrl ? (
+        {auction.thumbnailUrl && !imgError ? (
           <Image
             className="object-cover group-hover:scale-105 transition-transform duration-500"
             alt={auction.title}
@@ -96,6 +97,7 @@ export function AuctionCard({ auction, variant, countdown, index = 0 }: AuctionC
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
             unoptimized
+            onError={() => setImgError(true)}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
