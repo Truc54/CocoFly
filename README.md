@@ -12,7 +12,6 @@
 
 | Vai trò | Email đăng nhập | Mật khẩu mặc định | Ghi chú quyền hạn |
 |:---|:---|:---|:---|
-| **Administrator** | `admin@cocofly.vn` | `Admin@12345` | Truy cập Admin Dashboard quản lý cấu hình hệ thống, duyệt tin, xử lý tranh chấp. |
 | **Seller (Người bán)** | `seller@cocofly.vn` | `Seller@12345` | Đăng tin đấu giá mới, quản lý sản phẩm, chat với người mua, gửi hàng. |
 | **Buyer (Người mua)** | `buyer@cocofly.vn` | `Buyer@12345` | Tham gia đấu giá trực tiếp, đặt giá tự động (Proxy Bid), thanh toán hóa đơn. |
 

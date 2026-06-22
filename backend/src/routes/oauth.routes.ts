@@ -51,39 +51,3 @@ oauthRoutes.get('/google/callback', async (req: Request, res: Response, next: Ne
     next(err);
   }
 });
-
-// ──────────────────────────────────────────
-// FACEBOOK
-// ──────────────────────────────────────────
-
-// GET /auth/facebook → redirect to Facebook consent
-oauthRoutes.get('/facebook', (_req: Request, res: Response) => {
-  const url = oauthService.getFacebookAuthUrl();
-  res.redirect(url);
-});
-
-// GET /auth/facebook/callback → handle callback
-oauthRoutes.get('/facebook/callback', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { code } = req.query;
-    if (!code || typeof code !== 'string') {
-      res.redirect(`${env.FRONTEND_URL}/login?error=missing_code`);
-      return;
-    }
-
-    const result = await oauthService.handleFacebookCallback(code);
-
-    res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, REFRESH_COOKIE_OPTIONS);
-
-    const params = new URLSearchParams({ 
-      accessToken: result.accessToken,
-      user: JSON.stringify(result.user)
-    });
-    if ('message' in result && result.message) {
-      params.set('message', result.message);
-    }
-    res.redirect(`${env.FRONTEND_URL}/auth/callback?${params.toString()}`);
-  } catch (err) {
-    next(err);
-  }
-});

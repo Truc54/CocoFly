@@ -1,5 +1,5 @@
 import { Worker, Job } from 'bullmq';
-import { env } from '../config/env';
+import { getBullMQConnection } from '../config/bullmq-connection';
 import prisma from '../config/prisma';
 import { AuctionRepository } from '../repositories/auction.repository';
 import { schedulePaymentTimeout } from '../queues/payment.queue';
@@ -26,10 +26,7 @@ interface ShippingTimeoutPayload {
 
 
 
-const REDIS_CONNECTION = {
-  host: new URL(env.REDIS_URL).hostname || 'localhost',
-  port: parseInt(new URL(env.REDIS_URL).port || '6379', 10),
-};
+
 
 const MAX_NON_PAYMENT_STRIKES = 3;
 const repo = new AuctionRepository();
@@ -55,7 +52,7 @@ export async function startPaymentWorker(): Promise<void> {
       }
     },
     {
-      connection: REDIS_CONNECTION,
+      connection: getBullMQConnection(),
       concurrency: 5,
     },
   );

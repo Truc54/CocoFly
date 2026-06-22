@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import { env } from './config/env';
 import { globalRateLimit } from './middlewares/rateLimiter';
+import { healthRoutes } from './routes/health.routes';
 import { authRoutes } from './routes/auth.routes';
 import { oauthRoutes } from './routes/oauth.routes';
 import { auctionRoutes } from './routes/auction.routes';
@@ -21,9 +22,12 @@ const app = express();
 // Security headers
 app.use(helmet());
 
-// CORS
+// CORS — allow both dev local and production Vercel
 app.use(cors({
-  origin: env.FRONTEND_URL,
+  origin: [
+    env.FRONTEND_URL,
+    'http://localhost:3000',
+  ].filter(Boolean),
   credentials: true,
 }));
 
@@ -35,6 +39,9 @@ app.use(cookieParser());
 
 // Trust proxy for accurate IP (behind nginx/reverse proxy)
 app.set('trust proxy', 1);
+
+// Health check (BEFORE rate limit — must always respond)
+app.use(healthRoutes);
 
 // Global rate limit: 300 requests per 15 minutes per IP
 app.use(globalRateLimit);
