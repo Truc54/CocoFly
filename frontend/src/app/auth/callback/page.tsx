@@ -10,6 +10,7 @@ function AuthCallbackContent() {
 
   useEffect(() => {
     const accessToken = searchParams.get("accessToken");
+    const refreshToken = searchParams.get("refreshToken");
     const userStr = searchParams.get("user");
     const errorMessage = searchParams.get("error");
     const redirectUrl = searchParams.get("redirect");
@@ -26,7 +27,7 @@ function AuthCallbackContent() {
       }
       // OAuth login always persists (remember me = true)
       authStorage.setRememberMe(true);
-      authStorage.save(accessToken, user);
+      authStorage.save(accessToken, user, refreshToken || undefined);
     }
 
     if (accessToken) {
