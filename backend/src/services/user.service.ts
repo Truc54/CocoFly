@@ -212,6 +212,9 @@ export class UserService {
       balance: finalBalance,
       totalTransactions,
       hasPassword: !!(user as any).passwordHash,
+      accountStatus: user.accountStatus,
+      nonPaymentStrikes: user.nonPaymentStrikes,
+      banReason: user.banReason,
     };
   }
 

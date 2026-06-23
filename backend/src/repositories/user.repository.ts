@@ -239,6 +239,8 @@ export class UserRepository {
         phone: true,
         createdAt: true,
         accountStatus: true,
+        banReason: true,
+        nonPaymentStrikes: true,
         balance: true,
         notificationSettings: true,
         passwordHash: true,
