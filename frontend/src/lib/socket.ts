@@ -41,10 +41,18 @@ export function connectSocket(): Socket {
     // Token expired — try reconnecting with fresh token
     if ((err.message.includes("Token") || err.message.includes("jwt expired")) && !isRefreshingSocket) {
       isRefreshingSocket = true;
+      const refreshToken = authStorage.getRefreshToken();
+      if (!refreshToken) {
+        console.warn("🔌 Socket: No refresh token available for reconnection");
+        isRefreshingSocket = false;
+        return;
+      }
+
       fetch(`${API_URL}/auth/refresh`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken }),
       })
         .then((res) => {
           if (!res.ok) throw new Error("Refresh failed");
@@ -53,7 +61,7 @@ export function connectSocket(): Socket {
         .then((data) => {
           const currentUser = authStorage.getUser();
           if (currentUser) {
-            authStorage.save(data.accessToken, currentUser);
+            authStorage.save(data.accessToken, currentUser, data.refreshToken);
           }
           if (socket) {
             socket.auth = { token: data.accessToken };

@@ -40,9 +40,10 @@ oauthRoutes.get('/google/callback', async (req: Request, res: Response, next: Ne
     // Set refresh token as HttpOnly cookie
     res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, REFRESH_COOKIE_OPTIONS);
 
-    // Redirect to frontend with access token and user stringified
+    // Redirect to frontend with tokens and user stringified
     const params = new URLSearchParams({ 
       accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
       user: JSON.stringify(result.user) 
     });
     if ('message' in result && result.message) {

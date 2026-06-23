@@ -49,12 +49,13 @@ export class AuthController {
       const ip = req.ip || req.socket.remoteAddress || 'unknown';
       const result = await authService.login(email, password, ip);
 
-      // Set refresh token as HttpOnly cookie
+      // Set refresh token as HttpOnly cookie (fallback)
       res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, REFRESH_COOKIE_OPTIONS);
 
       res.status(200).json({
         success: true,
         accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
         user: result.user,
       });
     } catch (err) {
@@ -64,7 +65,7 @@ export class AuthController {
 
   async refreshToken(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const token = req.cookies?.[REFRESH_COOKIE_NAME];
+      const token = req.body.refreshToken || req.cookies?.[REFRESH_COOKIE_NAME];
       if (!token) {
         res.status(401).json({ success: false, message: 'Refresh token không được cung cấp' });
         return;
@@ -72,12 +73,13 @@ export class AuthController {
 
       const result = await authService.refreshToken(token);
 
-      // Rotation — set new cookie
+      // Rotation — set new cookie (fallback)
       res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, REFRESH_COOKIE_OPTIONS);
 
       res.status(200).json({
         success: true,
         accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
       });
     } catch (err) {
       next(err);
@@ -86,12 +88,12 @@ export class AuthController {
 
   async logout(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const token = req.cookies?.[REFRESH_COOKIE_NAME];
+      const token = req.body.refreshToken || req.cookies?.[REFRESH_COOKIE_NAME];
       if (token) {
         await authService.logout(token);
       }
 
-      // Clear cookie
+      // Clear cookie (fallback)
       res.clearCookie(REFRESH_COOKIE_NAME, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',

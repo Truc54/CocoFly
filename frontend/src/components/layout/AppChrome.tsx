@@ -50,7 +50,34 @@ export default function AppChrome({ children }: AppChromeProps) {
   const [mounted, setMounted] = useState(false);
 
   const fetchProfile = useCallback(async () => {
-    const token = authStorage.getToken();
+    let token = authStorage.getToken();
+    const refreshToken = authStorage.getRefreshToken();
+
+    if (!token && refreshToken) {
+      // Try silent refresh on mount
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        const refreshResponse = await fetch(`${apiUrl}/auth/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refreshToken }),
+        });
+
+        if (refreshResponse.ok) {
+          const refreshData = await refreshResponse.json();
+          authStorage.save(refreshData.accessToken, authStorage.getUser() || {}, refreshData.refreshToken);
+          token = refreshData.accessToken;
+          // Dispatch auth-change so other parts of the app are updated
+          window.dispatchEvent(new Event("auth-change"));
+        } else {
+          // Refresh token expired or revoked
+          authStorage.clear();
+        }
+      } catch (e) {
+        console.error("Silent refresh on mount failed:", e);
+      }
+    }
+
     if (!token) {
       setProfile(null);
       setLoading(false);
@@ -104,7 +131,7 @@ export default function AppChrome({ children }: AppChromeProps) {
       profile.accountStatus === "suspended" ||
       (profile.nonPaymentStrikes ?? 0) >= 3);
 
-  if (mounted && loading && authStorage.getToken()) {
+  if (mounted && loading && (authStorage.getToken() || authStorage.getRefreshToken())) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">

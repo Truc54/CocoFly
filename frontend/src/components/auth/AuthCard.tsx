@@ -107,7 +107,7 @@ export default function AuthCard({ mode }: AuthCardProps) {
       } else {
         const data = await authApi.login({ email, password });
         authStorage.setRememberMe(rememberMe);
-        authStorage.save(data.accessToken, data.user || {});
+        authStorage.save(data.accessToken, data.user || {}, data.refreshToken);
         window.dispatchEvent(new Event("auth-change"));
         if (data.user?.role === "admin") {
           router.push("/admin");

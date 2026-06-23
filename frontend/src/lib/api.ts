@@ -44,11 +44,17 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}): Pro
       isRefreshing = true;
 
       try {
-        // Automatically ask for a new token using the HttpOnly cookie
+        const refreshToken = authStorage.getRefreshToken();
+        if (!refreshToken) {
+          throw new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+        }
+
+        // Automatically ask for a new token using the body-based refreshToken
         const refreshResponse = await fetch(`${API_URL}/auth/refresh`, {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refreshToken }),
         });
 
         if (!refreshResponse.ok) {
@@ -57,9 +63,9 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}): Pro
 
         const refreshData = await refreshResponse.json();
         
-        // Save the new access token silently
+        // Save the new access token and refresh token silently
         const currentUser = authStorage.getUser() || {};
-        authStorage.save(refreshData.accessToken, currentUser);
+        authStorage.save(refreshData.accessToken, currentUser, refreshData.refreshToken);
         
         onTokenRefreshed(refreshData.accessToken);
         isRefreshing = false;
@@ -112,7 +118,14 @@ export const authApi = {
   }),
   verifyOtp: (data: { email: string; otp: string }) => fetchApi("/auth/verify-otp", { method: "POST", body: JSON.stringify({ email: data.email, code: data.otp }) }),
   resendOtp: (data: { email: string }) => fetchApi("/auth/resend-otp", { method: "POST", body: JSON.stringify(data) }),
-  logout: () => fetchApi("/auth/logout", { method: "POST", credentials: "include" }),
+  logout: () => {
+    const refreshToken = authStorage.getRefreshToken();
+    return fetchApi("/auth/logout", { 
+      method: "POST", 
+      credentials: "include",
+      body: refreshToken ? JSON.stringify({ refreshToken }) : undefined
+    });
+  },
   forgotPassword: (data: { email: string }) => fetchApi("/auth/forgot-password", { method: "POST", body: JSON.stringify(data) }),
   verifyResetOtp: (data: { email: string; otp: string }) => fetchApi("/auth/verify-reset-otp", { method: "POST", body: JSON.stringify({ email: data.email, code: data.otp }) }),
   resetPassword: (data: { email: string; token: string; newPassword: string; oldPassword?: string }) => fetchApi("/auth/reset-password", { method: "POST", body: JSON.stringify(data) }),
