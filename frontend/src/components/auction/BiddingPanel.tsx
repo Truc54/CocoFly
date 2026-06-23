@@ -40,6 +40,7 @@ interface BiddingPanelProps {
   leaderName?: string | null;
   totalBids?: number;
   startTime?: string;
+  onEnd?: () => void;
 }
 
 export default function BiddingPanel({
@@ -67,6 +68,7 @@ export default function BiddingPanel({
   leaderName = null,
   totalBids = 0,
   startTime,
+  onEnd,
 }: BiddingPanelProps) {
   const router = useRouter();
   const { toast } = useToast();
@@ -252,7 +254,7 @@ export default function BiddingPanel({
               </p>
             )}
           </div>
-          <CountdownTimer endTime={status === "scheduled" && startTime ? startTime : endTime} />
+          <CountdownTimer endTime={status === "scheduled" && startTime ? startTime : endTime} onEnd={onEnd} />
         </div>
       </div>
 

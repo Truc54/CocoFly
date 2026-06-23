@@ -66,6 +66,11 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
   const [isWatching, setIsWatching] = useState(false);
   const [watchLoading, setWatchLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [reloadTrigger, setReloadTrigger] = useState(0);
+
+  const handleReload = useCallback(() => {
+    setReloadTrigger((prev) => prev + 1);
+  }, []);
 
   useEffect(() => {
     const token = authStorage.getToken();
@@ -82,7 +87,10 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
 
     async function load() {
       try {
-        setLoading(true);
+        // Only set skeleton loading on initial load, prevent flash on reloads
+        if (reloadTrigger === 0) {
+          setLoading(true);
+        }
         const res = await auctionApi.getById(id);
         if (cancelled) return;
         const data = res.data as AuctionDetail;
@@ -114,7 +122,7 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
 
     load();
     return () => { cancelled = true; };
-  }, [id]);
+  }, [id, reloadTrigger]);
 
   const handleToggleWatch = useCallback(async () => {
     if (!isLoggedIn) {
@@ -150,7 +158,21 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
     );
   }
 
-  return <AuctionDetailContent auction={auction} related={related} activeImageIdx={activeImageIdx} setActiveImageIdx={setActiveImageIdx} isLoggedIn={isLoggedIn} isWatching={isWatching} watchLoading={watchLoading} onToggleWatch={handleToggleWatch} isHost={isHost} />;
+  return (
+    <AuctionDetailContent
+      key={`${auction.id}-${reloadTrigger}`}
+      auction={auction}
+      related={related}
+      activeImageIdx={activeImageIdx}
+      setActiveImageIdx={setActiveImageIdx}
+      isLoggedIn={isLoggedIn}
+      isWatching={isWatching}
+      watchLoading={watchLoading}
+      onToggleWatch={handleToggleWatch}
+      isHost={isHost}
+      onReload={handleReload}
+    />
+  );
 }
 
 // ─── INNER COMPONENT (needs hooks after auction loads) ────────────────────────
@@ -165,6 +187,7 @@ function AuctionDetailContent({
   watchLoading,
   onToggleWatch,
   isHost,
+  onReload,
 }: {
   auction: AuctionDetail;
   related: RelatedAuction[];
@@ -175,6 +198,7 @@ function AuctionDetailContent({
   watchLoading: boolean;
   onToggleWatch: () => void;
   isHost: boolean;
+  onReload: () => void;
 }) {
   const router = useRouter();
   const {
@@ -460,6 +484,7 @@ function AuctionDetailContent({
               leaderName={winnerName}
               totalBids={totalBids}
               startTime={auction.scheduledStart}
+              onEnd={onReload}
             />
           )}
 

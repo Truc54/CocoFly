@@ -4,21 +4,30 @@ import { useState, useEffect } from "react";
 
 interface CountdownTimerProps {
   endTime: string;
+  onEnd?: () => void;
 }
 
-export default function CountdownTimer({ endTime }: CountdownTimerProps) {
+export default function CountdownTimer({ endTime, onEnd }: CountdownTimerProps) {
   const [seconds, setSeconds] = useState(() => {
     const diff = Math.floor((new Date(endTime).getTime() - Date.now()) / 1000);
     return Math.max(0, diff);
   });
 
   useEffect(() => {
+    const initialDiff = Math.floor((new Date(endTime).getTime() - Date.now()) / 1000);
+    if (initialDiff <= 0) return;
+
     const timer = setInterval(() => {
       const diff = Math.floor((new Date(endTime).getTime() - Date.now()) / 1000);
-      setSeconds(Math.max(0, diff));
+      const nextSec = Math.max(0, diff);
+      setSeconds(nextSec);
+      if (nextSec <= 0) {
+        clearInterval(timer);
+        onEnd?.();
+      }
     }, 1000);
     return () => clearInterval(timer);
-  }, [endTime]);
+  }, [endTime, onEnd]);
 
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);

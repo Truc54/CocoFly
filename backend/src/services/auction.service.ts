@@ -91,6 +91,38 @@ export class AuctionService {
       throw new AppError('Phiên đấu giá không tồn tại', 404);
     }
 
+    const now = new Date();
+
+    // Self-healing: If scheduled start time has passed, activate or end it
+    if (auction.status === 'scheduled' && auction.scheduledStart && auction.scheduledStart <= now) {
+      try {
+        const { handleActivateAuction, handleEndAuction } = require('../workers/auction.worker');
+        if (auction.endTime && auction.endTime <= now) {
+          console.log(`[AuctionService] Self-healing: ending overdue scheduled auction ${auctionId}`);
+          await handleEndAuction({ auctionId });
+        } else {
+          console.log(`[AuctionService] Self-healing: activating overdue scheduled auction ${auctionId}`);
+          await handleActivateAuction({ auctionId });
+        }
+        const updated = await this.auctionRepository.findById(auctionId);
+        if (updated) return this.formatAuctionDetail(updated);
+      } catch (err) {
+        console.error(`[AuctionService] Self-healing failed for scheduled auction ${auctionId}:`, err);
+      }
+    }
+    // Self-healing: If active but endTime has passed, end it
+    else if (auction.status === 'active' && auction.endTime && auction.endTime <= now) {
+      try {
+        const { handleEndAuction } = require('../workers/auction.worker');
+        console.log(`[AuctionService] Self-healing: ending expired active auction ${auctionId}`);
+        await handleEndAuction({ auctionId });
+        const updated = await this.auctionRepository.findById(auctionId);
+        if (updated) return this.formatAuctionDetail(updated);
+      } catch (err) {
+        console.error(`[AuctionService] Self-healing failed for active auction ${auctionId}:`, err);
+      }
+    }
+
     return this.formatAuctionDetail(auction);
   }
 

@@ -270,10 +270,17 @@ async function handleEndAuction(data: AuctionJobPayload): Promise<void> {
       },
     ]);
 
+    // Fetch winner's fullName for realtime UI display
+    const winnerUser = await prisma.user.findUnique({
+      where: { id: highestBid.bidderId },
+      select: { fullName: true },
+    });
+
     // Broadcast via Socket.IO
     tryBroadcast(auctionId, 'auction:ended', {
       auctionId,
       winnerId: highestBid.bidderId,
+      winnerName: winnerUser?.fullName || null,
       finalPrice,
       actualEndTime: new Date().toISOString(),
     });
