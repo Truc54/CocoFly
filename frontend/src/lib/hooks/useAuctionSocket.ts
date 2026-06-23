@@ -274,9 +274,19 @@ export function useAuctionSocket(
 
 
 
+    // ── Auction started ───────────────────────────────────────────────────
+    const onStarted = (data: { auctionId: string; status: string }) => {
+      if (!mountedRef.current || data.auctionId !== auctionId) return;
+      setState((prev) => ({
+        ...prev,
+        auctionStatus: "active",
+      }));
+    };
+
     // Register all listeners using named references (safer cleanup)
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
+    socket.on("auction:started", onStarted);
     socket.on("auction:bid_placed", onBidPlaced);
     socket.on("auction:outbid", onOutbid);
     socket.on("auction:proxy_active", onProxyActive);
@@ -294,6 +304,7 @@ export function useAuctionSocket(
       // Remove only OUR specific listeners (not all listeners for these events)
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
+      socket.off("auction:started", onStarted);
       socket.off("auction:bid_placed", onBidPlaced);
       socket.off("auction:outbid", onOutbid);
       socket.off("auction:proxy_active", onProxyActive);

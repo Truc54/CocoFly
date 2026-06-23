@@ -5,9 +5,10 @@ import { useState, useEffect } from "react";
 interface CountdownTimerProps {
   endTime: string;
   onEnd?: () => void;
+  isScheduled?: boolean;
 }
 
-export default function CountdownTimer({ endTime, onEnd }: CountdownTimerProps) {
+export default function CountdownTimer({ endTime, onEnd, isScheduled = false }: CountdownTimerProps) {
   const [seconds, setSeconds] = useState(() => {
     const diff = Math.floor((new Date(endTime).getTime() - Date.now()) / 1000);
     return Math.max(0, diff);
@@ -43,6 +44,7 @@ export default function CountdownTimer({ endTime, onEnd }: CountdownTimerProps) 
   }`;
 
   if (seconds <= 0) {
+    if (isScheduled) return null;
     return (
       <div className="flex items-center gap-1 text-sm font-bold text-red-600">
         <span className="material-symbols-outlined text-lg">timer_off</span>

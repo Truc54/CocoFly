@@ -47,6 +47,7 @@ export default function AppChrome({ children }: AppChromeProps) {
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     const token = authStorage.getToken();
@@ -74,6 +75,7 @@ export default function AppChrome({ children }: AppChromeProps) {
   }, []);
 
   useEffect(() => {
+    setMounted(true);
     fetchProfile();
     window.addEventListener("auth-change", fetchProfile);
     return () => window.removeEventListener("auth-change", fetchProfile);
@@ -102,7 +104,7 @@ export default function AppChrome({ children }: AppChromeProps) {
       profile.accountStatus === "suspended" ||
       (profile.nonPaymentStrikes ?? 0) >= 3);
 
-  if (loading && authStorage.getToken()) {
+  if (mounted && loading && authStorage.getToken()) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">

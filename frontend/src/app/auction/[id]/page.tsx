@@ -67,6 +67,7 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
   const [watchLoading, setWatchLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [reloadTrigger, setReloadTrigger] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   const handleReload = useCallback(() => {
     setReloadTrigger((prev) => prev + 1);
@@ -124,6 +125,91 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
     return () => { cancelled = true; };
   }, [id, reloadTrigger]);
 
+  // Poll when scheduled auction is starting
+  useEffect(() => {
+    if (!auction || auction.status !== 'scheduled' || !auction.scheduledStart) {
+      setIsTransitioning(false);
+      return;
+    }
+
+    const startTime = new Date(auction.scheduledStart).getTime();
+    let pollInterval: NodeJS.Timeout | null = null;
+    let checkTimeout: NodeJS.Timeout | null = null;
+
+    const checkAndPoll = () => {
+      const now = Date.now();
+      if (now >= startTime - 1000) {
+        setIsTransitioning(true);
+        pollInterval = setInterval(async () => {
+          try {
+            const res = await auctionApi.getById(id);
+            const data = res.data as AuctionDetail;
+            if (data.status === 'active') {
+              if (pollInterval) clearInterval(pollInterval);
+              setAuction(data);
+              setIsTransitioning(false);
+              handleReload();
+            }
+          } catch (err) {
+            console.error("Polling error", err);
+          }
+        }, 2000);
+      } else {
+        const delay = startTime - now - 1000;
+        checkTimeout = setTimeout(() => {
+          checkAndPoll();
+        }, Math.max(delay, 0));
+      }
+    };
+
+    checkAndPoll();
+
+    return () => {
+      if (pollInterval) clearInterval(pollInterval);
+      if (checkTimeout) clearTimeout(checkTimeout);
+    };
+  }, [auction?.id, auction?.status, auction?.scheduledStart, id, handleReload]);
+
+  // Poll when active auction is ending
+  useEffect(() => {
+    if (!auction || auction.status !== 'active' || !auction.endTime) return;
+
+    const endTimeMs = new Date(auction.endTime).getTime();
+    let pollInterval: NodeJS.Timeout | null = null;
+    let checkTimeout: NodeJS.Timeout | null = null;
+
+    const checkAndPoll = () => {
+      const now = Date.now();
+      if (now >= endTimeMs - 1000) {
+        pollInterval = setInterval(async () => {
+          try {
+            const res = await auctionApi.getById(id);
+            const data = res.data as AuctionDetail;
+            if (data.status === 'ended' || data.status === 'failed' || data.status === 'buyout') {
+              if (pollInterval) clearInterval(pollInterval);
+              setAuction(data);
+              handleReload();
+            }
+          } catch (err) {
+            console.error("Polling error", err);
+          }
+        }, 2000);
+      } else {
+        const delay = endTimeMs - now - 1000;
+        checkTimeout = setTimeout(() => {
+          checkAndPoll();
+        }, Math.max(delay, 0));
+      }
+    };
+
+    checkAndPoll();
+
+    return () => {
+      if (pollInterval) clearInterval(pollInterval);
+      if (checkTimeout) clearTimeout(checkTimeout);
+    };
+  }, [auction?.id, auction?.status, auction?.endTime, id, handleReload]);
+
   const handleToggleWatch = useCallback(async () => {
     if (!isLoggedIn) {
       alert("Vui lòng đăng nhập để sử dụng tính năng này");
@@ -171,6 +257,7 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ id: st
       onToggleWatch={handleToggleWatch}
       isHost={isHost}
       onReload={handleReload}
+      isTransitioning={isTransitioning}
     />
   );
 }
@@ -188,6 +275,7 @@ function AuctionDetailContent({
   onToggleWatch,
   isHost,
   onReload,
+  isTransitioning,
 }: {
   auction: AuctionDetail;
   related: RelatedAuction[];
@@ -199,6 +287,7 @@ function AuctionDetailContent({
   onToggleWatch: () => void;
   isHost: boolean;
   onReload: () => void;
+  isTransitioning: boolean;
 }) {
   const router = useRouter();
   const {
@@ -372,7 +461,7 @@ function AuctionDetailContent({
               <button
                 onClick={() => {
                   if (!isLoggedIn) {
-                    router.push("/login");
+                    router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
                   } else {
                     window.dispatchEvent(new CustomEvent("open-dm", { detail: { targetUserId: auction.seller?.id } }));
                   }
@@ -485,6 +574,7 @@ function AuctionDetailContent({
               totalBids={totalBids}
               startTime={auction.scheduledStart}
               onEnd={onReload}
+              isTransitioning={isTransitioning}
             />
           )}
 

@@ -12,7 +12,7 @@ function createRateLimiter(config: RateLimitConfig) {
   return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
     try {
       const keys = config.keyGenerator(req);
-      
+
       for (let i = 0; i < config.limits.length; i++) {
         const limit = config.limits[i];
         const fullKey = keys[i];
@@ -61,10 +61,10 @@ function createRedisRateLimiter(prefix: string, max: number, ttlSeconds: number,
   };
 }
 
-// Global rate limit: 300 requests per 15 minutes per IP
+// Global rate limit: 1000 requests per 15 minutes per IP (safe for heavy users, prevents bot spam)
 export const globalRateLimit = createRedisRateLimiter(
   'global',
-  300,
+  1000,
   900, // 15 minutes
   'Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau 15 phút'
 );

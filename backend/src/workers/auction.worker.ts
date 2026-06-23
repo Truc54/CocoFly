@@ -198,6 +198,13 @@ async function handleActivateAuction(data: AuctionJobPayload): Promise<void> {
 
   console.log(`🔔 Auction ${auctionId} is now ACTIVE`);
 
+  // Broadcast to all clients connected to this auction room
+  tryBroadcast(auctionId, 'auction:started', {
+    auctionId,
+    status: AuctionStatus.active,
+    startTime: new Date().toISOString(),
+  });
+
   // Schedule the end job (idempotent: BullMQ deduplicates via jobId)
   await scheduleAuctionEnd(auctionId, auction.endTime);
 }

@@ -165,7 +165,7 @@ docker-compose up -d
 
 Để đảm bảo hệ thống an toàn trước khi deploy thực tế, các lớp phòng thủ bảo mật sau đã được tích hợp toàn diện:
 
-1. **Global Rate Limiting (Redis-based):** Ngăn chặn tấn công DDoS cơ bản bằng cách giới hạn tối đa `300 request / 15 phút` trên mỗi IP.
+1. **Global Rate Limiting (Redis-based):** Ngăn chặn tấn công DDoS cơ bản bằng cách giới hạn tối đa `1000 request / 15 phút` trên mỗi IP.
 2. **Auth & OTP Route Protections:**
    * Các hành động đăng ký, đăng nhập được giới hạn ở mức `20 request / 15 phút`.
    * Gửi và xác thực OTP bị giới hạn nghiêm ngặt ở mức `3 request / 3 phút` trên mỗi IP để ngăn chặn việc spam Gmail/SMS API.
