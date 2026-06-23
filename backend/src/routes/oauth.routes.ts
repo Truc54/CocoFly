@@ -19,15 +19,17 @@ const REFRESH_COOKIE_OPTIONS = {
 // ──────────────────────────────────────────
 
 // GET /auth/google → redirect to Google consent
-oauthRoutes.get('/google', (_req: Request, res: Response) => {
-  const url = oauthService.getGoogleAuthUrl();
+oauthRoutes.get('/google', (req: Request, res: Response) => {
+  const { redirect } = req.query;
+  const state = redirect && typeof redirect === 'string' ? redirect : undefined;
+  const url = oauthService.getGoogleAuthUrl(state);
   res.redirect(url);
 });
 
 // GET /auth/google/callback → handle callback
 oauthRoutes.get('/google/callback', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { code } = req.query;
+    const { code, state } = req.query;
     if (!code || typeof code !== 'string') {
       res.redirect(`${env.FRONTEND_URL}/login?error=missing_code`);
       return;
@@ -45,6 +47,9 @@ oauthRoutes.get('/google/callback', async (req: Request, res: Response, next: Ne
     });
     if ('message' in result && result.message) {
       params.set('message', result.message);
+    }
+    if (state && typeof state === 'string') {
+      params.set('redirect', state);
     }
     res.redirect(`${env.FRONTEND_URL}/auth/callback?${params.toString()}`);
   } catch (err) {

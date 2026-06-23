@@ -198,6 +198,13 @@ async function handleActivateAuction(data: AuctionJobPayload): Promise<void> {
 
   console.log(`🔔 Auction ${auctionId} is now ACTIVE`);
 
+  // Broadcast to all clients connected to this auction room
+  tryBroadcast(auctionId, 'auction:started', {
+    auctionId,
+    status: AuctionStatus.active,
+    startTime: new Date().toISOString(),
+  });
+
   // Schedule the end job (idempotent: BullMQ deduplicates via jobId)
   await scheduleAuctionEnd(auctionId, auction.endTime);
 }
@@ -270,10 +277,17 @@ async function handleEndAuction(data: AuctionJobPayload): Promise<void> {
       },
     ]);
 
+    // Fetch winner's fullName for realtime UI display
+    const winnerUser = await prisma.user.findUnique({
+      where: { id: highestBid.bidderId },
+      select: { fullName: true },
+    });
+
     // Broadcast via Socket.IO
     tryBroadcast(auctionId, 'auction:ended', {
       auctionId,
       winnerId: highestBid.bidderId,
+      winnerName: winnerUser?.fullName || null,
       finalPrice,
       actualEndTime: new Date().toISOString(),
     });

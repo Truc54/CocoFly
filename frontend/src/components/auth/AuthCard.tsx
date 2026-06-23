@@ -29,10 +29,16 @@ export default function AuthCard({ mode }: AuthCardProps) {
   
   const [toastConfig, setToastConfig] = useState<{ title: string; desc: string } | null>(null);
   const [isClosingToast, setIsClosingToast] = useState(false);
+  const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
+      const redir = params.get("redirect");
+      if (redir) {
+        setRedirectUrl(redir);
+      }
+
       let title = "";
       let desc = "";
 
@@ -52,7 +58,11 @@ export default function AuthCard({ mode }: AuthCardProps) {
           setIsClosingToast(false);
         }, 8000);
 
-        const newUrl = window.location.pathname;
+        const newParams = new URLSearchParams(window.location.search);
+        newParams.delete("verified");
+        newParams.delete("reset");
+        const newSearch = newParams.toString();
+        const newUrl = window.location.pathname + (newSearch ? `?${newSearch}` : "");
         window.history.replaceState({ path: newUrl }, "", newUrl);
 
         return () => {
@@ -102,7 +112,11 @@ export default function AuthCard({ mode }: AuthCardProps) {
         if (data.user?.role === "admin") {
           router.push("/admin");
         } else {
-          router.push("/");
+          if (redirectUrl) {
+            router.push(redirectUrl);
+          } else {
+            router.push("/");
+          }
         }
       }
     } catch (err: unknown) {
@@ -178,7 +192,7 @@ export default function AuthCard({ mode }: AuthCardProps) {
             <div className="mt-3 rounded-xl border border-primary/15 bg-primary/5 p-1">
               <div className="grid grid-cols-2 gap-1">
                 <Link
-                  href="/login"
+                  href={redirectUrl ? `/login?redirect=${encodeURIComponent(redirectUrl)}` : "/login"}
                   className={`inline-flex h-10 items-center justify-center rounded-lg text-sm font-bold transition-colors ${
                     isLogin
                       ? "bg-white text-primary shadow-sm"
@@ -188,7 +202,7 @@ export default function AuthCard({ mode }: AuthCardProps) {
                   Đăng nhập
                 </Link>
                 <Link
-                  href="/register"
+                  href={redirectUrl ? `/register?redirect=${encodeURIComponent(redirectUrl)}` : "/register"}
                   className={`inline-flex h-10 items-center justify-center rounded-lg text-sm font-bold transition-colors ${
                     !isLogin
                       ? "bg-white text-primary shadow-sm"
@@ -369,7 +383,7 @@ export default function AuthCard({ mode }: AuthCardProps) {
                 </div>
 
                 <div className="flex flex-col gap-3">
-                  <a href={`${API_URL}/auth/google`} className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm transition-colors hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-50 dark:hover:bg-slate-800 dark:hover:text-slate-50 w-full">
+                  <a href={redirectUrl ? `${API_URL}/auth/google?redirect=${encodeURIComponent(redirectUrl)}` : `${API_URL}/auth/google`} className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm transition-colors hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-50 dark:hover:bg-slate-800 dark:hover:text-slate-50 w-full">
                     <Image
                       src="/auth/google-logo.svg"
                       alt="Google"
@@ -386,7 +400,9 @@ export default function AuthCard({ mode }: AuthCardProps) {
             <p className="text-center text-sm text-slate-600 dark:text-slate-300">
               {isLogin ? "Bạn chưa có tài khoản?" : "Bạn đã có tài khoản?"}{" "}
               <Link
-                href={isLogin ? "/register" : "/login"}
+                href={isLogin 
+                  ? (redirectUrl ? `/register?redirect=${encodeURIComponent(redirectUrl)}` : "/register") 
+                  : (redirectUrl ? `/login?redirect=${encodeURIComponent(redirectUrl)}` : "/login")}
                 className="font-bold text-primary hover:text-primary/80 hover:underline"
               >
                 {isLogin ? "Đăng ký ngay" : "Đăng nhập"}

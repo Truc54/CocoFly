@@ -18,7 +18,7 @@ export class OAuthService {
   // ──────────────────────────────────────────
   // GOOGLE
   // ──────────────────────────────────────────
-  getGoogleAuthUrl(): string {
+  getGoogleAuthUrl(state?: string): string {
     const params = new URLSearchParams({
       client_id: env.GOOGLE_CLIENT_ID,
       redirect_uri: env.GOOGLE_CALLBACK_URL,
@@ -26,6 +26,7 @@ export class OAuthService {
       scope: 'openid email profile',
       access_type: 'offline',
       prompt: 'consent',
+      ...(state ? { state } : {}),
     });
     return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
   }

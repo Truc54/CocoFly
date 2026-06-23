@@ -12,6 +12,7 @@ function AuthCallbackContent() {
     const accessToken = searchParams.get("accessToken");
     const userStr = searchParams.get("user");
     const errorMessage = searchParams.get("error");
+    const redirectUrl = searchParams.get("redirect");
 
     if (errorMessage) {
       router.push(`/login?error=${encodeURIComponent(errorMessage)}`);
@@ -31,8 +32,12 @@ function AuthCallbackContent() {
     if (accessToken) {
       // Dispatch event to update the Header immediately
       window.dispatchEvent(new Event("auth-change"));
-      // Redirect to home page smoothly
-      router.push("/");
+      // Redirect to target page or home page smoothly
+      if (redirectUrl) {
+        router.push(redirectUrl);
+      } else {
+        router.push("/");
+      }
     } else {
       router.push("/login?error=auth_failed");
     }

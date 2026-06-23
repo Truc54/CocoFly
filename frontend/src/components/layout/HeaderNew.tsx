@@ -363,7 +363,7 @@ export default function HeaderNew() {
               <AccountDropdown />
             ) : (
               <Link
-                href="/login"
+                href={pathname === "/login" || pathname === "/register" ? "/login" : `/login?redirect=${encodeURIComponent(pathname)}`}
                 className="px-4 py-2 text-sm font-bold text-primary bg-white dark:bg-slate-800 border-2 border-primary rounded-lg hover:bg-primary hover:text-white dark:hover:bg-primary dark:hover:text-white transition-all hover:-translate-y-0.5 active:translate-y-0 shadow-[2px_2px_0px_#E2B9A1] hover:shadow-[3px_3px_0px_#E2B9A1] active:shadow-[1px_1px_0px_#E2B9A1]"
               >
                 Đăng nhập

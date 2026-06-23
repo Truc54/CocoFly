@@ -40,6 +40,8 @@ interface BiddingPanelProps {
   leaderName?: string | null;
   totalBids?: number;
   startTime?: string;
+  onEnd?: () => void;
+  isTransitioning?: boolean;
 }
 
 export default function BiddingPanel({
@@ -67,6 +69,8 @@ export default function BiddingPanel({
   leaderName = null,
   totalBids = 0,
   startTime,
+  onEnd,
+  isTransitioning = false,
 }: BiddingPanelProps) {
   const router = useRouter();
   const { toast } = useToast();
@@ -100,7 +104,7 @@ export default function BiddingPanel({
 
   const handleBidClick = () => {
     if (!isLoggedIn) {
-      router.push("/login");
+      router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
       return;
     }
     onClearError();
@@ -149,7 +153,7 @@ export default function BiddingPanel({
 
   const handleBuyout = () => {
     if (!isLoggedIn) {
-      router.push("/login");
+      router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
       return;
     }
     setShowBuyoutModal(true);
@@ -252,7 +256,14 @@ export default function BiddingPanel({
               </p>
             )}
           </div>
-          <CountdownTimer endTime={status === "scheduled" && startTime ? startTime : endTime} />
+          {isTransitioning ? (
+            <span className="text-xs font-extrabold text-blue-600 dark:text-blue-400 animate-pulse flex items-center gap-1.5 bg-blue-50 dark:bg-blue-950/20 px-2.5 py-1.5 rounded-lg border border-blue-200 dark:border-blue-800">
+              <span className="w-2 h-2 rounded-full bg-blue-600 dark:bg-blue-400 animate-ping"></span>
+              Đang bắt đầu...
+            </span>
+          ) : (
+            <CountdownTimer endTime={status === "scheduled" && startTime ? startTime : endTime} onEnd={onEnd} isScheduled={status === "scheduled"} />
+          )}
         </div>
       </div>
 
@@ -308,7 +319,18 @@ export default function BiddingPanel({
       {/* CTA Buttons */}
       <div className="space-y-3">
         {isHost ? (
-          status === "active" ? (
+          isTransitioning ? (
+            <button
+              disabled
+              className="w-full py-3 bg-slate-100 text-slate-400 font-bold text-base rounded-full border-2 border-slate-200 cursor-default flex items-center justify-center gap-2"
+            >
+              <svg className="animate-spin h-5 w-5 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              ĐANG KHỞI TẠO PHIÊN...
+            </button>
+          ) : status === "active" ? (
             <div className="space-y-2 border-t-2 border-slate-100 dark:border-slate-700 pt-4 mt-2">
               <div className="flex justify-between items-center py-1.5">
                 <span className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400">Người dẫn đầu</span>
@@ -396,7 +418,7 @@ export default function BiddingPanel({
                 onClick={(e) => {
                   e.stopPropagation();
                   if (!isLoggedIn) {
-                    router.push("/login");
+                    router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
                   } else {
                     onToggleWatch();
                   }
@@ -420,18 +442,31 @@ export default function BiddingPanel({
           </>
         ) : (
           <div className="space-y-3">
-            <button
-              disabled
-              className="w-full py-3 bg-slate-200 text-slate-500 font-bold text-base rounded-full border-2 border-slate-200 cursor-default flex items-center justify-center gap-2"
-            >
-              {status === "scheduled" ? "CHƯA BẮT ĐẦU" : !isLoggedIn ? "ĐĂNG NHẬP ĐỂ ĐẤU GIÁ" : "ĐÃ KẾT THÚC"}
-            </button>
+            {isTransitioning ? (
+              <button
+                disabled
+                className="w-full py-3 bg-slate-100 text-slate-400 font-bold text-base rounded-full border-2 border-slate-200 cursor-default flex items-center justify-center gap-2"
+              >
+                <svg className="animate-spin h-5 w-5 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                ĐANG KHỞI TẠO PHIÊN...
+              </button>
+            ) : (
+              <button
+                disabled
+                className="w-full py-3 bg-slate-200 text-slate-500 font-bold text-base rounded-full border-2 border-slate-200 cursor-default flex items-center justify-center gap-2"
+              >
+                {status === "scheduled" ? "CHƯA BẮT ĐẦU" : !isLoggedIn ? "ĐĂNG NHẬP ĐỂ ĐẤU GIÁ" : "ĐÃ KẾT THÚC"}
+              </button>
+            )}
             <div className="flex gap-3">
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
                   if (!isLoggedIn) {
-                    router.push("/login");
+                    router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
                   } else {
                     onToggleWatch();
                   }
