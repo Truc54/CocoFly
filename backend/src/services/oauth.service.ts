@@ -3,6 +3,8 @@ import { UserRepository } from '../repositories/user.repository';
 import { TokenService } from './token.service';
 import { AppError } from '../utils/AppError';
 import { uploadFromUrl } from '../config/cloudinary.config';
+import { HttpStatus } from '../utils/HttpStatus';
+import { ErrorCode } from '../utils/ErrorCode';
 
 const userRepository = new UserRepository();
 const tokenService = new TokenService();
@@ -46,7 +48,7 @@ export class OAuthService {
     });
 
     if (!tokenRes.ok) {
-      throw new AppError('Không thể xác thực với Google', 401);
+      throw new AppError('Không thể xác thực với Google', HttpStatus.UNAUTHORIZED, ErrorCode.UNAUTHORIZED);
     }
 
     const tokenData = await tokenRes.json() as { access_token: string };
@@ -57,7 +59,7 @@ export class OAuthService {
     });
 
     if (!userRes.ok) {
-      throw new AppError('Không thể lấy thông tin từ Google', 401);
+      throw new AppError('Không thể lấy thông tin từ Google', HttpStatus.UNAUTHORIZED, ErrorCode.UNAUTHORIZED);
     }
 
     const googleUser = await userRes.json() as { id: string; email: string; name: string; picture?: string };

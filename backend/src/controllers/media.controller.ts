@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import cloudinary from '../config/cloudinary.config';
 import { env } from '../config/env';
+import { HttpStatus } from '../utils/HttpStatus';
 
 export class MediaController {
   async getUploadSignature(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -13,7 +14,7 @@ export class MediaController {
         env.CLOUDINARY_API_SECRET,
       );
 
-      res.status(200).json({
+      res.status(HttpStatus.OK).json({
         success: true,
         data: {
           signature,

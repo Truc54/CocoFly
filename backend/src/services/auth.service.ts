@@ -6,6 +6,8 @@ import { TokenService } from './token.service';
 import { EmailService } from './email.service';
 import { AppError } from '../utils/AppError';
 import { validateEmailRealness } from '../utils/emailValidator';
+import { HttpStatus } from '../utils/HttpStatus';
+import { ErrorCode } from '../utils/ErrorCode';
 
 const BCRYPT_COST = 12;
 const OTP_TTL = 600;        // 10 minutes
@@ -26,7 +28,7 @@ export class AuthService {
 
     if (existingUser) {
       if (existingUser.accountStatus === 'active') {
-        throw new AppError('Email đã được sử dụng', 409);
+        throw new AppError('Email đã được sử dụng', HttpStatus.CONFLICT, ErrorCode.EMAIL_ALREADY_EXISTS);
       }
       // Unverified user — delete and re-create
       await this.userRepository.deleteById(existingUser.id);
@@ -52,20 +54,20 @@ export class AuthService {
   async verifyOtp(email: string, code: string) {
     const user = await this.userRepository.findByEmail(email);
     if (!user) {
-      throw new AppError('Email không tồn tại', 404);
+      throw new AppError('Email không tồn tại', HttpStatus.NOT_FOUND, ErrorCode.USER_NOT_FOUND);
     }
 
     // Check attempts
     const attemptsStr = await redis.get(`otp:attempts:${email}`);
     const attempts = attemptsStr ? parseInt(attemptsStr, 10) : 0;
     if (attempts >= OTP_MAX_ATTEMPTS) {
-      throw new AppError('Bạn đã nhập sai quá nhiều lần. Vui lòng yêu cầu mã mới', 429);
+      throw new AppError('Bạn đã nhập sai quá nhiều lần. Vui lòng yêu cầu mã mới', HttpStatus.TOO_MANY_REQUESTS, ErrorCode.TOO_MANY_REQUESTS);
     }
 
     // Check OTP exists
     const storedOtp = await redis.get(`otp:${email}`);
     if (!storedOtp) {
-      throw new AppError('Mã OTP đã hết hạn', 410);
+      throw new AppError('Mã OTP đã hết hạn', HttpStatus.GONE, ErrorCode.OTP_EXPIRED);
     }
 
     // Compare OTP
@@ -73,7 +75,7 @@ export class AuthService {
       await redis.incr(`otp:attempts:${email}`);
       await redis.expire(`otp:attempts:${email}`, OTP_TTL);
       const remaining = OTP_MAX_ATTEMPTS - 1 - attempts;
-      throw new AppError(`Mã không đúng. Còn ${remaining} lần thử`, 400);
+      throw new AppError(`Mã không đúng. Còn ${remaining} lần thử`, HttpStatus.BAD_REQUEST, ErrorCode.WRONG_OTP);
     }
 
     // Success
@@ -90,13 +92,13 @@ export class AuthService {
   async resendOtp(email: string) {
     const user = await this.userRepository.findByEmail(email);
     if (!user) {
-      throw new AppError('Email không tồn tại', 404);
+      throw new AppError('Email không tồn tại', HttpStatus.NOT_FOUND, ErrorCode.USER_NOT_FOUND);
     }
 
     // Check cooldown
     const cooldownTtl = await redis.ttl(`otp:cooldown:${email}`);
     if (cooldownTtl > 0) {
-      throw new AppError(`Vui lòng chờ ${cooldownTtl} giây trước khi gửi lại`, 429);
+      throw new AppError(`Vui lòng chờ ${cooldownTtl} giây trước khi gửi lại`, HttpStatus.TOO_MANY_REQUESTS, ErrorCode.TOO_MANY_REQUESTS);
     }
 
     // Generate new OTP — overwrites old key (old code invalidated)
@@ -117,19 +119,19 @@ export class AuthService {
     const user = await this.userRepository.findByEmail(email);
 
     if (!user) {
-      throw new AppError('Email hoặc mật khẩu không đúng', 401);
+      throw new AppError('Email hoặc mật khẩu không đúng', HttpStatus.UNAUTHORIZED, ErrorCode.UNAUTHORIZED);
     }
 
     if (user.accountStatus === 'unverified') {
-      throw new AppError('Tài khoản chưa xác minh. Kiểm tra email của bạn', 403);
+      throw new AppError('Tài khoản chưa xác minh. Kiểm tra email của bạn', HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN);
     }
 
     if (user.accountStatus === 'banned' || user.accountStatus === 'suspended') {
-      throw new AppError(`Tài khoản đã bị khóa: ${user.banReason || 'Vi phạm chính sách'}`, 403);
+      throw new AppError(`Tài khoản đã bị khóa: ${user.banReason || 'Vi phạm chính sách'}`, HttpStatus.FORBIDDEN, ErrorCode.ACCOUNT_BANNED);
     }
 
     if (!user.passwordHash) {
-      throw new AppError('Email hoặc mật khẩu không đúng', 401);
+      throw new AppError('Email hoặc mật khẩu không đúng', HttpStatus.UNAUTHORIZED, ErrorCode.UNAUTHORIZED);
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
@@ -141,7 +143,7 @@ export class AuthService {
       await redis.incr(`login:fail:ip:${ip}`);
       await redis.expire(`login:fail:ip:${ip}`, 3600);
 
-      throw new AppError('Email hoặc mật khẩu không đúng', 401);
+      throw new AppError('Email hoặc mật khẩu không đúng', HttpStatus.UNAUTHORIZED, ErrorCode.UNAUTHORIZED);
     }
 
     // Success — clear fail counters
@@ -177,12 +179,12 @@ export class AuthService {
   async refreshToken(token: string) {
     const userId = await this.tokenService.verifyRefreshToken(token);
     if (!userId) {
-      throw new AppError('Refresh token không hợp lệ hoặc đã hết hạn', 401);
+      throw new AppError('Refresh token không hợp lệ hoặc đã hết hạn', HttpStatus.UNAUTHORIZED, ErrorCode.UNAUTHORIZED);
     }
 
     const user = await this.userRepository.findById(userId);
     if (!user) {
-      throw new AppError('Người dùng không tồn tại', 401);
+      throw new AppError('Người dùng không tồn tại', HttpStatus.UNAUTHORIZED, ErrorCode.UNAUTHORIZED);
     }
 
     // Rotation: delete old, create new
@@ -218,13 +220,13 @@ export class AuthService {
     const user = await this.userRepository.findByEmail(email);
 
     if (!user || user.accountStatus === 'unverified') {
-      throw new AppError('Email không tồn tại hoặc chưa được xác minh', 404);
+      throw new AppError('Email không tồn tại hoặc chưa được xác minh', HttpStatus.NOT_FOUND, ErrorCode.USER_NOT_FOUND);
     }
 
     // Check cooldown
     const cooldownTtl = await redis.ttl(`otp:cooldown:reset:${email}`);
     if (cooldownTtl > 0) {
-      throw new AppError(`Vui lòng chờ ${cooldownTtl} giây trước khi gửi lại`, 429);
+      throw new AppError(`Vui lòng chờ ${cooldownTtl} giây trước khi gửi lại`, HttpStatus.TOO_MANY_REQUESTS, ErrorCode.TOO_MANY_REQUESTS);
     }
 
     const otpCode = this.generateOtp();
@@ -243,26 +245,26 @@ export class AuthService {
   async verifyResetOtp(email: string, code: string) {
     const user = await this.userRepository.findByEmail(email);
     if (!user) {
-      throw new AppError('Email không tồn tại', 404);
+      throw new AppError('Email không tồn tại', HttpStatus.NOT_FOUND, ErrorCode.USER_NOT_FOUND);
     }
 
     // Check attempts
     const attemptsStr = await redis.get(`otp:attempts:reset:${email}`);
     const attempts = attemptsStr ? parseInt(attemptsStr, 10) : 0;
     if (attempts >= OTP_MAX_ATTEMPTS) {
-      throw new AppError('Bạn đã nhập sai quá nhiều lần. Vui lòng yêu cầu mã mới', 429);
+      throw new AppError('Bạn đã nhập sai quá nhiều lần. Vui lòng yêu cầu mã mới', HttpStatus.TOO_MANY_REQUESTS, ErrorCode.TOO_MANY_REQUESTS);
     }
 
     const storedOtp = await redis.get(`otp:reset:${email}`);
     if (!storedOtp) {
-      throw new AppError('Mã OTP đã hết hạn', 410);
+      throw new AppError('Mã OTP đã hết hạn', HttpStatus.GONE, ErrorCode.OTP_EXPIRED);
     }
 
     if (storedOtp !== code) {
       await redis.incr(`otp:attempts:reset:${email}`);
       await redis.expire(`otp:attempts:reset:${email}`, OTP_TTL);
       const remaining = OTP_MAX_ATTEMPTS - 1 - attempts;
-      throw new AppError(`Mã không đúng. Còn ${remaining} lần thử`, 400);
+      throw new AppError(`Mã không đúng. Còn ${remaining} lần thử`, HttpStatus.BAD_REQUEST, ErrorCode.WRONG_OTP);
     }
 
     // OTP correct — clean up and issue a reset token
@@ -281,21 +283,21 @@ export class AuthService {
   async resetPassword(email: string, token: string, newPassword: string, oldPassword?: string) {
     const user = await this.userRepository.findByEmail(email);
     if (!user) {
-      throw new AppError('Email không tồn tại', 404);
+      throw new AppError('Email không tồn tại', HttpStatus.NOT_FOUND, ErrorCode.USER_NOT_FOUND);
     }
 
     const storedToken = await redis.get(`reset:token:${email}`);
     if (!storedToken || storedToken !== token) {
-      throw new AppError('Phiên đặt lại mật khẩu không hợp lệ hoặc đã hết hạn', 400);
+      throw new AppError('Phiên đặt lại mật khẩu không hợp lệ hoặc đã hết hạn', HttpStatus.BAD_REQUEST, ErrorCode.BAD_REQUEST);
     }
 
     if (oldPassword) {
       if (!user.passwordHash) {
-        throw new AppError('Không thể xác thực mật khẩu hiện tại.', 400);
+        throw new AppError('Không thể xác thực mật khẩu hiện tại.', HttpStatus.BAD_REQUEST, ErrorCode.BAD_REQUEST);
       }
       const isPasswordValid = await bcrypt.compare(oldPassword, user.passwordHash);
       if (!isPasswordValid) {
-        throw new AppError('Mật khẩu hiện tại không đúng', 400);
+        throw new AppError('Mật khẩu hiện tại không đúng', HttpStatus.BAD_REQUEST, ErrorCode.BAD_REQUEST);
       }
     }
 
