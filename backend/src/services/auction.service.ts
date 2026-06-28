@@ -3,6 +3,8 @@ import { CreateAuctionInput } from '../validators/auction.validator';
 import { scheduleAuctionActivation } from '../queues/auction.queue';
 import { AuctionStatus } from '@prisma/client';
 import { AppError } from '../utils/AppError';
+import { HttpStatus } from '../utils/HttpStatus';
+import { ErrorCode } from '../utils/ErrorCode';
 import prisma from '../config/prisma';
 import cloudinary from '../config/cloudinary.config';
 
@@ -33,15 +35,15 @@ export class AuctionService {
     });
 
     if (!seller) {
-      throw new AppError('Không tìm thấy tài khoản', 404);
+      throw new AppError('Không tìm thấy tài khoản', HttpStatus.NOT_FOUND, ErrorCode.USER_NOT_FOUND);
     }
 
     if (seller.role !== 'seller') {
-      throw new AppError('Chỉ tài khoản Seller mới được tạo đấu giá', 403);
+      throw new AppError('Chỉ tài khoản Seller mới được tạo đấu giá', HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN);
     }
 
     if (seller.accountStatus !== 'active') {
-      throw new AppError('Tài khoản chưa được kích hoạt hoặc đã bị khóa', 403);
+      throw new AppError('Tài khoản chưa được kích hoạt hoặc đã bị khóa', HttpStatus.FORBIDDEN, ErrorCode.ACCOUNT_BANNED);
     }
 
     // Verify category exists and is active
@@ -51,7 +53,7 @@ export class AuctionService {
     });
 
     if (!category || !category.isActive) {
-      throw new AppError('Danh mục không tồn tại hoặc đã bị vô hiệu hóa', 400);
+      throw new AppError('Danh mục không tồn tại hoặc đã bị vô hiệu hóa', HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR);
     }
 
     // Move images from temp to permanent folder on Cloudinary
@@ -88,7 +90,7 @@ export class AuctionService {
     const auction = await this.auctionRepository.findById(auctionId);
 
     if (!auction) {
-      throw new AppError('Phiên đấu giá không tồn tại', 404);
+      throw new AppError('Phiên đấu giá không tồn tại', HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND);
     }
 
     const now = new Date();
@@ -131,7 +133,7 @@ export class AuctionService {
   public async getBidHistory(auctionId: string, page: number, limit: number) {
     // Verify auction exists
     const exists = await this.auctionRepository.findById(auctionId);
-    if (!exists) throw new AppError('Phiên đấu giá không tồn tại', 404);
+    if (!exists) throw new AppError('Phiên đấu giá không tồn tại', HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND);
 
     const { bids, total } = await this.auctionRepository.getBidHistory(auctionId, page, limit);
 
@@ -464,8 +466,8 @@ export class AuctionService {
       select: { id: true, sellerId: true },
     });
 
-    if (!auction) throw new AppError('Phiên đấu giá không tồn tại', 404);
-    if (auction.sellerId === userId) throw new AppError('Không thể yêu thích đấu giá của chính mình', 400);
+    if (!auction) throw new AppError('Phiên đấu giá không tồn tại', HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND);
+    if (auction.sellerId === userId) throw new AppError('Không thể yêu thích đấu giá của chính mình', HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR);
 
     const watching = await this.auctionRepository.toggleWatch(auctionId, userId);
     return { watching };
@@ -528,12 +530,12 @@ export class AuctionService {
       }
     });
 
-    if (!auction) throw new AppError('Phiên đấu giá không tồn tại', 404);
-    if (auction.sellerId === authorId) throw new AppError('Không thể đánh giá chính mình', 400);
+    if (!auction) throw new AppError('Phiên đấu giá không tồn tại', HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND);
+    if (auction.sellerId === authorId) throw new AppError('Không thể đánh giá chính mình', HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR);
 
     const payment = auction.payments[0];
     if (!payment || payment.shippingStatus !== 'delivered') {
-      throw new AppError('Chỉ có thể đánh giá sau khi đã nhận hàng', 400);
+      throw new AppError('Chỉ có thể đánh giá sau khi đã nhận hàng', HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR);
     }
 
     const existing = await prisma.review.findUnique({
@@ -542,7 +544,7 @@ export class AuctionService {
       }
     });
 
-    if (existing) throw new AppError('Bạn đã đánh giá cho phiên đấu giá này rồi', 400);
+    if (existing) throw new AppError('Bạn đã đánh giá cho phiên đấu giá này rồi', HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR);
 
     const review = await prisma.review.create({
       data: {

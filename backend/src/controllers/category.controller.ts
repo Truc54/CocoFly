@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../config/prisma';
+import { HttpStatus } from '../utils/HttpStatus';
 
 export class CategoryController {
   async getCategories(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -67,7 +68,7 @@ export class CategoryController {
         }));
       }
 
-      res.json({ success: true, data });
+      res.status(HttpStatus.OK).json({ success: true, data });
     } catch (error) {
       next(error);
     }
