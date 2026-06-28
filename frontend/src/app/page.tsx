@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { auctionApi, categoryApi } from "@/lib/api";
+import { auctionApi, categoryApi, paymentApi } from "@/lib/api";
 
 import Sidebar from "@/components/layout/Sidebar";
 import HeroSection from "@/components/home/HeroSection";
@@ -42,7 +42,30 @@ export default function HomePage() {
     const dataStr = sessionStorage.getItem("successPayment");
     if (dataStr) {
       try {
-        setPaymentSuccessData(JSON.parse(dataStr));
+        const parsed = JSON.parse(dataStr);
+        if (parsed.paymentId) {
+          const cleanPaymentId = parsed.paymentId.split("_")[0];
+          paymentApi
+            .getById(cleanPaymentId)
+            .then((res) => {
+              if (res.success && res.data) {
+                const p = res.data;
+                setPaymentSuccessData({
+                  paymentId: p.id,
+                  itemName: p.auction?.item?.title || "Sản phẩm đấu giá",
+                  imageUrl: p.auction?.item?.media?.[0]?.cdnUrl || "/placeholder.png",
+                  amount: p.amount,
+                });
+              } else {
+                setPaymentSuccessData(parsed);
+              }
+            })
+            .catch(() => {
+              setPaymentSuccessData(parsed);
+            });
+        } else {
+          setPaymentSuccessData(parsed);
+        }
         sessionStorage.removeItem("successPayment");
       } catch (e) {}
     }

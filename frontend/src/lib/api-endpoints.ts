@@ -51,6 +51,7 @@ export const ApiEndpoints = {
     MARK_READ: (id: string) => `/api/notifications/${id}/read`,
   },
   PAYMENTS: {
+    GET_BY_ID: (id: string) => `/api/payments/${id}`,
     BY_AUCTION_ID: (auctionId: string) => `/api/payments/auction/${auctionId}`,
     INITIATE: (paymentId: string) => `/api/payments/${paymentId}/initiate`,
     DECLINE: (paymentId: string) => `/api/auctions/payments/${paymentId}/decline`,

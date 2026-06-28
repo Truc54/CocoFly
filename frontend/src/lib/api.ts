@@ -275,6 +275,7 @@ export const notificationApi = {
 };
 
 export const paymentApi = {
+  getById: (id: string) => fetchApi(ApiEndpoints.PAYMENTS.GET_BY_ID(id)),
   getByAuctionId: (auctionId: string) => fetchApi(ApiEndpoints.PAYMENTS.BY_AUCTION_ID(auctionId)),
   initiate: (paymentId: string, method: string, shippingInfo?: { addressLine: string; phone: string }) => fetchApi(ApiEndpoints.PAYMENTS.INITIATE(paymentId), {
     method: 'POST',
