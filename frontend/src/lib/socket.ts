@@ -3,6 +3,7 @@
 import { io, Socket } from "socket.io-client";
 import { API_URL } from "./api";
 import { authStorage } from "./auth-storage";
+import { ApiEndpoints } from "./api-endpoints";
 
 let socket: Socket | null = null;
 
@@ -48,7 +49,7 @@ export function connectSocket(): Socket {
         return;
       }
 
-      fetch(`${API_URL}/auth/refresh`, {
+      fetch(`${API_URL}${ApiEndpoints.AUTH.REFRESH}`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

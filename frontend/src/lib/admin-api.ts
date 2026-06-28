@@ -1,11 +1,12 @@
 import { fetchApi } from "./api";
+import { ApiEndpoints } from "./api-endpoints";
 
 export const adminApi = {
   dashboard: {
-    getStats: () => fetchApi("/api/admin/dashboard/stats"),
+    getStats: () => fetchApi(ApiEndpoints.ADMIN.DASHBOARD.STATS),
     getRevenue: (period: "day" | "week" | "month") =>
-      fetchApi(`/api/admin/dashboard/revenue?period=${period}`),
-    getActivity: () => fetchApi("/api/admin/dashboard/activity"),
+      fetchApi(`${ApiEndpoints.ADMIN.DASHBOARD.REVENUE}?period=${period}`),
+    getActivity: () => fetchApi(ApiEndpoints.ADMIN.DASHBOARD.ACTIVITY),
   },
   users: {
     list: (params: { page?: number; limit?: number; search?: string; role?: string; status?: string }) => {
@@ -15,25 +16,25 @@ export const adminApi = {
       if (params.search) query.append("search", params.search);
       if (params.role) query.append("role", params.role);
       if (params.status) query.append("status", params.status);
-      return fetchApi(`/api/admin/users?${query.toString()}`);
+      return fetchApi(`${ApiEndpoints.ADMIN.USERS.BASE}?${query.toString()}`);
     },
-    getById: (id: string) => fetchApi(`/api/admin/users/${id}`),
+    getById: (id: string) => fetchApi(ApiEndpoints.ADMIN.USERS.BY_ID(id)),
     ban: (id: string, reason: string) =>
-      fetchApi(`/api/admin/users/${id}/ban`, {
+      fetchApi(ApiEndpoints.ADMIN.USERS.BAN(id), {
         method: "PATCH",
         body: JSON.stringify({ reason }),
       }),
     unban: (id: string) =>
-      fetchApi(`/api/admin/users/${id}/unban`, {
+      fetchApi(ApiEndpoints.ADMIN.USERS.UNBAN(id), {
         method: "PATCH",
       }),
     changeRole: (id: string, role: string) =>
-      fetchApi(`/api/admin/users/${id}/role`, {
+      fetchApi(ApiEndpoints.ADMIN.USERS.ROLE(id), {
         method: "PATCH",
         body: JSON.stringify({ role }),
       }),
     resetStrikes: (id: string) =>
-      fetchApi(`/api/admin/users/${id}/reset-strikes`, {
+      fetchApi(ApiEndpoints.ADMIN.USERS.RESET_STRIKES(id), {
         method: "PATCH",
       }),
   },
@@ -44,15 +45,15 @@ export const adminApi = {
       if (params.limit) query.append("limit", params.limit.toString());
       if (params.status) query.append("status", params.status);
       if (params.search) query.append("search", params.search);
-      return fetchApi(`/api/admin/auctions?${query.toString()}`);
+      return fetchApi(`${ApiEndpoints.ADMIN.AUCTIONS.BASE}?${query.toString()}`);
     },
-    getById: (id: string) => fetchApi(`/api/admin/auctions/${id}`),
+    getById: (id: string) => fetchApi(ApiEndpoints.ADMIN.AUCTIONS.BY_ID(id)),
     forceEnd: (id: string) =>
-      fetchApi(`/api/admin/auctions/${id}/force-end`, {
+      fetchApi(ApiEndpoints.ADMIN.AUCTIONS.FORCE_END(id), {
         method: "POST",
       }),
     cancel: (id: string) =>
-      fetchApi(`/api/admin/auctions/${id}/cancel`, {
+      fetchApi(ApiEndpoints.ADMIN.AUCTIONS.CANCEL(id), {
         method: "POST",
       }),
   },
@@ -64,10 +65,10 @@ export const adminApi = {
       if (params.status) query.append("status", params.status);
       if (params.method) query.append("method", params.method);
       if (params.search) query.append("search", params.search);
-      return fetchApi(`/api/admin/payments?${query.toString()}`);
+      return fetchApi(`${ApiEndpoints.ADMIN.PAYMENTS.BASE}?${query.toString()}`);
     },
     refund: (id: string, reason: string) =>
-      fetchApi(`/api/admin/payments/${id}/refund`, {
+      fetchApi(ApiEndpoints.ADMIN.PAYMENTS.REFUND(id), {
         method: "POST",
         body: JSON.stringify({ reason }),
       }),
@@ -79,39 +80,39 @@ export const adminApi = {
       if (params.limit) query.append("limit", params.limit.toString());
       if (params.status) query.append("status", params.status);
       if (params.search) query.append("search", params.search);
-      return fetchApi(`/api/admin/disputes?${query.toString()}`);
+      return fetchApi(`${ApiEndpoints.ADMIN.DISPUTES.BASE}?${query.toString()}`);
     },
-    getById: (id: string) => fetchApi(`/api/admin/disputes/${id}`),
+    getById: (id: string) => fetchApi(ApiEndpoints.ADMIN.DISPUTES.BY_ID(id)),
     resolve: (
       id: string,
       payload: { refundBuyer: boolean; strikeSeller: boolean; strikeBuyer: boolean; note: string }
     ) =>
-      fetchApi(`/api/admin/disputes/${id}/resolve`, {
+      fetchApi(ApiEndpoints.ADMIN.DISPUTES.RESOLVE(id), {
         method: "PATCH",
         body: JSON.stringify(payload),
       }),
   },
   categories: {
-    list: () => fetchApi("/api/admin/categories"),
+    list: () => fetchApi(ApiEndpoints.ADMIN.CATEGORIES.BASE),
     create: (data: { name: string; slug: string; description?: string; parentId?: number | null; sortOrder?: number; iconUrl?: string }) =>
-      fetchApi("/api/admin/categories", {
+      fetchApi(ApiEndpoints.ADMIN.CATEGORIES.BASE, {
         method: "POST",
         body: JSON.stringify(data),
       }),
     update: (id: number, data: { name?: string; slug?: string; description?: string; parentId?: number | null; sortOrder?: number; iconUrl?: string; isActive?: boolean }) =>
-      fetchApi(`/api/admin/categories/${id}`, {
+      fetchApi(ApiEndpoints.ADMIN.CATEGORIES.BY_ID(id), {
         method: "PUT",
         body: JSON.stringify(data),
       }),
     remove: (id: number) =>
-      fetchApi(`/api/admin/categories/${id}`, {
+      fetchApi(ApiEndpoints.ADMIN.CATEGORIES.BY_ID(id), {
         method: "DELETE",
       }),
   },
   config: {
-    getAll: () => fetchApi("/api/admin/config"),
+    getAll: () => fetchApi(ApiEndpoints.ADMIN.CONFIG.BASE),
     update: (key: string, value: string) =>
-      fetchApi(`/api/admin/config/${key}`, {
+      fetchApi(ApiEndpoints.ADMIN.CONFIG.BY_KEY(key), {
         method: "PUT",
         body: JSON.stringify({ value }),
       }),
@@ -123,7 +124,7 @@ export const adminApi = {
       if (params.limit) query.append("limit", params.limit.toString());
       if (params.actionType) query.append("actionType", params.actionType);
       if (params.actorId) query.append("actorId", params.actorId);
-      return fetchApi(`/api/admin/audit-logs?${query.toString()}`);
+      return fetchApi(`${ApiEndpoints.ADMIN.AUDIT_LOGS}?${query.toString()}`);
     },
   },
 };

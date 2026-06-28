@@ -1,6 +1,8 @@
 import { UserRepository } from '../repositories/user.repository';
 import { TokenService } from './token.service';
 import { AppError } from '../utils/AppError';
+import { HttpStatus } from '../utils/HttpStatus';
+import { ErrorCode } from '../utils/ErrorCode';
 
 export class UserService {
   private userRepository = new UserRepository();
@@ -8,17 +10,17 @@ export class UserService {
 
   async upgradeToSeller(userId: string, phoneNumber: string) {
     if (!phoneNumber) {
-      throw new AppError('Số điện thoại là bắt buộc', 400);
+      throw new AppError('Số điện thoại là bắt buộc', HttpStatus.BAD_REQUEST, ErrorCode.PHONE_REQUIRED);
     }
 
     // 2. Find current user
     const user = await this.userRepository.findById(userId);
     if (!user) {
-      throw new AppError('Người dùng không tồn tại', 404);
+      throw new AppError('Người dùng không tồn tại', HttpStatus.NOT_FOUND, ErrorCode.USER_NOT_FOUND);
     }
 
     if (user.role === 'seller') {
-      throw new AppError('Tài khoản đã là người bán', 409);
+      throw new AppError('Tài khoản đã là người bán', HttpStatus.CONFLICT, ErrorCode.ALREADY_SELLER);
     }
 
     // 3. Update role and phone
@@ -63,12 +65,12 @@ export class UserService {
 
   async saveAddress(userId: string, addressLine: string, phone: string) {
     if (!addressLine || !phone) {
-      throw new AppError('Địa chỉ và số điện thoại là bắt buộc', 400);
+      throw new AppError('Địa chỉ và số điện thoại là bắt buộc', HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR);
     }
 
     const user = await this.userRepository.findById(userId);
     if (!user) {
-      throw new AppError('Người dùng không tồn tại', 404);
+      throw new AppError('Người dùng không tồn tại', HttpStatus.NOT_FOUND, ErrorCode.USER_NOT_FOUND);
     }
 
     const fullName = user.fullName || 'User';
@@ -172,7 +174,7 @@ export class UserService {
 
   async getMyProfile(userId: string) {
     const user = await this.userRepository.getProfileData(userId);
-    if (!user) throw new AppError('Người dùng không tồn tại', 404);
+    if (!user) throw new AppError('Người dùng không tồn tại', HttpStatus.NOT_FOUND, ErrorCode.USER_NOT_FOUND);
 
     const pinnedCount = await this.userRepository.countPinnedAuctions(userId);
 
@@ -262,12 +264,12 @@ export class UserService {
       where: { id: auctionId },
       select: { id: true }
     });
-    if (!auction) throw new AppError('Phiên đấu giá không tồn tại', 404);
+    if (!auction) throw new AppError('Phiên đấu giá không tồn tại', HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND);
 
     // Enforce max 3
     const currentCount = await this.userRepository.countPinnedAuctions(userId);
     if (currentCount >= UserService.MAX_PINS) {
-      throw new AppError(`Bạn chỉ có thể ghim tối đa ${UserService.MAX_PINS} đấu giá`, 400);
+      throw new AppError(`Bạn chỉ có thể ghim tối đa ${UserService.MAX_PINS} đấu giá`, HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR);
     }
 
     await this.userRepository.pinAuction(userId, auctionId, currentCount);
@@ -414,7 +416,7 @@ export class UserService {
 
   async getUserProfile(userId: string) {
     const user = await this.userRepository.getProfileData(userId);
-    if (!user) throw new AppError('Người dùng không tồn tại', 404);
+    if (!user) throw new AppError('Người dùng không tồn tại', HttpStatus.NOT_FOUND, ErrorCode.USER_NOT_FOUND);
 
     const pinnedCount = await this.userRepository.countPinnedAuctions(userId);
 

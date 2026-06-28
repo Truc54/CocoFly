@@ -2,6 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import { AuctionService } from '../services/auction.service';
 import prisma from '../config/prisma';
 import { AppError } from '../utils/AppError';
+import { HttpStatus } from '../utils/HttpStatus';
+import { ErrorCode } from '../utils/ErrorCode';
 
 /**
  * Controller Layer:
@@ -19,7 +21,7 @@ export class AuctionController {
       const sellerId = req.user!.userId;
       const result = await this.auctionService.createAuction(sellerId, req.body);
 
-      res.status(201).json({
+      res.status(HttpStatus.CREATED).json({
         success: true,
         message: 'Đấu giá đã được tạo và lên lịch thành công',
         data: result,
@@ -36,7 +38,7 @@ export class AuctionController {
       const auctionId = req.params.auctionId as string;
       const auction = await this.auctionService.getAuctionById(auctionId);
 
-      res.status(200).json({
+      res.status(HttpStatus.OK).json({
         success: true,
         data: auction,
       });
@@ -57,7 +59,7 @@ export class AuctionController {
 
       const result = await this.auctionService.getLiveAuctions({ page, limit, categoryId, sort, search });
 
-      res.json({ success: true, data: result });
+      res.status(HttpStatus.OK).json({ success: true, data: result });
     } catch (error) {
       next(error);
     }
@@ -74,7 +76,7 @@ export class AuctionController {
 
       const result = await this.auctionService.getUpcomingAuctions({ page, limit, categoryId, period, search, sort });
 
-      res.json({ success: true, data: result });
+      res.status(HttpStatus.OK).json({ success: true, data: result });
     } catch (error) {
       next(error);
     }
@@ -86,7 +88,7 @@ export class AuctionController {
     try {
       const q = (req.query.q as string || '').trim();
       if (q.length < 2) {
-        res.json({ success: true, data: [] });
+        res.status(HttpStatus.OK).json({ success: true, data: [] });
         return;
       }
 
@@ -94,7 +96,7 @@ export class AuctionController {
       const status = (req.query.status as string) || 'active';
       const suggestions = await this.auctionService.getSuggestions(q, limit, status);
 
-      res.json({ success: true, data: suggestions });
+      res.status(HttpStatus.OK).json({ success: true, data: suggestions });
     } catch (error) {
       next(error);
     }
@@ -109,7 +111,7 @@ export class AuctionController {
       const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 20));
 
       const result = await this.auctionService.getBidHistory(auctionId, page, limit);
-      res.json({ success: true, data: result });
+      res.status(HttpStatus.OK).json({ success: true, data: result });
     } catch (err) {
       next(err);
     }
@@ -123,7 +125,7 @@ export class AuctionController {
       const userId = req.user!.userId;
 
       const result = await this.auctionService.getUserBidStatus(auctionId, userId);
-      res.json({ success: true, data: result });
+      res.status(HttpStatus.OK).json({ success: true, data: result });
     } catch (err) {
       next(err);
     }
@@ -141,9 +143,15 @@ export class AuctionController {
         select: { id: true, buyerId: true, auctionId: true, status: true },
       });
 
-      if (!payment) throw new AppError('Thanh toán không tồn tại', 404);
-      if (payment.buyerId !== userId) throw new AppError('Bạn không có quyền thực hiện hành động này', 403);
-      if (payment.status !== 'pending') throw new AppError('Thanh toán không ở trạng thái chờ', 400);
+      if (!payment) {
+        throw new AppError('Thanh toán không tồn tại', HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND);
+      }
+      if (payment.buyerId !== userId) {
+        throw new AppError('Bạn không có quyền thực hiện hành động này', HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN);
+      }
+      if (payment.status !== 'pending') {
+        throw new AppError('Thanh toán không ở trạng thái chờ', HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR);
+      }
 
       // Mark payment as failed (runner-up decline — no strike penalty)
       await prisma.payment.update({
@@ -180,7 +188,7 @@ export class AuctionController {
         });
       }
 
-      res.json({ success: true, message: 'Đã từ chối mua sản phẩm' });
+      res.status(HttpStatus.OK).json({ success: true, message: 'Đã từ chối mua sản phẩm' });
     } catch (err) {
       next(err);
     }
@@ -197,7 +205,7 @@ export class AuctionController {
 
       const result = await this.auctionService.getSellerAuctions(sellerId, tab, page, limit);
       const counts = await this.auctionService.getSellerAuctionCounts(sellerId);
-      res.json({ success: true, data: { ...result, counts } });
+      res.status(HttpStatus.OK).json({ success: true, data: { ...result, counts } });
     } catch (err) {
       next(err);
     }
@@ -209,7 +217,7 @@ export class AuctionController {
       const auctionId = req.params.auctionId as string;
 
       const result = await this.auctionService.updateAuction(auctionId, sellerId, req.body);
-      res.json({ success: true, message: 'Cập nhật thành công', data: result });
+      res.status(HttpStatus.OK).json({ success: true, message: 'Cập nhật thành công', data: result });
     } catch (err) {
       next(err);
     }
@@ -221,7 +229,7 @@ export class AuctionController {
       const auctionId = req.params.auctionId as string;
 
       await this.auctionService.deleteAuction(auctionId, sellerId);
-      res.json({ success: true, message: 'Đã xóa phiên đấu giá' });
+      res.status(HttpStatus.OK).json({ success: true, message: 'Đã xóa phiên đấu giá' });
     } catch (err) {
       next(err);
     }
@@ -235,7 +243,7 @@ export class AuctionController {
       const auctionId = req.params.auctionId as string;
 
       const result = await this.auctionService.toggleWatchAuction(auctionId, userId);
-      res.json({
+      res.status(HttpStatus.OK).json({
         success: true,
         message: result.watching ? 'Đã thêm vào yêu thích' : 'Đã bỏ yêu thích',
         data: result,
@@ -252,7 +260,7 @@ export class AuctionController {
       const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 10));
 
       const result = await this.auctionService.getWatchlist(userId, page, limit);
-      res.json({ success: true, data: result });
+      res.status(HttpStatus.OK).json({ success: true, data: result });
     } catch (err) {
       next(err);
     }
@@ -264,7 +272,7 @@ export class AuctionController {
       const auctionId = req.params.auctionId as string;
 
       const watching = await this.auctionService.isWatching(auctionId, userId);
-      res.json({ success: true, data: { watching } });
+      res.status(HttpStatus.OK).json({ success: true, data: { watching } });
     } catch (err) {
       next(err);
     }
@@ -279,15 +287,13 @@ export class AuctionController {
       const { rating, comment } = req.body;
 
       if (!rating || typeof rating !== 'number' || rating < 1 || rating > 5) {
-        res.status(400).json({ success: false, message: 'Rating phải từ 1 đến 5' });
-        return;
+        throw new AppError('Rating phải từ 1 đến 5', HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR);
       }
 
       const review = await this.auctionService.addReview(auctionId, userId, rating, comment);
-      res.json({ success: true, message: 'Đánh giá thành công', data: review });
+      res.status(HttpStatus.OK).json({ success: true, message: 'Đánh giá thành công', data: review });
     } catch (err) {
       next(err);
     }
   }
 }
-

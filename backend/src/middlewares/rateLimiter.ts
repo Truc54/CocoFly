@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import redis from '../config/redis';
 import { AppError } from '../utils/AppError';
+import { HttpStatus } from '../utils/HttpStatus';
+import { ErrorCode } from '../utils/ErrorCode';
 
 interface RateLimitConfig {
   keyGenerator: (req: Request) => string[];
@@ -20,7 +22,7 @@ function createRateLimiter(config: RateLimitConfig) {
         const count = current ? parseInt(current, 10) : 0;
 
         if (count >= limit.max) {
-          throw new AppError(config.message, 429);
+          throw new AppError(config.message, HttpStatus.TOO_MANY_REQUESTS, ErrorCode.TOO_MANY_REQUESTS);
         }
       }
       next();
@@ -44,7 +46,7 @@ function createRedisRateLimiter(prefix: string, max: number, ttlSeconds: number,
       const count = current ? parseInt(current, 10) : 0;
 
       if (count >= max) {
-        throw new AppError(message, 429);
+        throw new AppError(message, HttpStatus.TOO_MANY_REQUESTS, ErrorCode.TOO_MANY_REQUESTS);
       }
 
       const multi = redis.multi();
@@ -105,7 +107,7 @@ export const loginRateLimit = async (req: Request, _res: Response, next: NextFun
       if (emailCount && parseInt(emailCount, 10) >= 5) {
         const ttl = await redis.ttl(emailKey);
         const minutes = Math.max(1, Math.ceil(ttl / 60));
-        throw new AppError(`Tài khoản tạm bị khóa do đăng nhập sai quá nhiều lần. Vui lòng thử lại sau ${minutes} phút`, 429);
+        throw new AppError(`Tài khoản tạm bị khóa do đăng nhập sai quá nhiều lần. Vui lòng thử lại sau ${minutes} phút`, HttpStatus.TOO_MANY_REQUESTS, ErrorCode.TOO_MANY_REQUESTS);
       }
     }
 
@@ -114,7 +116,7 @@ export const loginRateLimit = async (req: Request, _res: Response, next: NextFun
     if (ipCount && parseInt(ipCount, 10) >= 20) {
       const ttl = await redis.ttl(ipKey);
       const minutes = Math.max(1, Math.ceil(ttl / 60));
-      throw new AppError(`Quá nhiều lần đăng nhập thất bại từ IP này. Vui lòng thử lại sau ${minutes} phút`, 429);
+      throw new AppError(`Quá nhiều lần đăng nhập thất bại từ IP này. Vui lòng thử lại sau ${minutes} phút`, HttpStatus.TOO_MANY_REQUESTS, ErrorCode.TOO_MANY_REQUESTS);
     }
 
     next();

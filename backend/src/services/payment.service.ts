@@ -5,6 +5,8 @@ import { cancelPaymentTimeout, scheduleShippingTimeout } from '../queues/payment
 import prisma from '../config/prisma';
 import { PaymentMethod } from '@prisma/client';
 import { AppError } from '../utils/AppError';
+import { HttpStatus } from '../utils/HttpStatus';
+import { ErrorCode } from '../utils/ErrorCode';
 import { NotificationService } from './notification.service';
 
 /**
@@ -235,10 +237,10 @@ export class PaymentService {
   async confirmShipping(paymentId: string, sellerId: string): Promise<void> {
     const payment = await this.paymentRepo.findForShipping(paymentId);
 
-    if (!payment) throw new AppError('Không tìm thấy thanh toán', 404);
-    if (payment.sellerId !== sellerId) throw new AppError('Bạn không có quyền xác nhận giao hàng này', 403);
-    if (payment.status !== 'paid') throw new AppError('Thanh toán chưa được xác nhận', 400);
-    if (payment.shippingStatus !== 'pending') throw new AppError('Đã xác nhận giao hàng trước đó', 400);
+    if (!payment) throw new AppError('Không tìm thấy thanh toán', HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND);
+    if (payment.sellerId !== sellerId) throw new AppError('Bạn không có quyền xác nhận giao hàng này', HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN);
+    if (payment.status !== 'paid') throw new AppError('Thanh toán chưa được xác nhận', HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR);
+    if (payment.shippingStatus !== 'pending') throw new AppError('Đã xác nhận giao hàng trước đó', HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR);
 
     await prisma.payment.update({
       where: { id: paymentId },
@@ -264,10 +266,10 @@ export class PaymentService {
   async confirmDelivery(paymentId: string, buyerId: string): Promise<void> {
     const payment = await this.paymentRepo.findById(paymentId);
 
-    if (!payment) throw new AppError('Không tìm thấy thanh toán', 404);
-    if (payment.buyerId !== buyerId) throw new AppError('Bạn không có quyền thực hiện thao tác này', 403);
-    if (payment.status !== 'paid') throw new AppError('Thanh toán chưa hoàn tất', 400);
-    if (payment.shippingStatus !== 'shipped') throw new AppError('Đơn hàng chưa được giao, không thể xác nhận', 400);
+    if (!payment) throw new AppError('Không tìm thấy thanh toán', HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND);
+    if (payment.buyerId !== buyerId) throw new AppError('Bạn không có quyền thực hiện thao tác này', HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN);
+    if (payment.status !== 'paid') throw new AppError('Thanh toán chưa hoàn tất', HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR);
+    if (payment.shippingStatus !== 'shipped') throw new AppError('Đơn hàng chưa được giao, không thể xác nhận', HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR);
 
     // Update payment to delivered, release escrow, and update seller balance
     await prisma.$transaction([
@@ -351,13 +353,13 @@ export class PaymentService {
   // ── Buyer: Open Dispute ────────────────────────────────────────────────
   async openDispute(paymentId: string, userId: string, reason: string): Promise<void> {
     const payment = await this.paymentRepo.findById(paymentId);
-    if (!payment) throw new AppError('Không tìm thấy thanh toán', 404);
+    if (!payment) throw new AppError('Không tìm thấy thanh toán', HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND);
     if (payment.buyerId !== userId) {
-      throw new AppError('Bạn không có quyền thực hiện khiếu nại này', 403);
+      throw new AppError('Bạn không có quyền thực hiện khiếu nại này', HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN);
     }
 
     if (payment.status !== 'paid' && payment.status !== 'escrow_released') {
-      throw new AppError('Chỉ có thể khiếu nại đơn hàng đã thanh toán hoặc đã nhận hàng', 400);
+      throw new AppError('Chỉ có thể khiếu nại đơn hàng đã thanh toán hoặc đã nhận hàng', HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR);
     }
 
     // Check if a dispute already exists for this payment
@@ -365,7 +367,7 @@ export class PaymentService {
       where: { paymentId },
     });
     if (existingDispute) {
-      throw new AppError('Đơn hàng này đã có khiếu nại đang được xử lý', 400);
+      throw new AppError('Đơn hàng này đã có khiếu nại đang được xử lý', HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR);
     }
 
     // Create dispute in transaction
@@ -428,10 +430,10 @@ export class PaymentService {
       },
     });
 
-    if (!dispute) throw new AppError('Không tìm thấy khiếu nại', 404);
+    if (!dispute) throw new AppError('Không tìm thấy khiếu nại', HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND);
 
     if (dispute.payment.buyerId !== userId && dispute.payment.sellerId !== userId) {
-      throw new AppError('Bạn không có quyền xem khiếu nại này', 403);
+      throw new AppError('Bạn không có quyền xem khiếu nại này', HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN);
     }
 
     return dispute;
@@ -454,18 +456,18 @@ export class PaymentService {
       },
     });
 
-    if (!dispute) throw new AppError('Không tìm thấy khiếu nại', 404);
+    if (!dispute) throw new AppError('Không tìm thấy khiếu nại', HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND);
 
     if (dispute.payment.sellerId !== userId) {
-      throw new AppError('Chỉ người bán của đơn hàng mới có thể phản hồi khiếu nại', 403);
+      throw new AppError('Chỉ người bán của đơn hàng mới có thể phản hồi khiếu nại', HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN);
     }
 
     if (dispute.status !== 'pending') {
-      throw new AppError('Khiếu nại này đã được phân xử hoặc đóng', 400);
+      throw new AppError('Khiếu nại này đã được phân xử hoặc đóng', HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR);
     }
 
     if (dispute.sellerResponse) {
-      throw new AppError('Bạn đã gửi phản hồi cho khiếu nại này rồi', 400);
+      throw new AppError('Bạn đã gửi phản hồi cho khiếu nại này rồi', HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR);
     }
 
     // Update dispute response
@@ -519,10 +521,10 @@ export class PaymentService {
       },
     });
 
-    if (!dispute) throw new AppError('Không tìm thấy khiếu nại cho phiên đấu giá này', 404);
+    if (!dispute) throw new AppError('Không tìm thấy khiếu nại cho phiên đấu giá này', HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND);
 
     if (dispute.payment.buyerId !== userId && dispute.payment.sellerId !== userId) {
-      throw new AppError('Bạn không có quyền xem khiếu nại này', 403);
+      throw new AppError('Bạn không có quyền xem khiếu nại này', HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN);
     }
 
     return dispute;

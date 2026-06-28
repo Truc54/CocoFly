@@ -1,4 +1,5 @@
 import { authStorage } from "./auth-storage";
+import { ApiEndpoints } from "./api-endpoints";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -39,7 +40,7 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}): Pro
   });
 
   // Handle Token Expiry
-  if (response.status === 401 && endpoint !== "/auth/login" && endpoint !== "/auth/refresh") {
+  if (response.status === 401 && endpoint !== ApiEndpoints.AUTH.LOGIN && endpoint !== ApiEndpoints.AUTH.REFRESH) {
     if (!isRefreshing) {
       isRefreshing = true;
 
@@ -50,7 +51,7 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}): Pro
         }
 
         // Automatically ask for a new token using the body-based refreshToken
-        const refreshResponse = await fetch(`${API_URL}/auth/refresh`, {
+        const refreshResponse = await fetch(`${API_URL}${ApiEndpoints.AUTH.REFRESH}`, {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
@@ -94,52 +95,61 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}): Pro
 
   if (!response.ok) {
     let errorMessage = "Có lỗi xảy ra, vui lòng thử lại sau.";
+    let errorCode = "UNKNOWN_ERROR";
+
     if (data) {
-      if (Array.isArray(data.message)) {
-        errorMessage = data.message.join("\n");
+      if (data.error) {
+        if (typeof data.error === "object") {
+          errorCode = data.error.code || errorCode;
+          errorMessage = data.error.message || errorMessage;
+        } else if (typeof data.error === "string") {
+          errorMessage = data.error;
+        }
       } else if (typeof data.message === "string") {
         errorMessage = data.message;
-      } else if (data.error) {
-        errorMessage = data.error;
+      } else if (Array.isArray(data.message)) {
+        errorMessage = data.message.join("\n");
       }
     }
-    throw new Error(errorMessage || `Request Failed: ${response.status}`);
+    const errorObj = new Error(errorMessage);
+    (errorObj as any).code = errorCode;
+    throw errorObj;
   }
 
   return data;
 }
 
 export const authApi = {
-  register: (data: any) => fetchApi("/auth/register", { method: "POST", body: JSON.stringify(data) }),
-  login: (data: any) => fetchApi("/auth/login", { 
+  register: (data: any) => fetchApi(ApiEndpoints.AUTH.REGISTER, { method: "POST", body: JSON.stringify(data) }),
+  login: (data: any) => fetchApi(ApiEndpoints.AUTH.LOGIN, { 
     method: "POST", 
     body: JSON.stringify(data),
     credentials: "include",
   }),
-  verifyOtp: (data: { email: string; otp: string }) => fetchApi("/auth/verify-otp", { method: "POST", body: JSON.stringify({ email: data.email, code: data.otp }) }),
-  resendOtp: (data: { email: string }) => fetchApi("/auth/resend-otp", { method: "POST", body: JSON.stringify(data) }),
+  verifyOtp: (data: { email: string; otp: string }) => fetchApi(ApiEndpoints.AUTH.VERIFY_OTP, { method: "POST", body: JSON.stringify({ email: data.email, code: data.otp }) }),
+  resendOtp: (data: { email: string }) => fetchApi(ApiEndpoints.AUTH.RESEND_OTP, { method: "POST", body: JSON.stringify(data) }),
   logout: () => {
     const refreshToken = authStorage.getRefreshToken();
-    return fetchApi("/auth/logout", { 
+    return fetchApi(ApiEndpoints.AUTH.LOGOUT, { 
       method: "POST", 
       credentials: "include",
       body: refreshToken ? JSON.stringify({ refreshToken }) : undefined
     });
   },
-  forgotPassword: (data: { email: string }) => fetchApi("/auth/forgot-password", { method: "POST", body: JSON.stringify(data) }),
-  verifyResetOtp: (data: { email: string; otp: string }) => fetchApi("/auth/verify-reset-otp", { method: "POST", body: JSON.stringify({ email: data.email, code: data.otp }) }),
-  resetPassword: (data: { email: string; token: string; newPassword: string; oldPassword?: string }) => fetchApi("/auth/reset-password", { method: "POST", body: JSON.stringify(data) }),
+  forgotPassword: (data: { email: string }) => fetchApi(ApiEndpoints.AUTH.FORGOT_PASSWORD, { method: "POST", body: JSON.stringify(data) }),
+  verifyResetOtp: (data: { email: string; otp: string }) => fetchApi(ApiEndpoints.AUTH.VERIFY_RESET_OTP, { method: "POST", body: JSON.stringify({ email: data.email, code: data.otp }) }),
+  resetPassword: (data: { email: string; token: string; newPassword: string; oldPassword?: string }) => fetchApi(ApiEndpoints.AUTH.RESET_PASSWORD, { method: "POST", body: JSON.stringify(data) }),
 };
 
 export const userApi = {
   upgradeRole: async (phoneNumber: string, token: string) => {
-    return fetchApi('/api/users/upgrade-role', {
+    return fetchApi(ApiEndpoints.USERS.UPGRADE_ROLE, {
       method: 'POST',
       body: JSON.stringify({ phoneNumber }),
     });
   },
-  getAddress: () => fetchApi('/api/users/me/address'),
-  saveAddress: (addressLine: string, phone: string) => fetchApi('/api/users/me/address', {
+  getAddress: () => fetchApi(ApiEndpoints.USERS.ADDRESS),
+  saveAddress: (addressLine: string, phone: string) => fetchApi(ApiEndpoints.USERS.ADDRESS, {
     method: 'POST',
     body: JSON.stringify({ addressLine, phone }),
   }),
@@ -148,34 +158,34 @@ export const userApi = {
     if (tab) qs.set('tab', tab);
     qs.set('page', page.toString());
     qs.set('limit', limit.toString());
-    return fetchApi(`/api/users/me/participated-auctions?${qs.toString()}`);
+    return fetchApi(`${ApiEndpoints.USERS.PARTICIPATED_AUCTIONS}?${qs.toString()}`);
   },
-  getMyProfile: () => fetchApi('/api/users/me/profile'),
-  updateProfile: (data: { fullName?: string; bio?: string; address?: string; avatarUrl?: string }) => fetchApi('/api/users/me/profile', {
+  getMyProfile: () => fetchApi(ApiEndpoints.USERS.PROFILE),
+  updateProfile: (data: { fullName?: string; bio?: string; address?: string; avatarUrl?: string }) => fetchApi(ApiEndpoints.USERS.PROFILE, {
     method: 'PUT',
     body: JSON.stringify(data),
   }),
-  updateNotificationSettings: (settings: any) => fetchApi('/api/users/me/notifications', {
+  updateNotificationSettings: (settings: any) => fetchApi(ApiEndpoints.USERS.NOTIFICATIONS, {
     method: 'PUT',
     body: JSON.stringify(settings),
   }),
-  togglePin: (auctionId: string) => fetchApi(`/api/users/me/pin/${auctionId}`, { method: 'POST' }),
+  togglePin: (auctionId: string) => fetchApi(ApiEndpoints.USERS.PIN(auctionId), { method: 'POST' }),
   getMyRelatedAuctions: (page: number = 1, limit: number = 8) =>
-    fetchApi(`/api/users/me/related-auctions?page=${page}&limit=${limit}`),
+    fetchApi(`${ApiEndpoints.USERS.RELATED_AUCTIONS}?page=${page}&limit=${limit}`),
   getMyReviews: (page: number = 1, limit: number = 10) =>
-    fetchApi(`/api/users/me/reviews?page=${page}&limit=${limit}`),
+    fetchApi(`${ApiEndpoints.USERS.REVIEWS}?page=${page}&limit=${limit}`),
   getTransactions: (page: number = 1, limit: number = 10) => 
-    fetchApi(`/api/users/me/transactions?page=${page}&limit=${limit}`),
+    fetchApi(`${ApiEndpoints.USERS.TRANSACTIONS}?page=${page}&limit=${limit}`),
   getUserProfile: (id: string) => 
-    fetchApi(`/api/users/${id}/profile`),
+    fetchApi(ApiEndpoints.USERS.USER_PROFILE(id)),
   getUserRelatedAuctions: (id: string, page: number = 1, limit: number = 8) =>
-    fetchApi(`/api/users/${id}/related-auctions?page=${page}&limit=${limit}`),
+    fetchApi(`${ApiEndpoints.USERS.USER_RELATED_AUCTIONS(id)}?page=${page}&limit=${limit}`),
   getUserReviews: (id: string, page: number = 1, limit: number = 10) =>
-    fetchApi(`/api/users/${id}/reviews?page=${page}&limit=${limit}`),
+    fetchApi(`${ApiEndpoints.USERS.USER_REVIEWS(id)}?page=${page}&limit=${limit}`),
 };
 
 export const mediaApi = {
-  getUploadSignature: () => fetchApi('/api/media/sign', { method: 'POST' }),
+  getUploadSignature: () => fetchApi(ApiEndpoints.MEDIA.SIGN, { method: 'POST' }),
 };
 
 export const auctionApi = {
@@ -188,7 +198,7 @@ export const auctionApi = {
     if (params?.sort) searchParams.set('sort', params.sort);
     if (params?.search) searchParams.set('search', params.search);
     const qs = searchParams.toString();
-    return fetchApi(`/api/auctions/live${qs ? `?${qs}` : ''}`);
+    return fetchApi(`${ApiEndpoints.AUCTIONS.LIVE}${qs ? `?${qs}` : ''}`);
   },
   getUpcoming: (params?: { page?: number; limit?: number; categoryId?: number; period?: string; search?: string; sort?: string }) => {
     const searchParams = new URLSearchParams();
@@ -199,43 +209,43 @@ export const auctionApi = {
     if (params?.search) searchParams.set('search', params.search);
     if (params?.sort) searchParams.set('sort', params.sort);
     const qs = searchParams.toString();
-    return fetchApi(`/api/auctions/upcoming${qs ? `?${qs}` : ''}`);
+    return fetchApi(`${ApiEndpoints.AUCTIONS.UPCOMING}${qs ? `?${qs}` : ''}`);
   },
   // ── Single auction
-  getById: (id: string) => fetchApi(`/api/auctions/${id}`),
+  getById: (id: string) => fetchApi(ApiEndpoints.AUCTIONS.BY_ID(id)),
   // ── Bid history for detail page
   getBidHistory: (id: string, page = 1, limit = 20) =>
-    fetchApi(`/api/auctions/${id}/bids?page=${page}&limit=${limit}`),
+    fetchApi(`${ApiEndpoints.AUCTIONS.BIDS(id)}?page=${page}&limit=${limit}`),
   // ── Create auction
-  create: (data: any) => fetchApi('/api/auctions', {
+  create: (data: any) => fetchApi(ApiEndpoints.AUCTIONS.CREATE, {
     method: 'POST',
     body: JSON.stringify(data),
   }),
   // ── Search suggestions
   getSuggestions: (q: string, status: 'active' | 'scheduled' = 'active', limit = 8) =>
-    fetchApi(`/api/auctions/suggestions?q=${encodeURIComponent(q)}&status=${status}&limit=${limit}`),
+    fetchApi(`${ApiEndpoints.AUCTIONS.SUGGESTIONS}?q=${encodeURIComponent(q)}&status=${status}&limit=${limit}`),
   // ── Get user's bid status for an auction (requires auth)
-  getMyBidStatus: (id: string) => fetchApi(`/api/auctions/${id}/my-status`),
+  getMyBidStatus: (id: string) => fetchApi(ApiEndpoints.AUCTIONS.MY_STATUS(id)),
   // ── Seller: manage own auctions
   getMyListings: (tab?: string, page: number = 1, limit: number = 10) => {
     const qs = new URLSearchParams();
     if (tab) qs.set('tab', tab);
     qs.set('page', page.toString());
     qs.set('limit', limit.toString());
-    return fetchApi(`/api/auctions/my-listings?${qs.toString()}`);
+    return fetchApi(`${ApiEndpoints.AUCTIONS.MY_LISTINGS}?${qs.toString()}`);
   },
-  update: (id: string, data: any) => fetchApi(`/api/auctions/${id}`, {
+  update: (id: string, data: any) => fetchApi(ApiEndpoints.AUCTIONS.BY_ID(id), {
     method: 'PUT',
     body: JSON.stringify(data),
   }),
-  remove: (id: string) => fetchApi(`/api/auctions/${id}`, { method: 'DELETE' }),
+  remove: (id: string) => fetchApi(ApiEndpoints.AUCTIONS.BY_ID(id), { method: 'DELETE' }),
   // ── Watchlist (Favorites)
-  toggleWatch: (auctionId: string) => fetchApi(`/api/auctions/${auctionId}/watch`, { method: 'POST' }),
+  toggleWatch: (auctionId: string) => fetchApi(ApiEndpoints.AUCTIONS.WATCH(auctionId), { method: 'POST' }),
   getWatchlist: (page: number = 1, limit: number = 10) =>
-    fetchApi(`/api/auctions/watchlist?page=${page}&limit=${limit}`),
-  getWatchStatus: (auctionId: string) => fetchApi(`/api/auctions/${auctionId}/watch-status`),
+    fetchApi(`${ApiEndpoints.AUCTIONS.WATCHLIST}?page=${page}&limit=${limit}`),
+  getWatchStatus: (auctionId: string) => fetchApi(ApiEndpoints.AUCTIONS.WATCH_STATUS(auctionId)),
   // ── Review Seller
-  reviewSeller: (id: string, data: { rating: number; comment?: string }) => fetchApi(`/api/auctions/${id}/review`, {
+  reviewSeller: (id: string, data: { rating: number; comment?: string }) => fetchApi(ApiEndpoints.AUCTIONS.REVIEW(id), {
     method: 'POST',
     body: JSON.stringify(data),
   }),
@@ -244,7 +254,7 @@ export const auctionApi = {
 export const categoryApi = {
   getAll: (params?: { featured?: boolean }) => {
     const qs = params?.featured ? '?featured=true' : '';
-    return fetchApi(`/api/categories${qs}`);
+    return fetchApi(`${ApiEndpoints.CATEGORIES.GET_ALL}${qs}`);
   },
 };
 
@@ -254,35 +264,36 @@ export const notificationApi = {
     if (cursor) qs.set('cursor', cursor);
     qs.set('limit', limit.toString());
     if (unreadOnly) qs.set('unreadOnly', 'true');
-    return fetchApi(`/api/notifications?${qs.toString()}`);
+    return fetchApi(`${ApiEndpoints.NOTIFICATIONS.BASE}?${qs.toString()}`);
   },
   getUnreadCount: async (): Promise<number> => {
-    const res = await fetchApi('/api/notifications/unread-count');
+    const res = await fetchApi(ApiEndpoints.NOTIFICATIONS.UNREAD_COUNT);
     return res?.count || 0;
   },
-  markAsRead: (id: string) => fetchApi(`/api/notifications/${id}/read`, { method: 'PATCH' }),
-  markAllAsRead: () => fetchApi('/api/notifications/read-all', { method: 'PATCH' }),
+  markAsRead: (id: string) => fetchApi(ApiEndpoints.NOTIFICATIONS.MARK_READ(id), { method: 'PATCH' }),
+  markAllAsRead: () => fetchApi(ApiEndpoints.NOTIFICATIONS.MARK_ALL_READ, { method: 'PATCH' }),
 };
 
 export const paymentApi = {
-  getByAuctionId: (auctionId: string) => fetchApi(`/api/payments/auction/${auctionId}`),
-  initiate: (paymentId: string, method: string, shippingInfo?: { addressLine: string; phone: string }) => fetchApi(`/api/payments/${paymentId}/initiate`, {
+  getById: (id: string) => fetchApi(ApiEndpoints.PAYMENTS.GET_BY_ID(id)),
+  getByAuctionId: (auctionId: string) => fetchApi(ApiEndpoints.PAYMENTS.BY_AUCTION_ID(auctionId)),
+  initiate: (paymentId: string, method: string, shippingInfo?: { addressLine: string; phone: string }) => fetchApi(ApiEndpoints.PAYMENTS.INITIATE(paymentId), {
     method: 'POST',
     body: JSON.stringify({ method, shippingInfo }),
   }),
   decline: (paymentId: string) =>
-    fetchApi(`/api/auctions/payments/${paymentId}/decline`, { method: 'POST' }),
+    fetchApi(ApiEndpoints.PAYMENTS.DECLINE(paymentId), { method: 'POST' }),
   confirmShipping: (paymentId: string) =>
-    fetchApi(`/api/payments/${paymentId}/confirm-shipping`, { method: 'PATCH' }),
+    fetchApi(ApiEndpoints.PAYMENTS.CONFIRM_SHIPPING(paymentId), { method: 'PATCH' }),
   confirmDelivery: (paymentId: string) =>
-    fetchApi(`/api/payments/${paymentId}/confirm-delivery`, { method: 'PATCH' }),
-  openDispute: (paymentId: string, reason: string) => fetchApi(`/api/payments/${paymentId}/dispute`, {
+    fetchApi(ApiEndpoints.PAYMENTS.CONFIRM_DELIVERY(paymentId), { method: 'PATCH' }),
+  openDispute: (paymentId: string, reason: string) => fetchApi(ApiEndpoints.PAYMENTS.OPEN_DISPUTE(paymentId), {
     method: 'POST',
     body: JSON.stringify({ reason }),
   }),
-  getDispute: (id: string) => fetchApi(`/api/payments/dispute/${id}`),
-  getDisputeByAuction: (auctionId: string) => fetchApi(`/api/payments/dispute/by-auction/${auctionId}`),
-  respondDispute: (id: string, response: string) => fetchApi(`/api/payments/dispute/${id}/respond`, {
+  getDispute: (id: string) => fetchApi(ApiEndpoints.PAYMENTS.GET_DISPUTE(id)),
+  getDisputeByAuction: (auctionId: string) => fetchApi(ApiEndpoints.PAYMENTS.GET_DISPUTE_BY_AUCTION(auctionId)),
+  respondDispute: (id: string, response: string) => fetchApi(ApiEndpoints.PAYMENTS.RESPOND_DISPUTE(id), {
     method: 'POST',
     body: JSON.stringify({ response }),
   }),
@@ -293,10 +304,10 @@ export const messageApi = {
     const qs = new URLSearchParams();
     if (cursor) qs.set('cursor', cursor);
     qs.set('limit', limit.toString());
-    return fetchApi(`/api/messages/conversations?${qs.toString()}`);
+    return fetchApi(`${ApiEndpoints.MESSAGES.CONVERSATIONS}?${qs.toString()}`);
   },
   getOrCreateConversation: (targetUserId: string) => {
-    return fetchApi('/api/messages/conversations', {
+    return fetchApi(ApiEndpoints.MESSAGES.CONVERSATIONS, {
       method: 'POST',
       body: JSON.stringify({ targetUserId }),
     });
@@ -305,15 +316,15 @@ export const messageApi = {
     const qs = new URLSearchParams();
     if (cursor) qs.set('cursor', cursor);
     qs.set('limit', limit.toString());
-    return fetchApi(`/api/messages/conversations/${conversationId}?${qs.toString()}`);
+    return fetchApi(`${ApiEndpoints.MESSAGES.GET_MESSAGES(conversationId)}?${qs.toString()}`);
   },
   markAsRead: (conversationId: string) => {
-    return fetchApi(`/api/messages/conversations/${conversationId}/read`, {
+    return fetchApi(ApiEndpoints.MESSAGES.MARK_AS_READ(conversationId), {
       method: 'PATCH',
     });
   },
   getUnreadCount: async (): Promise<number> => {
-    const res = await fetchApi('/api/messages/unread-count');
+    const res = await fetchApi(ApiEndpoints.MESSAGES.UNREAD_COUNT);
     return res?.count || 0;
   },
 };

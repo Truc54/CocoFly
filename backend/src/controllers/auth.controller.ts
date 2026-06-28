@@ -1,5 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/auth.service';
+import { HttpStatus } from '../utils/HttpStatus';
+import { ErrorCode } from '../utils/ErrorCode';
+import { AppError } from '../utils/AppError';
 
 const authService = new AuthService();
 
@@ -17,7 +20,7 @@ export class AuthController {
     try {
       const { email, password, fullName } = req.body;
       const result = await authService.register(email, password, fullName);
-      res.status(201).json({ success: true, ...result });
+      res.status(HttpStatus.CREATED).json({ success: true, ...result });
     } catch (err) {
       next(err);
     }
@@ -27,7 +30,7 @@ export class AuthController {
     try {
       const { email, code } = req.body;
       const result = await authService.verifyOtp(email, code);
-      res.status(200).json({ success: true, ...result });
+      res.status(HttpStatus.OK).json({ success: true, ...result });
     } catch (err) {
       next(err);
     }
@@ -37,7 +40,7 @@ export class AuthController {
     try {
       const { email } = req.body;
       const result = await authService.resendOtp(email);
-      res.status(200).json({ success: true, ...result });
+      res.status(HttpStatus.OK).json({ success: true, ...result });
     } catch (err) {
       next(err);
     }
@@ -52,7 +55,7 @@ export class AuthController {
       // Set refresh token as HttpOnly cookie (fallback)
       res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, REFRESH_COOKIE_OPTIONS);
 
-      res.status(200).json({
+      res.status(HttpStatus.OK).json({
         success: true,
         accessToken: result.accessToken,
         refreshToken: result.refreshToken,
@@ -67,8 +70,7 @@ export class AuthController {
     try {
       const token = req.body.refreshToken || req.cookies?.[REFRESH_COOKIE_NAME];
       if (!token) {
-        res.status(401).json({ success: false, message: 'Refresh token không được cung cấp' });
-        return;
+        throw new AppError('Refresh token không được cung cấp', HttpStatus.UNAUTHORIZED, ErrorCode.UNAUTHORIZED);
       }
 
       const result = await authService.refreshToken(token);
@@ -76,7 +78,7 @@ export class AuthController {
       // Rotation — set new cookie (fallback)
       res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, REFRESH_COOKIE_OPTIONS);
 
-      res.status(200).json({
+      res.status(HttpStatus.OK).json({
         success: true,
         accessToken: result.accessToken,
         refreshToken: result.refreshToken,
@@ -101,7 +103,7 @@ export class AuthController {
         path: '/',
       });
 
-      res.status(200).json({ success: true, message: 'Đăng xuất thành công' });
+      res.status(HttpStatus.OK).json({ success: true, message: 'Đăng xuất thành công' });
     } catch (err) {
       next(err);
     }
@@ -111,7 +113,7 @@ export class AuthController {
     try {
       const { email } = req.body;
       const result = await authService.forgotPassword(email);
-      res.status(200).json({ success: true, ...result });
+      res.status(HttpStatus.OK).json({ success: true, ...result });
     } catch (err) {
       next(err);
     }
@@ -121,7 +123,7 @@ export class AuthController {
     try {
       const { email, code } = req.body;
       const result = await authService.verifyResetOtp(email, code);
-      res.status(200).json({ success: true, ...result });
+      res.status(HttpStatus.OK).json({ success: true, ...result });
     } catch (err) {
       next(err);
     }
@@ -131,7 +133,7 @@ export class AuthController {
     try {
       const { email, token, newPassword, oldPassword } = req.body;
       const result = await authService.resetPassword(email, token, newPassword, oldPassword);
-      res.status(200).json({ success: true, ...result });
+      res.status(HttpStatus.OK).json({ success: true, ...result });
     } catch (err) {
       next(err);
     }

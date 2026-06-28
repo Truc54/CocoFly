@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { TokenService } from '../services/token.service';
 import { AppError } from '../utils/AppError';
+import { HttpStatus } from '../utils/HttpStatus';
+import { ErrorCode } from '../utils/ErrorCode';
 
 const tokenService = new TokenService();
 
@@ -22,7 +24,7 @@ export function authGuard(req: Request, _res: Response, next: NextFunction): voi
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new AppError('Token không được cung cấp', 401);
+      throw new AppError('Token không được cung cấp', HttpStatus.UNAUTHORIZED, ErrorCode.UNAUTHORIZED);
     }
 
     const token = authHeader.split(' ')[1];
@@ -40,6 +42,6 @@ export function authGuard(req: Request, _res: Response, next: NextFunction): voi
       next(err);
       return;
     }
-    next(new AppError('Token không hợp lệ hoặc đã hết hạn', 401));
+    next(new AppError('Token không hợp lệ hoặc đã hết hạn', HttpStatus.UNAUTHORIZED, ErrorCode.UNAUTHORIZED));
   }
 }

@@ -3,6 +3,8 @@ import redis from '../config/redis';
 import prisma from '../config/prisma';
 import { AuctionRepository } from '../repositories/auction.repository';
 import { AppError } from '../utils/AppError';
+import { HttpStatus } from '../utils/HttpStatus';
+import { ErrorCode } from '../utils/ErrorCode';
 import { scheduleAuctionEnd, auctionQueue } from '../queues/auction.queue';
 import { schedulePaymentTimeout } from '../queues/payment.queue';
 import { Decimal } from '@prisma/client/runtime/library';
@@ -85,7 +87,7 @@ export class BiddingService {
     const acquired = await redis.set(lockKey, lockValue, 'EX', LOCK_TTL, 'NX');
 
     if (!acquired) {
-      throw new AppError('Hệ thống đang xử lý bid khác, vui lòng thử lại', 409);
+      throw new AppError('Hệ thống đang xử lý bid khác, vui lòng thử lại', HttpStatus.CONFLICT, ErrorCode.CONFLICT);
     }
 
     try {
@@ -93,25 +95,25 @@ export class BiddingService {
       const rateKey = `bid_rate:${auctionId}:${bidderId}`;
       const rateAllowed = await redis.set(rateKey, '1', 'EX', RATE_LIMIT_SECONDS, 'NX');
       if (!rateAllowed) {
-        throw new AppError('Bạn đang đặt giá quá nhanh, đợi 3 giây', 429);
+        throw new AppError('Bạn đang đặt giá quá nhanh, đợi 3 giây', HttpStatus.TOO_MANY_REQUESTS, ErrorCode.TOO_MANY_REQUESTS);
       }
 
       // 3. Fetch auction
       const auction = await this.repo.getAuctionForBidding(auctionId);
-      if (!auction) throw new AppError('Phiên đấu giá không tồn tại', 404);
-      if (auction.status !== 'active') throw new AppError('Phiên đấu giá không hoạt động', 400);
-      if (new Date() >= auction.endTime) throw new AppError('Phiên đấu giá đã kết thúc', 400);
-      if (bidderId === auction.sellerId) throw new AppError('Bạn không thể đặt giá cho đấu giá của chính mình', 403);
+      if (!auction) throw new AppError('Phiên đấu giá không tồn tại', HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND);
+      if (auction.status !== 'active') throw new AppError('Phiên đấu giá không hoạt động', HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR);
+      if (new Date() >= auction.endTime) throw new AppError('Phiên đấu giá đã kết thúc', HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR);
+      if (bidderId === auction.sellerId) throw new AppError('Bạn không thể đặt giá cho đấu giá của chính mình', HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN);
 
       const bidder = await prisma.user.findUnique({
         where: { id: bidderId },
         select: { accountStatus: true, createdAt: true },
       });
       if (!bidder) {
-        throw new AppError('Tài khoản không tồn tại', 404);
+        throw new AppError('Tài khoản không tồn tại', HttpStatus.NOT_FOUND, ErrorCode.USER_NOT_FOUND);
       }
       if (bidder.accountStatus === 'banned' || bidder.accountStatus === 'suspended') {
-        throw new AppError('Tài khoản của bạn đã bị khóa', 403);
+        throw new AppError('Tài khoản của bạn đã bị khóa', HttpStatus.FORBIDDEN, ErrorCode.ACCOUNT_BANNED);
       }
 
       // FR-07: High-value bid requires account age >= 7 days
@@ -120,7 +122,8 @@ export class BiddingService {
         if (accountAgeDays < MIN_ACCOUNT_AGE_DAYS) {
           throw new AppError(
             `Tài khoản cần tồn tại ít nhất ${MIN_ACCOUNT_AGE_DAYS} ngày để đặt giá trên ${HIGH_VALUE_THRESHOLD.toLocaleString()}đ`,
-            403,
+            HttpStatus.FORBIDDEN,
+            ErrorCode.FORBIDDEN,
           );
         }
       }
@@ -131,26 +134,26 @@ export class BiddingService {
       const minBid = currentPrice + bidIncrement;
 
       if (amount < minBid) {
-        throw new AppError(`Giá đặt tối thiểu là ${minBid.toLocaleString()} VNĐ`, 400);
+        throw new AppError(`Giá đặt tối thiểu là ${minBid.toLocaleString()} VNĐ`, HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR);
       }
 
       const buyoutPrice = auction.buyoutPrice ? Number(auction.buyoutPrice) : null;
       if (buyoutPrice) {
         if (amount >= buyoutPrice) {
-          throw new AppError(`Mức giá bạn đặt đã chạm mức Mua Ngay (${buyoutPrice.toLocaleString()} VNĐ). Vui lòng sử dụng chức năng Mua Ngay để sở hữu vật phẩm.`, 400);
+          throw new AppError(`Mức giá bạn đặt đã chạm mức Mua Ngay (${buyoutPrice.toLocaleString()} VNĐ). Vui lòng sử dụng chức năng Mua Ngay để sở hữu vật phẩm.`, HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR);
         }
         if (maxAutoBid !== undefined && maxAutoBid >= buyoutPrice) {
-          throw new AppError(`Giá uỷ quyền tối đa không được vượt quá hoặc bằng giá Mua Ngay (${buyoutPrice.toLocaleString()} VNĐ). Vui lòng sử dụng chức năng Mua Ngay.`, 400);
+          throw new AppError(`Giá uỷ quyền tối đa không được vượt quá hoặc bằng giá Mua Ngay (${buyoutPrice.toLocaleString()} VNĐ). Vui lòng sử dụng chức năng Mua Ngay.`, HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR);
         }
       }
 
       // Validate proxy
       if (maxAutoBid !== undefined) {
         if (maxAutoBid < amount) {
-          throw new AppError('Giá tối đa tự động phải >= giá đặt', 400);
+          throw new AppError('Giá tối đa tự động phải >= giá đặt', HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR);
         }
         if (maxAutoBid < minBid) {
-          throw new AppError(`Giá tối đa tự động tối thiểu là ${minBid.toLocaleString()} VNĐ`, 400);
+          throw new AppError(`Giá tối đa tự động tối thiểu là ${minBid.toLocaleString()} VNĐ`, HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR);
         }
         
         // Force the starting amount of a proxy bid to be the absolute minimum required to lead.
@@ -252,15 +255,15 @@ export class BiddingService {
     const acquired = await redis.set(lockKey, lockValue, 'EX', LOCK_TTL, 'NX');
 
     if (!acquired) {
-      throw new AppError('Hệ thống đang xử lý, vui lòng thử lại', 409);
+      throw new AppError('Hệ thống đang xử lý, vui lòng thử lại', HttpStatus.CONFLICT, ErrorCode.CONFLICT);
     }
 
     try {
       const auction = await this.repo.getAuctionForBidding(auctionId);
-      if (!auction) throw new AppError('Phiên đấu giá không tồn tại', 404);
-      if (auction.status !== 'active') throw new AppError('Phiên đấu giá không hoạt động', 400);
-      if (!auction.buyoutPrice) throw new AppError('Phiên đấu giá không hỗ trợ mua ngay', 400);
-      if (buyerId === auction.sellerId) throw new AppError('Bạn không thể mua sản phẩm của chính mình', 403);
+      if (!auction) throw new AppError('Phiên đấu giá không tồn tại', HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND);
+      if (auction.status !== 'active') throw new AppError('Phiên đấu giá không hoạt động', HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR);
+      if (!auction.buyoutPrice) throw new AppError('Phiên đấu giá không hỗ trợ mua ngay', HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR);
+      if (buyerId === auction.sellerId) throw new AppError('Bạn không thể mua sản phẩm của chính mình', HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN);
 
       // Verify buyer account
       const buyer = await prisma.user.findUnique({
@@ -268,10 +271,10 @@ export class BiddingService {
         select: { accountStatus: true, fullName: true },
       });
       if (!buyer) {
-        throw new AppError('Tài khoản không tồn tại', 404);
+        throw new AppError('Tài khoản không tồn tại', HttpStatus.NOT_FOUND, ErrorCode.USER_NOT_FOUND);
       }
       if (buyer.accountStatus === 'banned' || buyer.accountStatus === 'suspended') {
-        throw new AppError('Tài khoản của bạn đã bị khóa', 403);
+        throw new AppError('Tài khoản của bạn đã bị khóa', HttpStatus.FORBIDDEN, ErrorCode.ACCOUNT_BANNED);
       }
 
       const buyoutPrice = Number(auction.buyoutPrice);
