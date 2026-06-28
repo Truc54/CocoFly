@@ -66,5 +66,44 @@ export const ApiEndpoints = {
     UNREAD_COUNT: "/api/messages/unread-count",
     GET_MESSAGES: (conversationId: string) => `/api/messages/conversations/${conversationId}`,
     MARK_AS_READ: (conversationId: string) => `/api/messages/conversations/${conversationId}/read`,
+  },
+  ADMIN: {
+    DASHBOARD: {
+      STATS: "/api/admin/dashboard/stats",
+      REVENUE: "/api/admin/dashboard/revenue",
+      ACTIVITY: "/api/admin/dashboard/activity",
+    },
+    USERS: {
+      BASE: "/api/admin/users",
+      BY_ID: (id: string) => `/api/admin/users/${id}`,
+      BAN: (id: string) => `/api/admin/users/${id}/ban`,
+      UNBAN: (id: string) => `/api/admin/users/${id}/unban`,
+      ROLE: (id: string) => `/api/admin/users/${id}/role`,
+      RESET_STRIKES: (id: string) => `/api/admin/users/${id}/reset-strikes`,
+    },
+    AUCTIONS: {
+      BASE: "/api/admin/auctions",
+      BY_ID: (id: string) => `/api/admin/auctions/${id}`,
+      FORCE_END: (id: string) => `/api/admin/auctions/${id}/force-end`,
+      CANCEL: (id: string) => `/api/admin/auctions/${id}/cancel`,
+    },
+    PAYMENTS: {
+      BASE: "/api/admin/payments",
+      REFUND: (id: string) => `/api/admin/payments/${id}/refund`,
+    },
+    DISPUTES: {
+      BASE: "/api/admin/disputes",
+      BY_ID: (id: string) => `/api/admin/disputes/${id}`,
+      RESOLVE: (id: string) => `/api/admin/disputes/${id}/resolve`,
+    },
+    CATEGORIES: {
+      BASE: "/api/admin/categories",
+      BY_ID: (id: number) => `/api/admin/categories/${id}`,
+    },
+    CONFIG: {
+      BASE: "/api/admin/config",
+      BY_KEY: (key: string) => `/api/admin/config/${key}`,
+    },
+    AUDIT_LOGS: "/api/admin/audit-logs",
   }
 } as const;
