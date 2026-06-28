@@ -1,6 +1,8 @@
 import { UserRepository } from '../repositories/user.repository';
 import { TokenService } from './token.service';
 import { AppError } from '../utils/AppError';
+import { HttpStatus } from '../utils/HttpStatus';
+import { ErrorCode } from '../utils/ErrorCode';
 
 export class UserService {
   private userRepository = new UserRepository();
@@ -8,17 +10,17 @@ export class UserService {
 
   async upgradeToSeller(userId: string, phoneNumber: string) {
     if (!phoneNumber) {
-      throw new AppError('Số điện thoại là bắt buộc', 400);
+      throw new AppError('Số điện thoại là bắt buộc', HttpStatus.BAD_REQUEST, ErrorCode.PHONE_REQUIRED);
     }
 
     // 2. Find current user
     const user = await this.userRepository.findById(userId);
     if (!user) {
-      throw new AppError('Người dùng không tồn tại', 404);
+      throw new AppError('Người dùng không tồn tại', HttpStatus.NOT_FOUND, ErrorCode.USER_NOT_FOUND);
     }
 
     if (user.role === 'seller') {
-      throw new AppError('Tài khoản đã là người bán', 409);
+      throw new AppError('Tài khoản đã là người bán', HttpStatus.CONFLICT, ErrorCode.ALREADY_SELLER);
     }
 
     // 3. Update role and phone

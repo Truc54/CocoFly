@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { UserService } from '../services/user.service';
 import { AppError } from '../utils/AppError';
+import { HttpStatus } from '../utils/HttpStatus';
+import { ErrorCode } from '../utils/ErrorCode';
 
 export class UserController {
   private userService = new UserService();
@@ -8,17 +10,17 @@ export class UserController {
   async upgradeToSeller(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       if (!req.user) {
-        throw new AppError('Unauthorized', 401);
+        throw new AppError('Unauthorized', HttpStatus.UNAUTHORIZED, ErrorCode.UNAUTHORIZED);
       }
 
       const { phoneNumber } = req.body;
       if (!phoneNumber || typeof phoneNumber !== 'string') {
-        throw new AppError('Số điện thoại là bắt buộc', 400);
+        throw new AppError('Số điện thoại là bắt buộc', HttpStatus.BAD_REQUEST, ErrorCode.PHONE_REQUIRED);
       }
 
       const result = await this.userService.upgradeToSeller(req.user.userId, phoneNumber);
 
-      res.status(200).json(result);
+      res.status(HttpStatus.OK).json(result);
     } catch (err) {
       next(err);
     }

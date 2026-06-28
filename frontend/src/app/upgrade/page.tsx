@@ -92,12 +92,19 @@ export default function UpgradePage() {
 
       setStep(3); // Success
     } catch (err: unknown) {
-      const error = err as Error;
-      if (error.message.includes("Token không hợp lệ") || error.message.includes("Phiên đăng nhập") || error.message.includes("Unauthorized")) {
+      const error = err as any;
+      if (
+        error.code === "UNAUTHORIZED" ||
+        error.message?.includes("Token không hợp lệ") ||
+        error.message?.includes("Phiên đăng nhập") ||
+        error.message?.includes("Unauthorized")
+      ) {
         authStorage.clear();
         window.dispatchEvent(new Event("auth-change"));
         setErrorMsg("Phiên đăng nhập đã hết hạn. Đang chuyển hướng...");
         setTimeout(() => router.push("/login?redirect=/upgrade"), 1500);
+      } else if (error.code === "ALREADY_SELLER") {
+        setErrorMsg("Tài khoản của bạn đã là người bán rồi!");
       } else {
         setErrorMsg(error.message || "Xác thực thất bại. Vui lòng thử lại.");
       }
