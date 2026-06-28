@@ -1,5 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { NotificationService } from '../services/notification.service';
+import { AppError } from '../utils/AppError';
+import { HttpStatus } from '../utils/HttpStatus';
+import { ErrorCode } from '../utils/ErrorCode';
 
 const service = new NotificationService();
 
@@ -10,14 +13,16 @@ export class NotificationController {
   async getNotifications(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = (req as any).user?.userId;
-      if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+      if (!userId) {
+        throw new AppError('Unauthorized', HttpStatus.UNAUTHORIZED, ErrorCode.UNAUTHORIZED);
+      }
 
       const cursor = req.query.cursor as string | undefined;
       const limit = Math.max(1, Math.min(Number(req.query.limit) || 20, 50));
       const unreadOnly = req.query.unreadOnly === 'true';
 
       const result = await service.getNotifications(userId, { cursor, limit, unreadOnly });
-      return res.json(result);
+      res.status(HttpStatus.OK).json(result);
     } catch (err) {
       next(err);
     }
@@ -29,10 +34,12 @@ export class NotificationController {
   async getUnreadCount(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = (req as any).user?.userId;
-      if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+      if (!userId) {
+        throw new AppError('Unauthorized', HttpStatus.UNAUTHORIZED, ErrorCode.UNAUTHORIZED);
+      }
 
       const count = await service.getUnreadCount(userId);
-      return res.json({ count });
+      res.status(HttpStatus.OK).json({ count });
     } catch (err) {
       next(err);
     }
@@ -44,10 +51,12 @@ export class NotificationController {
   async markAsRead(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = (req as any).user?.userId;
-      if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+      if (!userId) {
+        throw new AppError('Unauthorized', HttpStatus.UNAUTHORIZED, ErrorCode.UNAUTHORIZED);
+      }
 
       await service.markAsRead(req.params.id as string, userId);
-      return res.json({ success: true });
+      res.status(HttpStatus.OK).json({ success: true });
     } catch (err) {
       next(err);
     }
@@ -59,10 +68,12 @@ export class NotificationController {
   async markAllAsRead(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = (req as any).user?.userId;
-      if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+      if (!userId) {
+        throw new AppError('Unauthorized', HttpStatus.UNAUTHORIZED, ErrorCode.UNAUTHORIZED);
+      }
 
       await service.markAllAsRead(userId);
-      return res.json({ success: true });
+      res.status(HttpStatus.OK).json({ success: true });
     } catch (err) {
       next(err);
     }
@@ -74,10 +85,12 @@ export class NotificationController {
   async deleteNotification(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = (req as any).user?.userId;
-      if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+      if (!userId) {
+        throw new AppError('Unauthorized', HttpStatus.UNAUTHORIZED, ErrorCode.UNAUTHORIZED);
+      }
 
       await service.deleteNotification(req.params.id as string, userId);
-      return res.json({ success: true });
+      res.status(HttpStatus.OK).json({ success: true });
     } catch (err) {
       next(err);
     }

@@ -1,5 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { MessageService } from '../services/message.service';
+import { AppError } from '../utils/AppError';
+import { HttpStatus } from '../utils/HttpStatus';
+import { ErrorCode } from '../utils/ErrorCode';
 
 const service = new MessageService();
 
@@ -10,13 +13,15 @@ export class MessageController {
   async getConversations(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = (req as any).user?.userId;
-      if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+      if (!userId) {
+        throw new AppError('Unauthorized', HttpStatus.UNAUTHORIZED, ErrorCode.UNAUTHORIZED);
+      }
 
       const cursor = req.query.cursor as string | undefined;
       const limit = Math.max(1, Math.min(Number(req.query.limit) || 20, 100));
 
       const result = await service.getConversations(userId, cursor, limit);
-      return res.json(result);
+      res.status(HttpStatus.OK).json(result);
     } catch (err) {
       next(err);
     }
@@ -29,15 +34,17 @@ export class MessageController {
   async getOrCreateConversation(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = (req as any).user?.userId;
-      if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+      if (!userId) {
+        throw new AppError('Unauthorized', HttpStatus.UNAUTHORIZED, ErrorCode.UNAUTHORIZED);
+      }
 
       const { targetUserId } = req.body;
       if (!targetUserId) {
-        return res.status(400).json({ message: 'targetUserId is required' });
+        throw new AppError('targetUserId is required', HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR);
       }
 
       const conversation = await service.getOrCreateConversation(userId, targetUserId);
-      return res.json(conversation);
+      res.status(HttpStatus.OK).json(conversation);
     } catch (err) {
       next(err);
     }
@@ -49,14 +56,16 @@ export class MessageController {
   async getMessages(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = (req as any).user?.userId;
-      if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+      if (!userId) {
+        throw new AppError('Unauthorized', HttpStatus.UNAUTHORIZED, ErrorCode.UNAUTHORIZED);
+      }
 
       const conversationId = req.params.id as string;
       const cursor = req.query.cursor as string | undefined;
       const limit = Math.max(1, Math.min(Number(req.query.limit) || 50, 100));
 
       const result = await service.getMessages(conversationId, userId, cursor, limit);
-      return res.json(result);
+      res.status(HttpStatus.OK).json(result);
     } catch (err) {
       next(err);
     }
@@ -68,10 +77,12 @@ export class MessageController {
   async getUnreadCount(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = (req as any).user?.userId;
-      if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+      if (!userId) {
+        throw new AppError('Unauthorized', HttpStatus.UNAUTHORIZED, ErrorCode.UNAUTHORIZED);
+      }
 
       const count = await service.getUnreadCount(userId);
-      return res.json({ count });
+      res.status(HttpStatus.OK).json({ count });
     } catch (err) {
       next(err);
     }
@@ -83,11 +94,13 @@ export class MessageController {
   async markAsRead(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = (req as any).user?.userId;
-      if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+      if (!userId) {
+        throw new AppError('Unauthorized', HttpStatus.UNAUTHORIZED, ErrorCode.UNAUTHORIZED);
+      }
 
       const conversationId = req.params.id as string;
       const result = await service.markAsRead(conversationId, userId);
-      return res.json(result);
+      res.status(HttpStatus.OK).json(result);
     } catch (err) {
       next(err);
     }
