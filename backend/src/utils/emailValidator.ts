@@ -1,6 +1,8 @@
 import dns from 'dns';
 import { promisify } from 'util';
 import { AppError } from './AppError';
+import { HttpStatus } from './HttpStatus';
+import { ErrorCode } from './ErrorCode';
 
 const resolveMx = promisify(dns.resolveMx);
 
@@ -42,24 +44,24 @@ const DISPOSABLE_DOMAINS = new Set([
 export async function validateEmailRealness(email: string): Promise<void> {
   const parts = email.split('@');
   if (parts.length !== 2) {
-    throw new AppError('Định dạng email không hợp lệ', 400);
+    throw new AppError('Định dạng email không hợp lệ', HttpStatus.BAD_REQUEST, ErrorCode.EMAIL_INVALID);
   }
 
   const domain = parts[1].toLowerCase();
 
   // 1. Chặn các nhà cung cấp email rác/tạm thời
   if (DISPOSABLE_DOMAINS.has(domain)) {
-    throw new AppError('Hệ thống không hỗ trợ đăng ký bằng email tạm thời/email rác', 400);
+    throw new AppError('Hệ thống không hỗ trợ đăng ký bằng email tạm thời/email rác', HttpStatus.BAD_REQUEST, ErrorCode.EMAIL_INVALID);
   }
 
   // 2. Xác thực tên miền email có bản ghi MX (để đảm bảo có nhận mail thực sự)
   try {
     const mxRecords = await resolveMx(domain);
     if (!mxRecords || mxRecords.length === 0) {
-      throw new AppError('Tên miền email không tồn tại hoặc không thể nhận thư', 400);
+      throw new AppError('Tên miền email không tồn tại hoặc không thể nhận thư', HttpStatus.BAD_REQUEST, ErrorCode.EMAIL_INVALID);
     }
   } catch (error: any) {
     // dns.resolveMx sẽ ném lỗi nếu không tìm thấy bản ghi MX hoặc tên miền không tồn tại
-    throw new AppError('Email không tồn tại hoặc tên miền không hỗ trợ nhận thư', 400);
+    throw new AppError('Email không tồn tại hoặc tên miền không hỗ trợ nhận thư', HttpStatus.BAD_REQUEST, ErrorCode.EMAIL_INVALID);
   }
 }
