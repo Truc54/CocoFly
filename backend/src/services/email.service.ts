@@ -19,6 +19,9 @@ const transporter = nodemailer.createTransport({
 export class EmailService {
   async sendOtpEmail(to: string, code: string): Promise<void> {
     try {
+      console.log(`[EmailService] Sending OTP email to ${to}...`);
+      console.log(`🔑 [OTP CODE] Mã OTP cho ${to} là: ${code}`);
+
       const result = await transporter.sendMail({
         from: `"CocoFly" <${env.SMTP_USER}>`,
         to,
@@ -35,7 +38,7 @@ export class EmailService {
         `,
       });
 
-      console.log(`[EmailService] OTP email sent to ${to}, messageId: ${result.messageId}`);
+      console.log(`[EmailService] OTP email sent successfully to ${to}, messageId: ${result.messageId}`);
     } catch (err: any) {
       console.error('[EmailService] Failed to send OTP email:', err.message || err);
       throw err;

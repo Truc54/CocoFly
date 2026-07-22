@@ -54,14 +54,22 @@ export async function validateEmailRealness(email: string): Promise<void> {
     throw new AppError('Hệ thống không hỗ trợ đăng ký bằng email tạm thời/email rác', HttpStatus.BAD_REQUEST, ErrorCode.EMAIL_INVALID);
   }
 
-  // 2. Xác thực tên miền email có bản ghi MX (để đảm bảo có nhận mail thực sự)
+  // 2. Xác thực tên miền email có bản ghi MX (có timeout 2.5s để tránh nghẽn DNS trên Cloud)
   try {
-    const mxRecords = await resolveMx(domain);
+    const mxPromise = resolveMx(domain);
+    const timeoutPromise = new Promise<dns.MxRecord[]>((_, reject) =>
+      setTimeout(() => reject(new Error('DNS_TIMEOUT')), 2500)
+    );
+    const mxRecords = await Promise.race([mxPromise, timeoutPromise]);
     if (!mxRecords || mxRecords.length === 0) {
       throw new AppError('Tên miền email không tồn tại hoặc không thể nhận thư', HttpStatus.BAD_REQUEST, ErrorCode.EMAIL_INVALID);
     }
   } catch (error: any) {
-    // dns.resolveMx sẽ ném lỗi nếu không tìm thấy bản ghi MX hoặc tên miền không tồn tại
+    if (error instanceof AppError) throw error;
+    if (error.message === 'DNS_TIMEOUT') {
+      console.warn(`[validateEmailRealness] DNS MX lookup timed out for ${domain}, proceeding with registration.`);
+      return;
+    }
     throw new AppError('Email không tồn tại hoặc tên miền không hỗ trợ nhận thư', HttpStatus.BAD_REQUEST, ErrorCode.EMAIL_INVALID);
   }
 }
