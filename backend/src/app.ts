@@ -3,7 +3,7 @@ import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import cors from 'cors';
 import { env } from './config/env';
-import { globalRateLimit } from './middlewares/rateLimiter';
+import rateLimit from 'express-rate-limit';
 import { healthRoutes } from './routes/health.routes';
 import { authRoutes } from './routes/auth.routes';
 import { oauthRoutes } from './routes/oauth.routes';
@@ -43,8 +43,14 @@ app.set('trust proxy', 1);
 // Health check (BEFORE rate limit — must always respond)
 app.use(healthRoutes);
 
-// Global rate limit: 300 requests per 15 minutes per IP
-app.use(globalRateLimit);
+// Global rate limit: in-memory (0ms latency, no Redis roundtrip)
+app.use(rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau 15 phút' },
+}));
 
 // ── Routes ──
 app.use('/auth', authRoutes);

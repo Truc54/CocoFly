@@ -4,57 +4,29 @@ import { AppError } from '../utils/AppError';
 import { HttpStatus } from '../utils/HttpStatus';
 import { ErrorCode } from '../utils/ErrorCode';
 
-interface RateLimitConfig {
-  keyGenerator: (req: Request) => string[];
-  limits: { key: string; max: number; ttl: number }[];
-  message: string;
-}
-
-function createRateLimiter(config: RateLimitConfig) {
-  return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const keys = config.keyGenerator(req);
-
-      for (let i = 0; i < config.limits.length; i++) {
-        const limit = config.limits[i];
-        const fullKey = keys[i];
-        const current = await redis.get(fullKey);
-        const count = current ? parseInt(current, 10) : 0;
-
-        if (count >= limit.max) {
-          throw new AppError(config.message, HttpStatus.TOO_MANY_REQUESTS, ErrorCode.TOO_MANY_REQUESTS);
-        }
-      }
-      next();
-    } catch (err) {
-      next(err);
-    }
-  };
-}
+// Lua script: atomic INCR + EXPIRE (no race condition)
+const RATE_LIMIT_SCRIPT = `
+  local count = redis.call('INCR', KEYS[1])
+  if count == 1 then
+    redis.call('EXPIRE', KEYS[1], ARGV[1])
+  end
+  return count
+`;
 
 // Reusable Redis-based rate limiter generator
 function createRedisRateLimiter(prefix: string, max: number, ttlSeconds: number, message: string) {
   return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
     try {
       const ip = req.ip || req.socket.remoteAddress || 'unknown';
-      // For authenticated routes (like upload), we can key by userId, otherwise IP
       const userId = (req as any).user?.id;
       const keySuffix = userId ? `user:${userId}` : `ip:${ip}`;
       const key = `ratelimit:${prefix}:${keySuffix}`;
 
-      const current = await redis.get(key);
-      const count = current ? parseInt(current, 10) : 0;
+      const count = await redis.eval(RATE_LIMIT_SCRIPT, 1, key, ttlSeconds) as number;
 
-      if (count >= max) {
+      if (count > max) {
         throw new AppError(message, HttpStatus.TOO_MANY_REQUESTS, ErrorCode.TOO_MANY_REQUESTS);
       }
-
-      const multi = redis.multi();
-      multi.incr(key);
-      if (!current) {
-        multi.expire(key, ttlSeconds);
-      }
-      await multi.exec();
 
       next();
     } catch (err) {
@@ -62,14 +34,6 @@ function createRedisRateLimiter(prefix: string, max: number, ttlSeconds: number,
     }
   };
 }
-
-// Global rate limit: 1000 requests per 15 minutes per IP (safe for heavy users, prevents bot spam)
-export const globalRateLimit = createRedisRateLimiter(
-  'global',
-  1000,
-  900, // 15 minutes
-  'Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau 15 phút'
-);
 
 // Auth routes rate limit: 20 requests per 15 minutes per IP
 export const authRateLimit = createRedisRateLimiter(
