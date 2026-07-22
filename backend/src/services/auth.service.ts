@@ -42,8 +42,10 @@ export class AuthService {
     await redis.set(`otp:${email}`, otpCode, 'EX', OTP_TTL);
     await redis.del(`otp:attempts:${email}`);
 
-    // Send email
-    await this.emailService.sendOtpEmail(email, otpCode);
+    // Send email in background (don't block response — SMTP is slow/blocked on Railway)
+    this.emailService.sendOtpEmail(email, otpCode).catch((err) =>
+      console.error(`[Register] Background email failed for ${email}:`, err.message)
+    );
 
     return { message: 'Mã OTP đã được gửi đến email của bạn' };
   }
@@ -107,7 +109,10 @@ export class AuthService {
     await redis.del(`otp:attempts:${email}`);
     await redis.set(`otp:cooldown:${email}`, '1', 'EX', OTP_COOLDOWN_TTL);
 
-    await this.emailService.sendOtpEmail(email, otpCode);
+    // Send email in background (don't block response)
+    this.emailService.sendOtpEmail(email, otpCode).catch((err) =>
+      console.error(`[ResendOtp] Background email failed for ${email}:`, err.message)
+    );
 
     return { message: 'Mã OTP mới đã được gửi' };
   }
@@ -234,7 +239,10 @@ export class AuthService {
     await redis.del(`otp:attempts:reset:${email}`);
     await redis.set(`otp:cooldown:reset:${email}`, '1', 'EX', OTP_COOLDOWN_TTL);
 
-    await this.emailService.sendPasswordResetOtpEmail(email, otpCode);
+    // Send email in background (don't block response)
+    this.emailService.sendPasswordResetOtpEmail(email, otpCode).catch((err) =>
+      console.error(`[ForgotPassword] Background email failed for ${email}:`, err.message)
+    );
 
     return { message: 'Mã OTP đặt lại mật khẩu đã được gửi đến email của bạn' };
   }
