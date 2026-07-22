@@ -17,11 +17,7 @@ const envSchema = z.object({
   GOOGLE_CLIENT_SECRET: z.string().optional().default(''),
   GOOGLE_CALLBACK_URL: z.string().optional().default('http://localhost:8000/auth/google/callback'),
 
-  SMTP_HOST: z.string().default('smtp.gmail.com'),
-  SMTP_PORT: z.coerce.number().default(587),
-  SMTP_USER: z.string().email(),
-  SMTP_PASS: z.string().min(1),
-  BREVO_API_KEY: z.string().optional().default(''),
+  RESEND_API_KEY: z.string().optional().default(''),
 
   FRONTEND_URL: z.string().url().default('http://localhost:3000'),
 

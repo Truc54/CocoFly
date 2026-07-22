@@ -1,43 +1,43 @@
 import { env } from '../config/env';
 
 export class EmailService {
-  private async sendViaBrevo(to: string, subject: string, htmlContent: string): Promise<any> {
-    const apiKey = env.BREVO_API_KEY;
+  private async sendViaResend(to: string, subject: string, html: string): Promise<any> {
+    const apiKey = env.RESEND_API_KEY;
 
     if (!apiKey) {
-      console.warn('[EmailService] BREVO_API_KEY is not set. Email will not be sent via API.');
-      return { messageId: 'mock-no-api-key' };
+      console.warn('[EmailService] RESEND_API_KEY is not set. Email will not be sent.');
+      return { id: 'mock-no-resend-key' };
     }
 
-    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+    const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
-        'accept': 'application/json',
-        'api-key': apiKey,
-        'content-type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        sender: { name: 'CocoFly', email: env.SMTP_USER || 'cocofly.vn@gmail.com' },
-        to: [{ email: to }],
+        from: 'CocoFly <otp@tructran.id.vn>',
+        to: [to],
         subject,
-        htmlContent,
+        html,
       }),
     });
 
+    const data: any = await response.json();
+
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Brevo API Error (${response.status}): ${errorText}`);
+      throw new Error(`Resend API Error (${response.status}): ${JSON.stringify(data)}`);
     }
 
-    return response.json();
+    return data;
   }
 
   async sendOtpEmail(to: string, code: string): Promise<void> {
     try {
-      console.log(`[EmailService] Sending OTP email via Brevo to ${to}...`);
+      console.log(`[EmailService] Sending OTP email via Resend to ${to}...`);
       console.log(`🔑 [OTP CODE] Mã OTP cho ${to} là: ${code}`);
 
-      const htmlContent = `
+      const html = `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
           <h2 style="color: #1a1a1a; margin-bottom: 8px;">Xác minh tài khoản CocoFly</h2>
           <p style="color: #555; font-size: 15px;">Mã OTP của bạn là:</p>
@@ -48,17 +48,17 @@ export class EmailService {
         </div>
       `;
 
-      const result = await this.sendViaBrevo(to, 'CocoFly - Mã xác minh tài khoản', htmlContent);
-      console.log(`[EmailService] OTP email sent successfully to ${to}, messageId:`, result.messageId || result.messageIds);
+      const result = await this.sendViaResend(to, 'CocoFly - Mã xác minh tài khoản', html);
+      console.log(`[EmailService] OTP email sent successfully to ${to}, id:`, result.id);
     } catch (err: any) {
-      console.error('[EmailService] Failed to send OTP email via Brevo:', err.message || err);
+      console.error('[EmailService] Failed to send OTP email via Resend:', err.message || err);
       throw err;
     }
   }
 
   async sendPasswordResetOtpEmail(to: string, code: string): Promise<void> {
     try {
-      const htmlContent = `
+      const html = `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
           <h2 style="color: #1a1a1a; margin-bottom: 8px;">Đặt lại mật khẩu CocoFly</h2>
           <p style="color: #555; font-size: 15px;">Mã OTP để đặt lại mật khẩu của bạn là:</p>
@@ -69,17 +69,17 @@ export class EmailService {
         </div>
       `;
 
-      const result = await this.sendViaBrevo(to, 'CocoFly - Đặt lại mật khẩu', htmlContent);
-      console.log(`[EmailService] Password reset OTP email sent to ${to}, messageId:`, result.messageId || result.messageIds);
+      const result = await this.sendViaResend(to, 'CocoFly - Đặt lại mật khẩu', html);
+      console.log(`[EmailService] Password reset OTP email sent to ${to}, id:`, result.id);
     } catch (err: any) {
-      console.error('[EmailService] Failed to send password reset OTP email via Brevo:', err.message || err);
+      console.error('[EmailService] Failed to send password reset OTP email:', err.message || err);
       throw err;
     }
   }
 
   async sendSecurityAlertEmail(to: string, ip: string): Promise<void> {
     try {
-      const htmlContent = `
+      const html = `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
           <h2 style="color: #d32f2f;">⚠️ Đăng nhập từ IP lạ</h2>
           <p style="color: #555;">Tài khoản CocoFly của bạn vừa được đăng nhập từ địa chỉ IP: <strong>${ip}</strong></p>
@@ -87,10 +87,10 @@ export class EmailService {
         </div>
       `;
 
-      const result = await this.sendViaBrevo(to, 'CocoFly - Cảnh báo đăng nhập bất thường', htmlContent);
-      console.log(`[EmailService] Security alert email sent to ${to}, messageId:`, result.messageId || result.messageIds);
+      const result = await this.sendViaResend(to, 'CocoFly - Cảnh báo đăng nhập bất thường', html);
+      console.log(`[EmailService] Security alert email sent to ${to}, id:`, result.id);
     } catch (err: any) {
-      console.error('[EmailService] Failed to send security alert email via Brevo:', err.message || err);
+      console.error('[EmailService] Failed to send security alert email:', err.message || err);
       throw err;
     }
   }
