@@ -2,6 +2,7 @@ import nodemailer from 'nodemailer';
 import { env } from '../config/env';
 
 const transporter = nodemailer.createTransport({
+  service: 'gmail',
   host: env.SMTP_HOST,
   port: env.SMTP_PORT,
   secure: env.SMTP_PORT === 465, // true for 465, false for other ports
@@ -9,7 +10,11 @@ const transporter = nodemailer.createTransport({
     user: env.SMTP_USER,
     pass: env.SMTP_PASS,
   },
-});
+  family: 4, // Force IPv4 to prevent 2-minute ENETUNREACH timeouts on Railway
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 10000,
+} as any);
 
 export class EmailService {
   async sendOtpEmail(to: string, code: string): Promise<void> {
