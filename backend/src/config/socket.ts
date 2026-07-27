@@ -20,20 +20,19 @@ const messageService = new MessageService();
 // Helper to rate limit socket events using Redis
 async function isSocketRateLimited(userId: string, event: string, limit: number, ttlSeconds: number): Promise<boolean> {
   const key = `ratelimit:socket:${event}:${userId}`;
-  const current = await redis.get(key);
-  const count = current ? parseInt(current, 10) : 0;
+  const count = await redis.incr(key);
 
-  if (count >= limit) {
-    return true;
+  if (count === 1) {
+    await redis.expire(key, ttlSeconds);
+  } else {
+    // Self-healing: if the key somehow exists but has no TTL (e.g. due to race conditions), set it
+    const ttl = await redis.ttl(key);
+    if (ttl === -1) {
+      await redis.expire(key, ttlSeconds);
+    }
   }
 
-  const multi = redis.multi();
-  multi.incr(key);
-  if (!current) {
-    multi.expire(key, ttlSeconds);
-  }
-  await multi.exec();
-  return false;
+  return count > limit;
 }
 
 export function getIO(): Server {
