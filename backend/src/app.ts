@@ -46,7 +46,7 @@ app.use(healthRoutes);
 // Global rate limit: in-memory (0ms latency, no Redis roundtrip)
 app.use(rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 300,
+  max: 1500,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau 15 phút' },
