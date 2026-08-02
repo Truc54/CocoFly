@@ -140,6 +140,8 @@ export default function FooterNew() {
         <div className="max-w-[1400px] mx-auto px-4 lg:px-6 py-4">
           <p className="text-center text-xs text-slate-500">
             © {new Date().getFullYear()} CocoFly. Tất cả quyền được bảo lưu.
+            {" · "}
+            <span>Icons by <a href="https://icons8.com" target="_blank" rel="noopener noreferrer" className="hover:text-slate-300 transition-colors">Icons8</a></span>
           </p>
         </div>
       </div>

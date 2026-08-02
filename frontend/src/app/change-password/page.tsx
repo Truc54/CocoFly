@@ -138,7 +138,7 @@ export default function ChangePasswordPage() {
       {/* LEFT PANEL */}
       <div className="relative hidden w-1/2 overflow-hidden bg-primary-main lg:flex">
         <Image
-          src="/otp-illustration.png"
+          src="/otp-illustration.jpg"
           alt="Change Password Illustration"
           fill
           unoptimized

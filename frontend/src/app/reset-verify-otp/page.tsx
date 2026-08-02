@@ -91,7 +91,7 @@ export default function ResetVerifyOtpPage() {
       {/* LEFT PANEL */}
       <div className="relative hidden w-1/2 overflow-hidden bg-primary-main lg:flex">
         <img
-          src="/otp-illustration.png"
+          src="/otp-illustration.jpg"
           alt="OTP Illustration"
           className="absolute inset-0 h-full w-full object-cover"
           onError={(e) => {
